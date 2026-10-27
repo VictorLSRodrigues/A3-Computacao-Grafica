@@ -26,40 +26,91 @@ O código-fonte do GLFW e os arquivos necessários do GLAD estão incluídos no 
 1. Abra o repositório no GitHub.
 2. Clique em **Code → Download ZIP**.
 3. Extraia o arquivo ZIP para uma pasta de sua preferência.
-4. Abra o PowerShell ou terminal na pasta extraída.
+4. Abra o PowerShell ou terminal na pasta que contém o arquivo `CMakeLists.txt`.
+
+### ⚠️ Atenção ao extrair o ZIP
+
+Dependendo de como o ZIP for extraído, pode ser criada uma pasta com o nome do projeto dentro da pasta onde você o extraiu.
+
+Por exemplo:
+
+```text
+Open-GL-Ambiente-Base-Configurado-Para-A3-/
+└── Open-GL-Ambiente-Base-Configurado-Para-A3-/
+    ├── CMakeLists.txt
+    ├── Libraries/
+    ├── src/
+    └── README.md
+```
+
+Nesse caso, **entre na pasta interna**, pois é nela que está o `CMakeLists.txt`.
+
+Os comandos de compilação devem ser executados na raiz real do projeto, onde está esse arquivo. Se você executar os comandos na pasta externa, o CMake poderá informar que não encontrou o projeto.
 
 ## ⚙️ Como configurar o ambiente no Windows
 
-Instale o CMake e o MSYS2 com o compilador GCC/G++ do ambiente UCRT64.
+### 1. Instalar o MSYS2
 
-Certifique-se de que o executável `g++.exe` esteja disponível em:
+Baixe e instale o MSYS2 pelo site oficial:
 
-`C:\msys64\ucrt64\bin\g++.exe`
+https://www.msys2.org/
 
-Adicione o diretório do CMake e, se necessário, o diretório `C:\msys64\ucrt64\bin` à variável de ambiente `PATH`.
+Após a instalação, abra o terminal **MSYS2 UCRT64**.
 
-Para verificar as instalações, execute:
+### 2. Instalar o compilador C/C++ e as ferramentas
+
+No terminal MSYS2 UCRT64, execute:
+
+```bash
+pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-cmake
+```
+
+Confirme a instalação quando solicitado. Se aparecer uma seleção de pacotes do grupo `toolchain`, pressione Enter para aceitar a seleção padrão e confirme quando solicitado.
+
+Esse comando instala o compilador GCC/G++, o CMake e ferramentas de desenvolvimento necessárias.
+
+### 3. Configurar a variável PATH
+
+Adicione o seguinte diretório à variável de ambiente `Path` do Windows:
+
+```text
+C:\msys64\ucrt64\bin
+```
+
+Se o CMake tiver sido instalado separadamente, certifique-se também de que seu diretório esteja no `Path`.
+
+Depois de alterar a variável, abra um novo terminal PowerShell.
+
+### 4. Verificar a instalação
+
+Execute:
 
 ```powershell
-cmake --version
 g++ --version
+cmake --version
 ```
+
+Se os comandos exibirem as versões instaladas, as ferramentas estão disponíveis no terminal.
 
 ## 🔨 Como compilar
 
-Na raiz do projeto, execute:
+Abra o PowerShell **na raiz do projeto**, na mesma pasta onde está o arquivo `CMakeLists.txt`.
+
+### 1. Configurar o projeto
 
 ```powershell
 cmake -S . -B build -G "MinGW Makefiles"
 ```
 
-Depois, compile:
+Esse comando configura o projeto e gera os arquivos de compilação na pasta `build`.
+
+### 2. Compilar
 
 ```powershell
 cmake --build build
 ```
 
-O CMake configurará o GLFW a partir do código-fonte incluído no projeto.
+O CMake configurará e compilará o GLFW a partir do código-fonte incluído no projeto, além de compilar os arquivos do programa.
 
 ## ▶️ Como executar
 
