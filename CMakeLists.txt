@@ -1,15 +1,22 @@
-
 cmake_minimum_required(VERSION 3.20)
 
-project(OpenGLProjeto LANGUAGES C CXX)
+project(OpenGLProjeto
+    VERSION 1.0.0
+    LANGUAGES C CXX
+)
 
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(GLFW_DIR "${CMAKE_SOURCE_DIR}/Libraries/glfw-3.5.1")
-set(GLAD_DIR "${CMAKE_SOURCE_DIR}/Libraries/glad")
-set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Libraries/include")
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(Libraries/glfw-3.5.1)
 
 add_executable(OpenGLProjeto
     src/main.cpp
@@ -17,16 +24,12 @@ add_executable(OpenGLProjeto
 )
 
 target_include_directories(OpenGLProjeto PRIVATE
-    "${INCLUDE_DIR}"
-    "${GLFW_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
 )
+
+find_package(OpenGL REQUIRED)
 
 target_link_libraries(OpenGLProjeto PRIVATE
-    "${CMAKE_SOURCE_DIR}/Libraries/lib/libglfw3.a"
-    opengl32
-    gdi32
+    glfw
+    OpenGL::GL
 )
-
-if(WIN32)
-    target_link_libraries(OpenGLProjeto PRIVATE user32 shell32)
-endif()
