@@ -20,7 +20,8 @@ add_subdirectory(Libraries/glfw-3.5.1)
 
 add_executable(OpenGLProjeto
     src/main.cpp
-    src/objectShaders.cpp
+    src/shader.cpp
+    src/mesh.cpp
     Libraries/glad/src/glad.c
 )
 
