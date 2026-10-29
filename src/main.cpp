@@ -27,7 +27,7 @@ int main()
     // Passando o monitor no glfwCreateWindow, a janela abre em tela cheia.
     GLFWmonitor *monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-    GLFWwindow *window = glfwCreateWindow(mode->width, mode->height, "PuloJanela", monitor, nullptr);
+    GLFWwindow *window = glfwCreateWindow(mode->width, mode->height, "OpenGL", monitor, nullptr);
 
     // Se a janela não foi criada, o ponteiro vem nulo.
     if (!window)
