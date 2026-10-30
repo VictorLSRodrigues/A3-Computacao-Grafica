@@ -10,4 +10,8 @@ namespace formas
     // Quadrado unitário (0 a 1), 2 componentes por vértice (x, y).
     // A posição e o tamanho reais vêm dos uniforms do shader de UI.
     std::vector<float> retangulo();
+
+    // Cria um quadrado com largura e altura de 0.3.
+    // Cada vértice possui 2 componentes: X e Y.
+    std::vector<float> quadrado();
 }

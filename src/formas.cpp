@@ -15,6 +15,19 @@ std::vector<float> formas::triangulo(float lado)
          
 }
 
+std::vector<float> formas::quadrado()
+{
+    return {
+        -0.15f, -0.15f,
+         0.15f, -0.15f,
+         0.15f,  0.15f,
+
+        -0.15f, -0.15f,
+         0.15f,  0.15f,
+        -0.15f,  0.15f
+    };
+}
+
 std::vector<float> formas::retangulo()
 {
     return {

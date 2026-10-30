@@ -26,6 +26,19 @@ int main()
         return -1;
     }
 
+    Mesh retangulo;
+    if (!retangulo.criar(formas::retangulo(), 2))
+{
+    std::cout << "Falha ao criar o retangulo!" << std::endl;
+    return -1;
+}
+
+   Mesh quadrado;
+    if (!quadrado.criar(formas::quadrado(), 2))
+{
+    std::cout << "Falha ao criar o retangulo!" << std::endl;
+    return -1;
+}
     Menu menu;
     if (!menu.criar())
         return -1;
@@ -38,7 +51,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader.usar();
-        triangulo.desenhar();
+        quadrado.desenhar();
 
         menu.desenhar(janela); // por cima de tudo, só aparece se estiver aberto
 
