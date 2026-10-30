@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-bool Mesh::criar(const std::vector<float>& vertices, int componentes, GLenum modoDesenho)
+bool Mesh::criar(const std::vector<float> &vertices, int componentes, GLenum modoDesenho)
 {
     // 0. checar se os dados fazem sentido antes de mexer na placa de vídeo
     if (componentes < 1 || componentes > 4)
@@ -17,6 +17,8 @@ bool Mesh::criar(const std::vector<float>& vertices, int componentes, GLenum mod
         return false;
     }
 
+    limpar(); // se já havia uma malha aqui, apaga antes de criar a nova
+    
     // 1. guardar a configuração
     quantidadeVertices = static_cast<GLsizei>(vertices.size() / componentes);
     modo = modoDesenho;
@@ -33,7 +35,7 @@ bool Mesh::criar(const std::vector<float>& vertices, int componentes, GLenum mod
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
     // 5. explicar como ler (atributo 0, 'componentes' floats por vértice)
-    glVertexAttribPointer(0, componentes, GL_FLOAT, GL_FALSE, componentes * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, componentes, GL_FLOAT, GL_FALSE, componentes * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
     // 6. soltar os binds

@@ -2,11 +2,11 @@
 
 #include <iostream>
 
-void Window::aoRedimensionar(GLFWwindow* janela, int largura, int altura)
+void Window::aoRedimensionar(GLFWwindow *janela, int largura, int altura)
 {
     glViewport(0, 0, largura, altura);
 
-    Window* self = static_cast<Window*>(glfwGetWindowUserPointer(janela));
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
     if (self)
     {
         self->largura = largura;
@@ -14,8 +14,11 @@ void Window::aoRedimensionar(GLFWwindow* janela, int largura, int altura)
     }
 }
 
-bool Window::criar(const char* titulo, bool telaCheia, int larguraJanela, int alturaJanela)
+bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int alturaJanela)
 {
+    glfwSetErrorCallback([](int codigo, const char *descricao)
+                         { std::cout << "Erro do GLFW (" << codigo << "): " << descricao << std::endl; });
+
     if (!glfwInit())
     {
         std::cout << "Erro ao inicializar o GLFW!" << std::endl;
@@ -29,11 +32,11 @@ bool Window::criar(const char* titulo, bool telaCheia, int larguraJanela, int al
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Em tela cheia, passa o monitor e usa a resolução dele.
-    GLFWmonitor* monitor = nullptr;
+    GLFWmonitor *monitor = nullptr;
     if (telaCheia)
     {
         monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
         larguraJanela = mode->width;
         alturaJanela = mode->height;
     }
@@ -47,6 +50,8 @@ bool Window::criar(const char* titulo, bool telaCheia, int larguraJanela, int al
     }
 
     glfwMakeContextCurrent(janela);
+
+    glfwSwapInterval(1); // vsync
 
     if (!gladLoadGL())
     {

@@ -8,24 +8,25 @@
 // Devolve true se deu tudo certo e false se algo falhou.
 bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
 {
-    GLint sucesso; // guarda "deu certo (1) ou deu erro (0)" de cada etapa
-    char log[512]; // espaço para a mensagem de erro, se houver
+    limpar(); // se já existia um programa, apaga antes de criar outro
 
-    // 1. compilar o vertex shader (decide onde cada ponto fica)
+    GLint sucesso;
+    char log[512];
+
+    // 1. vertex shader
     GLuint vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vertexFonte, nullptr);
     glCompileShader(vertex);
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &sucesso);
     if (!sucesso)
     {
-        // Mostra no terminal o erro do GLSL (com a linha do problema)
         glGetShaderInfoLog(vertex, 512, nullptr, log);
-        std::cout << "Erro no vertex shader:\n"
-                  << log << std::endl;
+        std::cout << "Erro no vertex shader:\n" << log << std::endl;
+        glDeleteShader(vertex);
         return false;
     }
 
-    // 2. compilar o fragment shader (decide a cor de cada pixel)
+    // 2. fragment shader
     GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fragmentFonte, nullptr);
     glCompileShader(fragment);
@@ -33,28 +34,31 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
     if (!sucesso)
     {
         glGetShaderInfoLog(fragment, 512, nullptr, log);
-        std::cout << "Erro no fragment shader:\n"
-                  << log << std::endl;
+        std::cout << "Erro no fragment shader:\n" << log << std::endl;
+        glDeleteShader(vertex);
+        glDeleteShader(fragment);
         return false;
     }
 
-    // 3. juntar os dois num programa e ligar
+    // 3. juntar no programa e ligar
     programa = glCreateProgram();
     glAttachShader(programa, vertex);
     glAttachShader(programa, fragment);
     glLinkProgram(programa);
     glGetProgramiv(programa, GL_LINK_STATUS, &sucesso);
+
+    // 4. os shaders soltos não são mais necessários (deu certo ou não)
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+
     if (!sucesso)
     {
         glGetProgramInfoLog(programa, 512, nullptr, log);
-        std::cout << "Erro ao ligar o programa:\n"
-                  << log << std::endl;
+        std::cout << "Erro ao ligar o programa:\n" << log << std::endl;
+        glDeleteProgram(programa);
+        programa = 0;
         return false;
     }
-
-    // 4. os shaders soltos não são mais necessários
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
 
     return true;
 }
