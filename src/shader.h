@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glad/glad.h>
+#include <string>
 
 class Shader
 {
@@ -9,6 +10,7 @@ private:
 
 public:
     bool criar(const char* vertexFonte, const char* fragmentFonte);
+    bool criarDeArquivos(const std::string& caminhoVertex, const std::string& caminhoFragment);
     void usar() const;
     void limpar();
 };

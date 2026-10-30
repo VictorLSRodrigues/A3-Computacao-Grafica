@@ -3,32 +3,8 @@
 #include <iostream>     // para escrever no terminal (std::cout)
 #include "shader.h"
 #include "mesh.h"
+#include "formas.h"
 #include <cmath>
-
-// Código dos shaders (mini-programas que rodam na placa de vídeo).
-// Por enquanto ficam como texto aqui; depois podem ir para arquivos.
-
-// Vertex shader: roda para cada vértice e decide onde ele fica na tela.
-const char *vertexShaderSource = R"(
-#version 330 core
-layout (location = 0) in vec3 aPos;
-
-void main()
-{
-    gl_Position = vec4(aPos, 1.0);
-}
-)";
-
-// Fragment shader: roda para cada pixel e decide a cor (aqui, laranja).
-const char *fragmentShaderSource = R"(
-#version 330 core
-out vec4 FragColor;
-
-void main()
-{
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0);
-}
-)";
 
 // Chamada automaticamente pelo GLFW quando a janela muda de tamanho.
 // Ajusta a área onde o OpenGL desenha para acompanhar a janela.
@@ -85,22 +61,15 @@ int main()
 
     // O Shader diz COMO desenhar (cor e posição).
     Shader shader;
-    if (!shader.criar(vertexShaderSource, fragmentShaderSource))
+    if (!shader.criarDeArquivos(ASSETS_DIR "shaders/basic.vert",
+                                ASSETS_DIR "shaders/basic.frag"))
     {
         std::cout << "Falha ao criar o shader!" << std::endl;
         return -1;
     }
 
-    // Os 3 pontos do triângulo (x, y, z). A tela vai de -1 a +1.
-    // O sqrt(3) deixa o triângulo equilátero.
-    std::vector<float> verticesTriangulo = {
-        -0.5f, -0.5f * float(std::sqrt(3)) / 3, 0.0f,
-        0.5f, -0.5f * float(std::sqrt(3)) / 3, 0.0f,
-        0.0f, 0.5f * float(std::sqrt(3)) / 2, 0.0f};
-
-    // A Mesh diz O QUE desenhar (a forma) e guarda os pontos na placa de vídeo.
     Mesh triangulo;
-    if (!triangulo.criar(verticesTriangulo))
+    if (!triangulo.criar(formas::triangulo(1.0f))) // <-- MUDOU (3): era criar(verticesTriangulo)
     {
         std::cout << "Falha ao criar o triangulo!" << std::endl;
         return -1;

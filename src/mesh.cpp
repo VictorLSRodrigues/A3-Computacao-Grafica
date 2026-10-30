@@ -2,14 +2,26 @@
 
 #include <iostream>
 
-// Guarda os vértices de uma forma dentro da placa de vídeo.
-// Recebe uma lista de números: x, y, z, x, y, z, ...
-bool Mesh::criar(const std::vector<float>& vertices)
+bool Mesh::criar(const std::vector<float>& vertices, int componentes, GLenum modoDesenho)
 {
-    // 1. descobrir quantos vértices tem (cada vértice usa 3 números)
-    quantidadeVertices = vertices.size() / 3;
+    // 0. checar se os dados fazem sentido antes de mexer na placa de vídeo
+    if (componentes < 1 || componentes > 4)
+    {
+        std::cout << "Mesh: componentes deve ser de 1 a 4." << std::endl;
+        return false;
+    }
+    if (vertices.empty() || vertices.size() % componentes != 0)
+    {
+        std::cout << "Mesh: lista vazia ou tamanho incompatível com " << componentes
+                  << " componentes por vértice." << std::endl;
+        return false;
+    }
 
-    // 2. criar o VAO (a "etiqueta") e o VBO (a "caixa" dos dados)
+    // 1. guardar a configuração
+    quantidadeVertices = static_cast<GLsizei>(vertices.size() / componentes);
+    modo = modoDesenho;
+
+    // 2. criar o VAO e o VBO
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -18,32 +30,31 @@ bool Mesh::criar(const std::vector<float>& vertices)
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
     // 4. enviar os números para a placa de vídeo
-    // (tamanho em bytes = quantidade de floats * tamanho de cada um)
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    // 5. explicar como ler os dados (atributo 0, 3 floats por vértice)
-    // O "0" é o mesmo location = 0 do aPos no vertex shader.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // 5. explicar como ler (atributo 0, 'componentes' floats por vértice)
+    glVertexAttribPointer(0, componentes, GL_FLOAT, GL_FALSE, componentes * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // 6. soltar os binds (deixa tudo "desligado" para não mexer sem querer)
+    // 6. soltar os binds
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     return true;
 }
 
-// Desenha a forma. O shader certo deve estar em uso antes (shader.usar()).
 void Mesh::desenhar() const
 {
-    glBindVertexArray(VAO);                               // escolhe os dados
-    glDrawArrays(GL_TRIANGLES, 0, quantidadeVertices);    // desenha de 3 em 3 vértices
+    glBindVertexArray(VAO);
+    glDrawArrays(modo, 0, quantidadeVertices);
     glBindVertexArray(0);
 }
 
-// Apaga os dados da placa de vídeo (chamar antes de fechar a janela).
 void Mesh::limpar()
 {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+    VAO = 0;
+    VBO = 0;
+    quantidadeVertices = 0;
 }

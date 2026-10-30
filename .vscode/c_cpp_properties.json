@@ -9,7 +9,8 @@
             "defines": [
                 "_DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "ASSETS_DIR=\"${workspaceFolder}/assets/\""
             ],
             "compilerPath": "C:\\msys64\\ucrt64\\bin\\g++.exe",
             "cStandard": "c17",

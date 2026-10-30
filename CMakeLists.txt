@@ -22,11 +22,16 @@ add_executable(OpenGLProjeto
     src/main.cpp
     src/shader.cpp
     src/mesh.cpp
+    src/formas.cpp
     Libraries/glad/src/glad.c
 )
 
 target_include_directories(OpenGLProjeto PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
+)
+
+target_compile_definitions(OpenGLProjeto PRIVATE
+    ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/"
 )
 
 find_package(OpenGL REQUIRED)
