@@ -23,6 +23,7 @@ add_executable(OpenGLProjeto
     src/shader.cpp
     src/mesh.cpp
     src/formas.cpp
+    src/window.cpp
     Libraries/glad/src/glad.c
 )
 
