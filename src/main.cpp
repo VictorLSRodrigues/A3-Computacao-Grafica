@@ -2,6 +2,7 @@
 #include "shader.h"
 #include "mesh.h"
 #include "formas.h"
+#include "menu.h"
 #include <iostream>
 
 int main()
@@ -25,13 +26,21 @@ int main()
         return -1;
     }
 
+    Menu menu;
+    if (!menu.criar())
+        return -1;
+
     while (!janela.deveFechar())
     {
+        menu.atualizar(janela);
+
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader.usar();
         triangulo.desenhar();
+
+        menu.desenhar(janela); // por cima de tudo, só aparece se estiver aberto
 
         janela.trocarBuffers();
         janela.processarEventos();

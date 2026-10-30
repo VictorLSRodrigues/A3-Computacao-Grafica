@@ -1,4 +1,6 @@
 #include "window.h"
+#include <algorithm>
+#include <iterator>
 
 #include <iostream>
 
@@ -12,6 +14,43 @@ void Window::aoRedimensionar(GLFWwindow *janela, int largura, int altura)
         self->largura = largura;
         self->altura = altura;
     }
+}
+
+void Window::aoTeclar(GLFWwindow *janela, int tecla, int /*scancode*/, int acao, int /*mods*/)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
+    if (!self || tecla < 0 || tecla > GLFW_KEY_LAST)
+        return;
+
+    if (acao == GLFW_PRESS)
+    {
+        self->teclas[tecla] = true;
+        self->teclasNoQuadro[tecla] = true;
+    }
+    else if (acao == GLFW_RELEASE)
+    {
+        self->teclas[tecla] = false;
+    }
+}
+
+void Window::aoMoverMouse(GLFWwindow *janela, double x, double y)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
+    if (self)
+    {
+        self->mouseX = x;
+        self->mouseY = y;
+    }
+}
+
+void Window::aoClicarMouse(GLFWwindow *janela, int botao, int acao, int /*mods*/)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
+    if (!self || botao < 0 || botao > GLFW_MOUSE_BUTTON_LAST)
+        return;
+
+    if (acao == GLFW_PRESS)
+        self->cliquesNoQuadro[botao] = true;
 }
 
 bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int alturaJanela)
@@ -67,6 +106,11 @@ bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int al
     glfwSetWindowUserPointer(janela, this);
     glfwSetFramebufferSizeCallback(janela, aoRedimensionar);
 
+    glfwSetKeyCallback(janela, aoTeclar);
+    glfwSetCursorPosCallback(janela, aoMoverMouse);
+    glfwSetMouseButtonCallback(janela, aoClicarMouse);
+    glfwGetCursorPos(janela, &mouseX, &mouseY);
+
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << std::endl;
     return true;
 }
@@ -74,7 +118,14 @@ bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int al
 bool Window::deveFechar() const { return glfwWindowShouldClose(janela); }
 void Window::fechar() const { glfwSetWindowShouldClose(janela, GLFW_TRUE); }
 void Window::trocarBuffers() const { glfwSwapBuffers(janela); }
-void Window::processarEventos() const { glfwPollEvents(); }
+
+void Window::processarEventos()
+{
+    // Limpa o "aconteceu neste quadro" do quadro anterior, depois lê os eventos novos.
+    std::fill(std::begin(teclasNoQuadro), std::end(teclasNoQuadro), false);
+    std::fill(std::begin(cliquesNoQuadro), std::end(cliquesNoQuadro), false);
+    glfwPollEvents();
+}
 
 void Window::limpar()
 {

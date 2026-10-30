@@ -102,3 +102,13 @@ bool Shader::criarDeArquivos(const std::string &caminhoVertex, const std::string
 
     return criar(vertexFonte.c_str(), fragmentFonte.c_str());
 }
+
+void Shader::setVec2(const char* nome, float x, float y) const
+{
+    glUniform2f(glGetUniformLocation(programa, nome), x, y);
+}
+
+void Shader::setVec4(const char* nome, float x, float y, float z, float w) const
+{
+    glUniform4f(glGetUniformLocation(programa, nome), x, y, z, w);
+}

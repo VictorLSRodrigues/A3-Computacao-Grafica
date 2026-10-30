@@ -11,4 +11,18 @@ std::vector<float> formas::triangulo(float lado)
         -lado / 2.0f, -altura / 3.0f,        0.0f,
          lado / 2.0f, -altura / 3.0f,        0.0f,
          0.0f,         2.0f * altura / 3.0f, 0.0f};
+
+         
+}
+
+std::vector<float> formas::retangulo()
+{
+    return {
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+        1.0f, 1.0f,
+
+        0.0f, 0.0f,
+        1.0f, 1.0f,
+        0.0f, 1.0f};
 }
