@@ -9,6 +9,12 @@ private:
     GLuint programa = 0;
 
 public:
+    Shader() = default;
+    ~Shader() { limpar(); }
+
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+
     bool criar(const char* vertexFonte, const char* fragmentFonte);
     bool criarDeArquivos(const std::string& caminhoVertex, const std::string& caminhoFragment);
     void usar() const;

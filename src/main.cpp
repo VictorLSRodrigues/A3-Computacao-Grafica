@@ -59,42 +59,44 @@ int main()
     // Mostra no terminal qual versão do OpenGL está rodando.
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << std::endl;
 
-    // O Shader diz COMO desenhar (cor e posição).
-    Shader shader;
-    if (!shader.criarDeArquivos(ASSETS_DIR "shaders/basic.vert",
-                                ASSETS_DIR "shaders/basic.frag"))
-    {
-        std::cout << "Falha ao criar o shader!" << std::endl;
-        return -1;
-    }
+    { // <-- abre o bloco: tudo aqui dentro morre antes de fechar a janela
 
-    Mesh triangulo;
-    if (!triangulo.criar(formas::triangulo(1.0f))) // <-- MUDOU (3): era criar(verticesTriangulo)
-    {
-        std::cout << "Falha ao criar o triangulo!" << std::endl;
-        return -1;
-    }
+        // O Shader diz COMO desenhar (cor e posição).
+        Shader shader;
+        if (!shader.criarDeArquivos(ASSETS_DIR "shaders/basic.vert",
+                                    ASSETS_DIR "shaders/basic.frag"))
+        {
+            std::cout << "Falha ao criar o shader!" << std::endl;
+            return -1;
+        }
 
-    // Loop principal: roda uma vez por quadro até a janela ser fechada.
-    while (!glfwWindowShouldClose(window))
-    {
-        // Pinta o fundo (r, g, b, transparência) e limpa a tela.
-        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        Mesh triangulo;
+        if (!triangulo.criar(formas::triangulo(1.0f))) // <-- MUDOU (3): era criar(verticesTriangulo)
+        {
+            std::cout << "Falha ao criar o triangulo!" << std::endl;
+            return -1;
+        }
 
-        // Escolhe o shader e desenha a forma com ele.
-        shader.usar();
-        triangulo.desenhar();
+        // Loop principal: roda uma vez por quadro até a janela ser fechada.
+        while (!glfwWindowShouldClose(window))
+        {
+            // Pinta o fundo (r, g, b, transparência) e limpa a tela.
+            glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
 
-        // Mostra o quadro pronto e processa cliques, teclas, etc.
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+            // Escolhe o shader e desenha a forma com ele.
+            shader.usar();
+            triangulo.desenhar();
+
+            // Mostra o quadro pronto e processa cliques, teclas, etc.
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        }
+
+    } // <-- fecha o bloco: aqui os destrutores rodam sozinhos
 
     // Limpeza ao sair: primeiro o que mora na placa de vídeo,
     // depois a janela (senão o OpenGL já não existe mais).
-    triangulo.limpar();
-    shader.limpar();
 
     glfwDestroyWindow(window);
     glfwTerminate();

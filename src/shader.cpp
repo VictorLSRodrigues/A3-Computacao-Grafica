@@ -69,6 +69,7 @@ void Shader::usar() const
 void Shader::limpar()
 {
     glDeleteProgram(programa);
+    programa = 0;
 }
 
 // Lê um arquivo de texto inteiro para dentro de uma string.

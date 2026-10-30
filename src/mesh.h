@@ -12,8 +12,12 @@ private:
     GLenum modo = GL_TRIANGLES;
 
 public:
-    // componentes: quantos números cada vértice tem (3 = x,y,z | 4 = x,y,z,w)
-    // modoDesenho: GL_TRIANGLES, GL_LINES, GL_POINTS, GL_LINE_LOOP...
+    Mesh() = default;
+    ~Mesh() { limpar(); }
+
+    Mesh(const Mesh&) = delete;
+    Mesh& operator=(const Mesh&) = delete;
+
     bool criar(const std::vector<float>& vertices,
                int componentes = 3,
                GLenum modoDesenho = GL_TRIANGLES);
