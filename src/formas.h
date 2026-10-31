@@ -15,7 +15,8 @@ namespace formas
     // Cada vértice possui 2 componentes: X e Y.
     std::vector<float> quadrado();
 
-    // Piramide
+    // Pirâmide com normais e UV: layout {3, 3, 2} (posição, normal, UV).
+    // Cada face tem os seus próprios vértices (16 no total).
     std::vector<float> piramide();
     std::vector<unsigned int> indicesPiramide();
 

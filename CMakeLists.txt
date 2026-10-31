@@ -25,6 +25,7 @@ add_executable(OpenGLProjeto
     src/formas.cpp
     src/window.cpp
     src/menu.cpp
+    src/texture.cpp
     Libraries/glad/src/glad.c
 )
 
