@@ -2,6 +2,7 @@
 
 #include <glad/glad.h>
 #include <string>
+#include <glm/glm.hpp>
 
 class Shader
 {
@@ -21,4 +22,6 @@ public:
     void limpar();
     void setVec2(const char *nome, float x, float y) const;
     void setVec4(const char *nome, float x, float y, float z, float w) const;
+    void setMat4(const char *nome, const glm::mat4 &matriz) const;
+
 };

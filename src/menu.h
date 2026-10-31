@@ -22,4 +22,5 @@ public:
     void atualizar(const Window& janela); // ESC abre e fecha
     void desenhar(const Window& janela);  // desenha o menu e trata os cliques
     bool estaAberto() const { return aberto; }
+    bool criarEbo();
 };

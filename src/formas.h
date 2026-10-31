@@ -14,4 +14,12 @@ namespace formas
     // Cria um quadrado com largura e altura de 0.3.
     // Cada vértice possui 2 componentes: X e Y.
     std::vector<float> quadrado();
+
+    // Piramide
+    std::vector<float> piramide();
+    std::vector<unsigned int> indicesPiramide();
+
+    // Cubo
+    std::vector<float> cubo();
+    std::vector<unsigned int> indicesCubo();
 }
