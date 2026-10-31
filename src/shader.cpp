@@ -60,7 +60,7 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
         programa = 0;
         return false;
     }
-
+    ID = programa;
     return true;
 }
 
@@ -75,6 +75,7 @@ void Shader::limpar()
 {
     glDeleteProgram(programa);
     programa = 0;
+    ID = 0;
 }
 
 // Lê um arquivo de texto inteiro para dentro de uma string.
@@ -123,5 +124,13 @@ void Shader::setMat4(const char* nome, const glm::mat4& matriz) const
         1,
         GL_FALSE,
         glm::value_ptr(matriz)
+    );
+}
+
+void Shader::Default()
+{
+    criarDeArquivos(
+        "shaders/cam.vert",
+        "shaders/cam.frag"
     );
 }

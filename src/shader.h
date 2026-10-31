@@ -10,6 +10,9 @@ private:
     GLuint programa = 0;
 
 public:
+
+    GLuint ID;
+
     Shader() = default;
     ~Shader() { limpar(); }
 
@@ -23,5 +26,6 @@ public:
     void setVec2(const char *nome, float x, float y) const;
     void setVec4(const char *nome, float x, float y, float z, float w) const;
     void setMat4(const char *nome, const glm::mat4 &matriz) const;
+    void Default();
 
 };

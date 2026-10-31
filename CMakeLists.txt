@@ -26,6 +26,7 @@ add_executable(OpenGLProjeto
     src/window.cpp
     src/menu.cpp
     src/texture.cpp
+    src/camera.cpp
     Libraries/glad/src/glad.c
 )
 

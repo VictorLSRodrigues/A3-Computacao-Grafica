@@ -5,6 +5,7 @@
 #include "formas.h"
 #include "menu.h"
 #include "texture.h"
+#include "camera.h"
 
 #include <iostream>
 
@@ -62,6 +63,14 @@ int main()
                                         ASSETS_DIR "shaders/texture_test.frag"))
         return -1;
 
+    // Shader novo: renderização com câmera
+    Shader shaderCamera;
+
+    if (!shaderCamera.criarDeArquivos(
+        ASSETS_DIR "shaders/cam.vert",
+        ASSETS_DIR "shaders/cam.frag"))
+    return -1;    
+
     // Quadrado de teste: posição (3) + normal (3) + UV (2) por vértice.
     std::vector<float> quadVertices = {
         -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
@@ -100,20 +109,26 @@ int main()
 
     // Controle de rotacao
     float rotation = 0.0f;
-    double prevTime = glfwGetTime();
+
+    Camera camera(
+    janela.getLargura(),
+    janela.getAltura(),
+    glm::vec3(0.0f, 0.0f, 2.0f)
+    );
+    
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
 
     // 7. Loop principal
     while (!janela.deveFechar())
     {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         menu.atualizar(janela);
 
-        // Controle de tempo
-        double currentTime = glfwGetTime();
-
-        float deltaTime = static_cast<float>(
-            currentTime - prevTime);
-
-        prevTime = currentTime;
+        camera.Inputs(janela.ponteiro(), deltaTime);
 
         // Atualizar rotacao
         rotation += 90.0f * deltaTime;
@@ -132,17 +147,22 @@ int main()
         glClear(
             GL_COLOR_BUFFER_BIT |
             GL_DEPTH_BUFFER_BIT);
+        
 
+            
         // 9. Ativar shader
-        shaderTextured.usar();
+        shaderCamera.usar();
 
-        shaderTextured.setMat4("model", model);
-        shaderTextured.setMat4("view", view);
-        shaderTextured.setMat4("proj", proj);
+        camera.Matrix(45.0f, 0.1f, 100.0f, shaderCamera, "camMatrix");
+
+        shaderCamera.setMat4("model", model);
 
         texture.bind(0);
         piramide.desenhar();
 
+       
+        shaderTextured.setMat4("model", model);
+        
         // Desenhar menu
         glDisable(GL_DEPTH_TEST);
 
