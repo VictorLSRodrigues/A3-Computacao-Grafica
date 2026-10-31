@@ -23,4 +23,8 @@ namespace formas
     // Cubo
     std::vector<float> cubo();
     std::vector<unsigned int> indicesCubo();
+
+    // Quadrado 3D: posição (3) + cor (3) + UV (2) + normal (3).
+    std::vector<float> quadradoTeste();
+    std::vector<unsigned int> indicesQuadradoTeste();
 }

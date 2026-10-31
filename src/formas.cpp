@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+//2D
+
 std::vector<float> formas::triangulo(float lado)
 {
     float altura = lado * std::sqrt(3.0f) / 2.0f;
@@ -41,40 +43,41 @@ std::vector<float> formas::retangulo()
 
 // Pirâmide: 8 floats por vértice = posição (3) + normal (3) + UV (2).
 // A base usa a imagem inteira. Cada face lateral usa um triângulo da imagem.
+
 std::vector<float> formas::piramide()
 {
-    // Normais das faces laterais: o vetor (1, 0.5) normalizado.
     const float n = 0.894427f;
     const float m = 0.447214f;
 
     return {
-        // Base (normal pra baixo)
-        -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,  // 0
-        -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // 1
-        0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,  // 2
-        0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,   // 3
+        // Base
+        -0.5f, -0.5f,  0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.83f, 0.70f, 0.44f,  1.0f, 1.0f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.83f, 0.70f, 0.44f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
 
         // Face esquerda
-        -0.5f, -0.5f, -0.5f, -n, m, 0.0f, 0.0f, 0.0f, // 4
-        -0.5f, -0.5f, 0.5f, -n, m, 0.0f, 1.0f, 0.0f,  // 5
-        0.0f, 0.5f, 0.0f, -n, m, 0.0f, 0.5f, 1.0f,    // 6
+        -0.5f, -0.5f, -0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f, -n, m, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.83f, 0.70f, 0.44f,  1.0f, 0.0f, -n, m, 0.0f,
+         0.0f,  0.5f,  0.0f,  0.92f, 0.86f, 0.76f,  0.5f, 1.0f, -n, m, 0.0f,
 
         // Face de trás
-        0.5f, -0.5f, -0.5f, 0.0f, m, -n, 0.0f, 0.0f,  // 7
-        -0.5f, -0.5f, -0.5f, 0.0f, m, -n, 1.0f, 0.0f, // 8
-        0.0f, 0.5f, 0.0f, 0.0f, m, -n, 0.5f, 1.0f,    // 9
+         0.5f, -0.5f, -0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f,  0.0f, m, -n,
+        -0.5f, -0.5f, -0.5f,  0.83f, 0.70f, 0.44f,  1.0f, 0.0f,  0.0f, m, -n,
+         0.0f,  0.5f,  0.0f,  0.92f, 0.86f, 0.76f,  0.5f, 1.0f,  0.0f, m, -n,
 
         // Face direita
-        0.5f, -0.5f, 0.5f, n, m, 0.0f, 0.0f, 0.0f,  // 10
-        0.5f, -0.5f, -0.5f, n, m, 0.0f, 1.0f, 0.0f, // 11
-        0.0f, 0.5f, 0.0f, n, m, 0.0f, 0.5f, 1.0f,   // 12
+         0.5f, -0.5f,  0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f,  n, m, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.83f, 0.70f, 0.44f,  1.0f, 0.0f,  n, m, 0.0f,
+         0.0f,  0.5f,  0.0f,  0.92f, 0.86f, 0.76f,  0.5f, 1.0f,  n, m, 0.0f,
 
         // Face da frente
-        -0.5f, -0.5f, 0.5f, 0.0f, m, n, 0.0f, 0.0f, // 13
-        0.5f, -0.5f, 0.5f, 0.0f, m, n, 1.0f, 0.0f,  // 14
-        0.0f, 0.5f, 0.0f, 0.0f, m, n, 0.5f, 1.0f    // 15
+        -0.5f, -0.5f,  0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f,  0.0f, m, n,
+         0.5f, -0.5f,  0.5f,  0.83f, 0.70f, 0.44f,  1.0f, 0.0f,  0.0f, m, n,
+         0.0f,  0.5f,  0.0f,  0.92f, 0.86f, 0.76f,  0.5f, 1.0f,  0.0f, m, n
     };
 }
+
 
 std::vector<unsigned int> formas::indicesPiramide()
 {
@@ -125,4 +128,23 @@ std::vector<unsigned int> formas::indicesCubo()
 
         // Baixo
         4, 5, 1, 4, 1, 0};
+}
+
+std::vector<float> formas::quadradoTeste()
+{
+    return {
+        // Posição          // Cor                // UV        // Normal
+        -0.5f, 0.0f,  0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f,  0.0f, -1.0f, 0.0f,
+        -0.5f, 0.0f, -0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 5.0f,  0.0f, -1.0f, 0.0f,
+         0.5f, 0.0f, -0.5f,  0.83f, 0.70f, 0.44f,  5.0f, 5.0f,  0.0f, -1.0f, 0.0f,
+         0.5f, 0.0f,  0.5f,  0.83f, 0.70f, 0.44f,  5.0f, 0.0f,  0.0f, -1.0f, 0.0f
+    };
+}
+
+std::vector<unsigned int> formas::indicesQuadradoTeste()
+{
+    return {
+        0, 1, 2,
+        0, 2, 3
+    };
 }
