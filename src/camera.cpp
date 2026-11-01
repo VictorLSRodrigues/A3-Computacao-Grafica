@@ -34,9 +34,9 @@ void Camera::Inputs(GLFWwindow* window, float deltaTime)
 {
     // Movimento da câmera
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        speed = 10.0f;
-    else
         speed = 5.0f;
+    else
+        speed = 1.5f;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         Position += speed * deltaTime * Orientation;

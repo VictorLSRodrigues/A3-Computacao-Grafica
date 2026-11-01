@@ -10,7 +10,7 @@ private:
     GLuint programa = 0;
 
 public:
-    GLuint ID;
+    GLuint ID = 0;
 
     Shader() = default;
     ~Shader() { limpar(); }
