@@ -36,7 +36,7 @@ int main()
     // 3. Carregar textura
     Texture texture;
 
-    if (!texture.load(ASSETS_DIR "textures/teste_uv.png"))
+    if (!texture.load(ASSETS_DIR "textures/terra.png"))
         return -1;
 
     // 4. Shader da pirâmide com iluminação
