@@ -22,7 +22,8 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
     if (!sucesso)
     {
         glGetShaderInfoLog(vertex, 512, nullptr, log);
-        std::cout << "Erro no vertex shader:\n" << log << std::endl;
+        std::cout << "Erro no vertex shader:\n"
+                  << log << std::endl;
         glDeleteShader(vertex);
         return false;
     }
@@ -35,7 +36,8 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
     if (!sucesso)
     {
         glGetShaderInfoLog(fragment, 512, nullptr, log);
-        std::cout << "Erro no fragment shader:\n" << log << std::endl;
+        std::cout << "Erro no fragment shader:\n"
+                  << log << std::endl;
         glDeleteShader(vertex);
         glDeleteShader(fragment);
         return false;
@@ -55,7 +57,8 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
     if (!sucesso)
     {
         glGetProgramInfoLog(programa, 512, nullptr, log);
-        std::cout << "Erro ao ligar o programa:\n" << log << std::endl;
+        std::cout << "Erro ao ligar o programa:\n"
+                  << log << std::endl;
         glDeleteProgram(programa);
         programa = 0;
         return false;
@@ -105,22 +108,22 @@ bool Shader::criarDeArquivos(const std::string &caminhoVertex, const std::string
     return criar(vertexFonte.c_str(), fragmentFonte.c_str());
 }
 
-void Shader::setVec2(const char* nome, float x, float y) const
+void Shader::setVec2(const char *nome, float x, float y) const
 {
     glUniform2f(glGetUniformLocation(programa, nome), x, y);
 }
 
-void Shader::setVec3(const char* nome, float x, float y, float z) const
+void Shader::setVec3(const char *nome, float x, float y, float z) const
 {
     glUniform3f(glGetUniformLocation(programa, nome), x, y, z);
 }
 
-void Shader::setVec4(const char* nome, float x, float y, float z, float w) const
+void Shader::setVec4(const char *nome, float x, float y, float z, float w) const
 {
     glUniform4f(glGetUniformLocation(programa, nome), x, y, z, w);
 }
 
-void Shader::setMat4(const char* nome, const glm::mat4& matriz) const
+void Shader::setMat4(const char *nome, const glm::mat4 &matriz) const
 {
     GLint localizacao = glGetUniformLocation(programa, nome);
 
@@ -128,14 +131,17 @@ void Shader::setMat4(const char* nome, const glm::mat4& matriz) const
         localizacao,
         1,
         GL_FALSE,
-        glm::value_ptr(matriz)
-    );
+        glm::value_ptr(matriz));
+}
+
+void Shader::setInt(const char *nome, int valor) const
+{
+    glUniform1i(glGetUniformLocation(programa, nome), valor);
 }
 
 void Shader::Default()
 {
     criarDeArquivos(
         "shaders/cam.vert",
-        "shaders/cam.frag"
-    );
+        "shaders/cam.frag");
 }

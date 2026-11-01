@@ -10,7 +10,6 @@ private:
     GLuint programa = 0;
 
 public:
-
     GLuint ID;
 
     Shader() = default;
@@ -27,6 +26,6 @@ public:
     void setVec3(const char *nome, float x, float y, float z) const;
     void setVec4(const char *nome, float x, float y, float z, float w) const;
     void setMat4(const char *nome, const glm::mat4 &matriz) const;
+    void setInt(const char *nome, int valor) const;
     void Default();
-
 };

@@ -14,6 +14,7 @@ in vec3 crntPos;
 
 // Gets the Texture Unit from the main function
 uniform sampler2D tex0;
+uniform sampler2D specular0;
 // Gets the color of the light from the main function
 uniform vec4 lightColor;
 // Gets the position of the light from the main function
@@ -39,9 +40,9 @@ void main()
     float specular = specAmount * specularLight;
 
     // outputs final color
-    vec4 texColor = texture(tex0, texCoord);
+    vec3 diffuseColor = texture(tex0, texCoord).rgb;
+    float specMask = texture(specular0, texCoord).r;
 
-    vec3 lighting = lightColor.rgb * (diffuse + ambient + specular);
-
-    FragColor = vec4(texColor.rgb * lighting, 1.0f);
+    vec3 result = diffuseColor * (diffuse + ambient) + specMask * specular;
+    FragColor = vec4(result * lightColor.rgb, 1.0f);
 }

@@ -23,11 +23,11 @@ int main()
     Mesh piramide;
 
     if (!piramide.criarEbo(
-        formas::piramide(),
-        formas::indicesPiramide(),
-        3,
-        GL_TRIANGLES,
-        {3, 3, 2, 3}))
+            formas::piramide(),
+            formas::indicesPiramide(),
+            3,
+            GL_TRIANGLES,
+            {3, 3, 2, 3}))
     {
         std::cout << "Falha ao criar a piramide!" << std::endl;
         return -1;
@@ -39,20 +39,28 @@ int main()
     if (!texture.load(ASSETS_DIR "textures/terra.png"))
         return -1;
 
+    Texture specular;
+    if (!specular.load(ASSETS_DIR "textures/terraSpecular.png"))
+        return -1;
+
     // 4. Shader da pirâmide com iluminação
     Shader shaderCamera;
 
     if (!shaderCamera.criarDeArquivos(
-        ASSETS_DIR "shaders/cam.vert",
-        ASSETS_DIR "shaders/cam.frag"))
+            ASSETS_DIR "shaders/cam.vert",
+            ASSETS_DIR "shaders/cam.frag"))
         return -1;
+
+    shaderCamera.usar();
+    shaderCamera.setInt("tex0", 0);
+    shaderCamera.setInt("specular0", 1);
 
     // 5. Shader da fonte de luz
     Shader shaderLuz;
 
     if (!shaderLuz.criarDeArquivos(
-        ASSETS_DIR "shaders/light.vert",
-        ASSETS_DIR "shaders/light.frag"))
+            ASSETS_DIR "shaders/light.vert",
+            ASSETS_DIR "shaders/light.frag"))
     {
         std::cout << "Falha ao criar o shader da luz!" << std::endl;
         return -1;
@@ -62,11 +70,11 @@ int main()
     Mesh quad;
 
     if (!quad.criarEbo(
-        formas::quadradoTeste(),
-        formas::indicesQuadradoTeste(),
-        3,
-        GL_TRIANGLES,
-        {3, 3, 2, 3}))
+            formas::quadradoTeste(),
+            formas::indicesQuadradoTeste(),
+            3,
+            GL_TRIANGLES,
+            {3, 3, 2, 3}))
     {
         std::cout << "Erro ao criar o quadrado!" << std::endl;
         return -1;
@@ -85,8 +93,7 @@ int main()
     Camera camera(
         janela.getLargura(),
         janela.getAltura(),
-        glm::vec3(0.0f, 0.0f, 2.0f)
-    );
+        glm::vec3(0.0f, 0.0f, 2.0f));
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -96,11 +103,11 @@ int main()
     Mesh luz;
 
     if (!luz.criarEbo(
-        formas::cubo(),
-        formas::indicesCubo(),
-        3,
-        GL_TRIANGLES,
-        {3}))
+            formas::cubo(),
+            formas::indicesCubo(),
+            3,
+            GL_TRIANGLES,
+            {3}))
     {
         std::cout << "Erro ao criar a malha da luz." << std::endl;
         return -1;
@@ -178,6 +185,7 @@ int main()
         shaderCamera.setMat4("model", model);
 
         texture.bind(0);
+        specular.bind(1);
         piramide.desenhar();
 
         // 14. Desenhar cubo da luz
