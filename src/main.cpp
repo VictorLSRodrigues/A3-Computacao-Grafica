@@ -131,9 +131,11 @@ int main()
         lastFrame = currentFrame;
 
         menu.atualizar(janela);
-
-        camera.Inputs(janela.ponteiro(), deltaTime);
-
+        if (menu.estaAberto())
+            glfwSetInputMode(janela.ponteiro(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        else
+            camera.Inputs(janela.ponteiro(), deltaTime);
+            
         // Atualizar rotação
         rotation += 90.0f * deltaTime;
 
