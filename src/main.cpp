@@ -16,7 +16,7 @@ int main()
     // 1. Criar janela
     Window janela;
 
-    if (!janela.criar("OpenGL - Triangulo 3D"))
+    if (!janela.criar("OpenGL - RotorGrafico"))
         return -1;
 
     // 2. Criar pirâmide
@@ -66,31 +66,18 @@ int main()
         return -1;
     }
 
-    // 6. Criar quadrado de teste
-    Mesh quad;
 
-    if (!quad.criarEbo(
-            formas::quadradoTeste(),
-            formas::indicesQuadradoTeste(),
-            3,
-            GL_TRIANGLES,
-            {3, 3, 2, 3}))
-    {
-        std::cout << "Erro ao criar o quadrado!" << std::endl;
-        return -1;
-    }
-
-    // 7. Ativar profundidade
+    // 6. Ativar profundidade
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    // 8. Criar menu
+    // 7. Criar menu
     Menu menu;
 
     if (!menu.criar())
         return -1;
 
-    // 9. Configurar câmera
+    // 8. Configurar câmera
     Camera camera(
         janela.getLargura(),
         janela.getAltura(),
@@ -100,7 +87,7 @@ int main()
     float lastFrame = 0.0f;
     float rotation = 0.0f;
 
-    // 10. Criar malha da luz
+    // 9. Criar malha da luz
     Mesh luz;
 
     if (!luz.criarEbo(
@@ -114,7 +101,7 @@ int main()
         return -1;
     }
 
-    // 11. Configuração da iluminação
+    // 10. Configuração da iluminação
     glm::vec4 lightColor(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec3 lightPos(0.5f, 0.5f, 0.5f);
 
@@ -125,7 +112,7 @@ int main()
     glm::vec3 pyramidPos(0.0f, 0.0f, 0.0f);
 
     lastFrame = glfwGetTime();
-    // 12. Loop principal
+    // 11. Loop principal
     while (!janela.deveFechar())
     {
         float currentFrame = glfwGetTime();
@@ -227,8 +214,6 @@ int main()
 
     // 16. Liberar recursos
     piramide.limpar();
-    luz.limpar();
-    quad.limpar();
 
     return 0;
 }

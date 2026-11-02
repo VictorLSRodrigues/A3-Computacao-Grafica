@@ -129,22 +129,3 @@ std::vector<unsigned int> formas::indicesCubo()
         // Baixo
         4, 5, 1, 4, 1, 0};
 }
-
-std::vector<float> formas::quadradoTeste()
-{
-    return {
-        // Posição          // Cor                // UV        // Normal
-        -0.5f, 0.0f,  0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 0.0f,  0.0f, -1.0f, 0.0f,
-        -0.5f, 0.0f, -0.5f,  0.83f, 0.70f, 0.44f,  0.0f, 5.0f,  0.0f, -1.0f, 0.0f,
-         0.5f, 0.0f, -0.5f,  0.83f, 0.70f, 0.44f,  5.0f, 5.0f,  0.0f, -1.0f, 0.0f,
-         0.5f, 0.0f,  0.5f,  0.83f, 0.70f, 0.44f,  5.0f, 0.0f,  0.0f, -1.0f, 0.0f
-    };
-}
-
-std::vector<unsigned int> formas::indicesQuadradoTeste()
-{
-    return {
-        0, 1, 2,
-        0, 2, 3
-    };
-}
