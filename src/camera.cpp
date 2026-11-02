@@ -8,7 +8,7 @@ Camera::Camera(int width, int height, glm::vec3 position)
     Position = position;
 }
 
-void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader& shader, const char* uniform)
+void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader &shader, const char *uniform)
 {
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
@@ -19,18 +19,16 @@ void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader& shade
         glm::radians(FOVdeg),
         static_cast<float>(width) / static_cast<float>(height),
         nearPlane,
-        farPlane
-    );
+        farPlane);
 
     glUniformMatrix4fv(
         glGetUniformLocation(shader.ID, uniform),
         1,
         GL_FALSE,
-        glm::value_ptr(projection * view)
-    );
+        glm::value_ptr(projection * view));
 }
 
-void Camera::Inputs(GLFWwindow* window, float deltaTime)
+void Camera::Inputs(GLFWwindow *window, float deltaTime)
 {
     // Movimento da câmera
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
@@ -56,7 +54,6 @@ void Camera::Inputs(GLFWwindow* window, float deltaTime)
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
         Position += speed * deltaTime * -Up;
 
-
     // Controle do mouse
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
     {
@@ -79,8 +76,7 @@ void Camera::Inputs(GLFWwindow* window, float deltaTime)
         glm::vec3 newOrientation = glm::rotate(
             Orientation,
             glm::radians(-rotX),
-            glm::normalize(glm::cross(Orientation, Up))
-        );
+            glm::normalize(glm::cross(Orientation, Up)));
 
         if (!(glm::angle(newOrientation, Up) <= glm::radians(5.0f) ||
               glm::angle(newOrientation, -Up) <= glm::radians(5.0f)))
@@ -91,8 +87,7 @@ void Camera::Inputs(GLFWwindow* window, float deltaTime)
         Orientation = glm::rotate(
             Orientation,
             glm::radians(-rotY),
-            Up
-        );
+            Up);
 
         glfwSetCursorPos(window, width / 2, height / 2);
     }
@@ -101,4 +96,15 @@ void Camera::Inputs(GLFWwindow* window, float deltaTime)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         firstClick = true;
     }
+}
+
+// Atualiza o tamanho usado na projeção. Ignora tamanhos inválidos
+// (janela minimizada tem altura 0), mantendo o último tamanho bom.
+void Camera::setSize(int newWidth, int newHeight)
+{
+    if (newWidth <= 0 || newHeight <= 0)
+        return;
+
+    width = newWidth;
+    height = newHeight;
 }

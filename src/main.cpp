@@ -66,7 +66,6 @@ int main()
         return -1;
     }
 
-
     // 6. Ativar profundidade
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -84,7 +83,7 @@ int main()
         glm::vec3(0.0f, 0.0f, 2.0f));
 
     float deltaTime = 0.0f;
-    float lastFrame = 0.0f;
+    double lastFrame = 0.0f;
     float rotation = 0.0f;
 
     // 9. Criar malha da luz
@@ -115,7 +114,7 @@ int main()
     // 11. Loop principal
     while (!janela.deveFechar())
     {
-        float currentFrame = glfwGetTime();
+        double currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         // Limita o deltaTime a 0.1 segundos
         if (deltaTime > 0.1f)
@@ -140,13 +139,14 @@ int main()
             glm::radians(rotation),
             glm::vec3(0.0f, 1.0f, 0.0f));
 
-
         // Limpar a tela e o buffer de profundidade
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 
         glClear(
             GL_COLOR_BUFFER_BIT |
             GL_DEPTH_BUFFER_BIT);
+
+        camera.setSize(janela.getLargura(), janela.getAltura());
 
         // 13. Desenhar pirâmide
         shaderCamera.usar();
@@ -204,7 +204,7 @@ int main()
 
         luz.desenhar();
 
-         // 15. Desenhar menu (por cima de tudo)
+        // 15. Desenhar menu (por cima de tudo)
         menu.desenhar(janela);
 
         // Atualizar janela

@@ -68,6 +68,7 @@ bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int al
     // OpenGL 3.3 no perfil Core.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_SAMPLES, 4); // suaviza as bordas (MSAA 4x)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Em tela cheia, passa o monitor e usa a resolução dele.
@@ -99,9 +100,8 @@ bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int al
         return false;
     }
 
-    largura = larguraJanela;
-    altura = alturaJanela;
-
+    glfwGetFramebufferSize(janela, &largura, &altura);
+    
     // Guarda "this" na janela pra o callback conseguir atualizar largura/altura.
     glfwSetWindowUserPointer(janela, this);
     glfwSetFramebufferSizeCallback(janela, aoRedimensionar);

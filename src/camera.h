@@ -31,6 +31,7 @@ class Camera
 
     void Matrix(float FOVdeg, float nearPlane, float farPlane, Shader& shader, const char* uniform);
     void Inputs(GLFWwindow* window, float deltaTime);
+    void setSize(int newWidth, int newHeight);
 
 
 };
