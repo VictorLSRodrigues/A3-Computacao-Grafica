@@ -123,11 +123,15 @@ int main()
 
     glm::vec3 pyramidPos(0.0f, 0.0f, 0.0f);
 
+    lastFrame = glfwGetTime();
     // 12. Loop principal
     while (!janela.deveFechar())
     {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
+        // Limita o deltaTime a 0.1 segundos
+        if (deltaTime > 0.1f)
+            deltaTime = 0.1f;
         lastFrame = currentFrame;
 
         menu.atualizar(janela);
@@ -135,7 +139,7 @@ int main()
             glfwSetInputMode(janela.ponteiro(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         else
             camera.Inputs(janela.ponteiro(), deltaTime);
-            
+
         // Atualizar rotação
         rotation += 90.0f * deltaTime;
 
