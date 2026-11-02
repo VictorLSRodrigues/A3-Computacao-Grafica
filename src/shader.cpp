@@ -142,6 +142,6 @@ void Shader::setInt(const char *nome, int valor) const
 void Shader::Default()
 {
     criarDeArquivos(
-        "shaders/cam.vert",
-        "shaders/cam.frag");
+        "shaders/default.vert",
+        "shaders/default.frag");
 }

@@ -14,6 +14,29 @@ bool Texture::load(const std::string& path)
 
     int channels = 0;
     unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
+    std::cout << "TEXTURA CARREGADA: " << path
+          << " | " << width << "x" << height
+          << " | Canais: " << channels
+          << std::endl;
+    if (channels >= 3)
+{
+    bool temCor = false;
+
+    for (size_t i = 0; i < (size_t)width * height * channels; i += channels)
+    {
+        if (data[i] != data[i + 1] || data[i + 1] != data[i + 2])
+        {
+            temCor = true;
+            break;
+        }
+    }
+
+    std::cout << "A imagem possui cores? "
+              << (temCor ? "SIM" : "NAO - ESCALA DE CINZA")
+              << std::endl;
+}
+
+
     if (!data)
     {
         std::cout << "Não consegui carregar a textura: " << path << "\n"
@@ -48,11 +71,17 @@ bool Texture::load(const std::string& path)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+std::cout << "Textura: " << path << std::endl;
+std::cout << "Largura: " << width << std::endl;
+std::cout << "Altura: " << height << std::endl;
+std::cout << "Canais: " << channels << std::endl;
+
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(data); // a cópia na placa de vídeo basta
 
     return true;
 }
+
 
 void Texture::bind(unsigned int unit) const
 {

@@ -19,6 +19,7 @@ int main()
     if (!janela.criar("OpenGL - Triangulo 3D"))
         return -1;
 
+       
     // 2. Criar pirâmide
     Mesh piramide;
 
@@ -47,8 +48,8 @@ int main()
     Shader shaderCamera;
 
     if (!shaderCamera.criarDeArquivos(
-            ASSETS_DIR "shaders/cam.vert",
-            ASSETS_DIR "shaders/cam.frag"))
+            ASSETS_DIR "shaders/default.vert",
+            ASSETS_DIR "shaders/default.frag"))
         return -1;
 
     shaderCamera.usar();
@@ -153,11 +154,28 @@ int main()
             glm::vec3(0.0f, 1.0f, 0.0f));
 
         // Limpar tela
-        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+        // Desenhar menu 2D
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+                
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glClear(
-            GL_COLOR_BUFFER_BIT |
-            GL_DEPTH_BUFFER_BIT);
+        menu.desenhar(janela);
+
+        // Restaurar estado 3D
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+
+// Limpar a tela e o buffer de profundidade
+glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+
+glClear(
+    GL_COLOR_BUFFER_BIT |
+    GL_DEPTH_BUFFER_BIT);
 
         // 13. Desenhar pirâmide
         shaderCamera.usar();
@@ -216,11 +234,16 @@ int main()
         luz.desenhar();
 
         // 15. Desenhar menu
-        glDisable(GL_DEPTH_TEST);
+        // Renderização do menu 2D
+glDepthMask(GL_FALSE);
+glDisable(GL_DEPTH_TEST);
 
-        menu.desenhar(janela);
+menu.desenhar(janela);
 
-        glEnable(GL_DEPTH_TEST);
+// Restaurar estado para os próximos desenhos
+glEnable(GL_DEPTH_TEST);
+glDepthMask(GL_TRUE);
+glDisable(GL_BLEND);
 
         // Atualizar janela
         janela.trocarBuffers();
