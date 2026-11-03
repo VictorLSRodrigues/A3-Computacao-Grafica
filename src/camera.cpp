@@ -28,47 +28,45 @@ void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader &shade
         glm::value_ptr(projection * view));
 }
 
-void Camera::Inputs(GLFWwindow *window, float deltaTime)
+void Camera::Inputs(Window& window, float deltaTime)
 {
     // Movimento da câmera
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_LEFT_SHIFT))
         speed = 5.0f;
     else
         speed = 1.5f;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_W))
         Position += speed * deltaTime * Orientation;
 
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_A))
         Position += speed * deltaTime * -glm::normalize(glm::cross(Orientation, Up));
 
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_S))
         Position += speed * deltaTime * -Orientation;
 
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_D))
         Position += speed * deltaTime * glm::normalize(glm::cross(Orientation, Up));
 
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_SPACE))
         Position += speed * deltaTime * Up;
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+    if (window.teclaSegurada(GLFW_KEY_LEFT_CONTROL))
         Position += speed * deltaTime * -Up;
 
     // Controle do mouse
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+    if (window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        window.setCursorMode(Window::CursorMode::Hidden);
 
         if (firstClick)
         {
-            glfwSetCursorPos(window, width / 2, height / 2);
+            window.setMousePosition(width / 2, height / 2);
             firstClick = false;
         }
 
-        double mouseX;
-        double mouseY;
-
-        glfwGetCursorPos(window, &mouseX, &mouseY);
+        double mouseX = window.getMouseX();
+        double mouseY = window.getMouseY();
 
         float rotX = sensitivity * static_cast<float>(mouseY - (height / 2)) / height;
         float rotY = sensitivity * static_cast<float>(mouseX - (width / 2)) / width;
@@ -89,11 +87,11 @@ void Camera::Inputs(GLFWwindow *window, float deltaTime)
             glm::radians(-rotY),
             Up);
 
-        glfwSetCursorPos(window, width / 2, height / 2);
+        window.setMousePosition(width / 2, height / 2);
     }
     else
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        window.setCursorMode(Window::CursorMode::Normal);
         firstClick = true;
     }
 }

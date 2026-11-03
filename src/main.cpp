@@ -123,9 +123,9 @@ int main()
 
         menu.atualizar(janela);
         if (menu.estaAberto())
-            glfwSetInputMode(janela.ponteiro(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            janela.setCursorMode(Window::CursorMode::Normal);
         else
-            camera.Inputs(janela.ponteiro(), deltaTime);
+            camera.Inputs(janela, deltaTime);
 
         // Atualizar rotação
         rotation += 90.0f * deltaTime;

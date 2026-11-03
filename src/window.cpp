@@ -50,7 +50,14 @@ void Window::aoClicarMouse(GLFWwindow *janela, int botao, int acao, int /*mods*/
         return;
 
     if (acao == GLFW_PRESS)
+    {
+        self->mouseButtons[botao] = true;
         self->cliquesNoQuadro[botao] = true;
+    }
+    else if (acao == GLFW_RELEASE)
+    {
+        self->mouseButtons[botao] = false;
+    }
 }
 
 bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int alturaJanela)
@@ -101,7 +108,7 @@ bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int al
     }
 
     glfwGetFramebufferSize(janela, &largura, &altura);
-    
+
     // Guarda "this" na janela pra o callback conseguir atualizar largura/altura.
     glfwSetWindowUserPointer(janela, this);
     glfwSetFramebufferSizeCallback(janela, aoRedimensionar);
@@ -139,4 +146,22 @@ void Window::limpar()
         glfwTerminate();
         glfwIniciado = false;
     }
+}
+
+void Window::setCursorMode(CursorMode mode)
+{
+    int value = GLFW_CURSOR_NORMAL;
+    if (mode == CursorMode::Hidden)
+        value = GLFW_CURSOR_HIDDEN;
+    else if (mode == CursorMode::Disabled)
+        value = GLFW_CURSOR_DISABLED;
+
+    glfwSetInputMode(janela, GLFW_CURSOR, value);
+}
+
+void Window::setMousePosition(double x, double y)
+{
+    glfwSetCursorPos(janela, x, y);
+    mouseX = x; // já guarda o valor novo, sem esperar o GLFW avisar
+    mouseY = y;
 }

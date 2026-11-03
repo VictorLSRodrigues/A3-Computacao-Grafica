@@ -15,6 +15,7 @@ private:
     bool teclas[GLFW_KEY_LAST + 1] = {};         // true enquanto a tecla está segurada
     bool teclasNoQuadro[GLFW_KEY_LAST + 1] = {}; // true só no quadro em que apertou
     bool cliquesNoQuadro[GLFW_MOUSE_BUTTON_LAST + 1] = {};
+    bool mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {}; // segurado agora
     double mouseX = 0.0;
     double mouseY = 0.0;
 
@@ -46,11 +47,17 @@ public:
     bool mouseClicou(int botao) const { return botao >= 0 && botao <= GLFW_MOUSE_BUTTON_LAST && cliquesNoQuadro[botao]; }
     double getMouseX() const { return mouseX; }
     double getMouseY() const { return mouseY; }
-    
+
     void limpar();
 
     GLFWwindow *ponteiro() const { return janela; }
     int getLargura() const { return largura; }
     int getAltura() const { return altura; }
     float aspecto() const { return altura > 0 ? static_cast<float>(largura) / altura : 1.0f; }
+    
+    enum class CursorMode { Normal, Hidden, Disabled };
+
+    bool mouseDown(int button) const { return button >= 0 && button <= GLFW_MOUSE_BUTTON_LAST && mouseButtons[button]; }
+    void setCursorMode(CursorMode mode);
+    void setMousePosition(double x, double y);
 };
