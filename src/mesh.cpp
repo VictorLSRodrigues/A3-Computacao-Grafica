@@ -4,7 +4,7 @@
 
 // Soma os componentes de cada atributo. Layout vazio = formato antigo.
 // Devolve 0 se algum atributo tiver menos de 1 ou mais de 4 componentes.
-int Mesh::computeStride(int componentes, const std::vector<int>& layout)
+int Mesh::computeStride(int componentes, const std::vector<int> &layout)
 {
     if (layout.empty())
         return (componentes >= 1 && componentes <= 4) ? componentes : 0;
@@ -20,7 +20,7 @@ int Mesh::computeStride(int componentes, const std::vector<int>& layout)
 }
 
 // Explica à placa de vídeo como ler cada atributo do vértice (posição, normal, UV...).
-void Mesh::setupAttributes(int componentes, const std::vector<int>& layout)
+void Mesh::setupAttributes(int componentes, const std::vector<int> &layout)
 {
     const std::vector<int> atributos = layout.empty() ? std::vector<int>{componentes} : layout;
 
@@ -42,54 +42,22 @@ void Mesh::setupAttributes(int componentes, const std::vector<int>& layout)
 bool Mesh::criar(const std::vector<float> &vertices, int componentes, GLenum modoDesenho,
                  const std::vector<int> &layout)
 {
-    // 0. checar se os dados fazem sentido antes de mexer na placa de vídeo
-    const int stride = computeStride(componentes, layout);
-    if (stride == 0)
-    {
-        std::cout << "Mesh: componentes deve ser de 1 a 4 (em cada atributo)." << std::endl;
-        return false;
-    }
-    const size_t perVertex = static_cast<size_t>(stride);
-    if (vertices.empty() || vertices.size() % perVertex != 0)
-    {
-        std::cout << "Mesh: lista vazia ou tamanho incompatível com " << stride
-                  << " floats por vértice." << std::endl;
-        return false;
-    }
-
-    limpar(); // se já havia uma malha aqui, apaga antes de criar a nova
-
-    // 1. guardar a configuração
-    quantidadeVertices = static_cast<GLsizei>(vertices.size() / perVertex);
-    modo = modoDesenho;
-
-    // 2. criar o VAO e o VBO
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    // 3. selecionar os dois (começa a gravar no VAO)
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    // 4. enviar os números para a placa de vídeo
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
-    // 5. explicar como ler cada atributo
-    setupAttributes(componentes, layout);
-
-    // 6. soltar os binds
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    return true;
+    return upload(vertices, {}, componentes, modoDesenho, layout);
 }
 
-bool Mesh::criarEbo(
-    const std::vector<float> &vertices,
-    const std::vector<unsigned int> &indices,
-    int componentes,
-    GLenum modoDesenho,
-    const std::vector<int> &layout)
+bool Mesh::criarEbo(const std::vector<float> &vertices, const std::vector<unsigned int> &indices,
+                    int componentes, GLenum modoDesenho, const std::vector<int> &layout)
+{
+    if (indices.empty())
+    {
+        std::cout << "Mesh: lista de indices vazia." << std::endl;
+        return false;
+    }
+    return upload(vertices, indices, componentes, modoDesenho, layout);
+}
+
+bool Mesh::upload(const std::vector<float> &vertices, const std::vector<unsigned int> &indices,
+                  int componentes, GLenum modoDesenho, const std::vector<int> &layout)
 {
     // 1. Verificar os dados
     const int stride = computeStride(componentes, layout);
@@ -102,68 +70,58 @@ bool Mesh::criarEbo(
 
     if (vertices.empty() || vertices.size() % perVertex != 0)
     {
-        std::cout << "Mesh: vertices invalidos." << std::endl;
+        std::cout << "Mesh: lista vazia ou tamanho incompatível com " << stride
+                  << " floats por vértice." << std::endl;
         return false;
     }
 
-    if (indices.empty())
-    {
-        std::cout << "Mesh: lista de indices vazia." << std::endl;
-        return false;
-    }
+    const size_t vertexCount = vertices.size() / perVertex;
+    const bool indexed = !indices.empty();
 
-    if (indices.size() > static_cast<size_t>(-1) / sizeof(unsigned int))
+    if (indexed)
     {
-        std::cout << "Mesh: quantidade de indices muito grande." << std::endl;
-        return false;
-    }
-
-    for (unsigned int indice : indices)
-    {
-        if (indice >= vertices.size() / perVertex)
+        for (unsigned int index : indices)
         {
-            std::cout << "Mesh: indice fora do intervalo dos vertices." << std::endl;
-            return false;
+            if (index >= vertexCount)
+            {
+                std::cout << "Mesh: indice fora do intervalo dos vertices." << std::endl;
+                return false;
+            }
         }
     }
 
-    // 2. Limpar malha anterior
+    // 2. Apagar a malha anterior (só depois de validar, pra não perder uma malha boa)
     limpar();
 
-    // 3. Guardar configuracoes
-    quantidadeVertices = static_cast<GLsizei>(vertices.size() / perVertex);
+    // 3. Guardar a configuração
+    quantidadeVertices = static_cast<GLsizei>(vertexCount);
     quantidadeIndices = static_cast<GLsizei>(indices.size());
     modo = modoDesenho;
-    usaIndices = true;
+    usaIndices = indexed;
 
-    // 4. Criar VAO, VBO e EBO
+    // 4. Criar os buffers
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    if (indexed)
+        glGenBuffers(1, &EBO);
 
-    // 5. Selecionar VAO
     glBindVertexArray(VAO);
 
-    // 6. Enviar vertices
+    // 5. Enviar os vértices
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        vertices.size() * sizeof(float),
-        vertices.data(),
-        GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    // 7. Configurar atributos
+    // 6. Explicar como ler cada atributo
     setupAttributes(componentes, layout);
 
-    // 8. Enviar indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        indices.size() * sizeof(unsigned int),
-        indices.data(),
-        GL_STATIC_DRAW);
+    // 7. Enviar os índices (o EBO fica guardado dentro do VAO)
+    if (indexed)
+    {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    }
 
-    // 9. Desvincular VAO
+    // 8. Soltar os binds (o VAO primeiro, pra ele não perder o EBO)
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -197,7 +155,7 @@ void Mesh::limpar()
 {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO); 
+    glDeleteBuffers(1, &EBO);
     VAO = 0;
     VBO = 0;
     EBO = 0;
