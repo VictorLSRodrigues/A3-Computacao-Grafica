@@ -12,7 +12,7 @@ bool Menu::criar()
         return false;
     }
 
-    if (!retangulo.criar(formas::retangulo(), 2)) // 2 componentes (x, y)
+    if (!retangulo.criarEbo(formas::retangulo(), formas::indicesRetangulo(), 2))
     {
         std::cout << "Falha ao criar o retangulo!" << std::endl;
         return false;
@@ -25,13 +25,13 @@ bool Menu::criar()
     return true;
 }
 
-void Menu::atualizar(const Window& janela)
+void Menu::atualizar(const Window &janela)
 {
     if (janela.teclaApertou(GLFW_KEY_ESCAPE))
         aberto = !aberto;
 }
 
-void Menu::desenharRetangulo(const Window& janela, float x, float y, float largura, float altura,
+void Menu::desenharRetangulo(const Window &janela, float x, float y, float largura, float altura,
                              float r, float g, float b, float a)
 {
     shaderUI.usar();
@@ -42,7 +42,7 @@ void Menu::desenharRetangulo(const Window& janela, float x, float y, float largu
     retangulo.desenhar();
 }
 
-bool Menu::botao(const Window& janela, float x, float y, float largura, float altura)
+bool Menu::botao(const Window &janela, float x, float y, float largura, float altura)
 {
     float mx = (float)janela.getMouseX();
     float my = (float)janela.getMouseY();
@@ -57,8 +57,7 @@ bool Menu::botao(const Window& janela, float x, float y, float largura, float al
     return sobre && janela.mouseClicou(GLFW_MOUSE_BUTTON_LEFT);
 }
 
-
-void Menu::desenhar(const Window& janela)
+void Menu::desenhar(const Window &janela)
 {
     if (!aberto)
         return;
@@ -76,8 +75,7 @@ void Menu::desenhar(const Window& janela)
     // Fundo escurecido
     desenharRetangulo(
         janela, 0.0f, 0.0f, tela_l, tela_a,
-        0.0f, 0.0f, 0.0f, 0.5f
-    );
+        0.0f, 0.0f, 0.0f, 0.5f);
 
     // Painel central
     float painelL = 400.0f;
@@ -88,16 +86,15 @@ void Menu::desenhar(const Window& janela)
 
     desenharRetangulo(
         janela, px, py, painelL, painelA,
-        0.1f, 0.12f, 0.18f, 0.95f
-    );
+        0.1f, 0.12f, 0.18f, 0.95f);
 
     // Botão sair
     if (botao(
-        janela,
-        px + 50.0f,
-        py + painelA - 120.0f,
-        300.0f,
-        70.0f))
+            janela,
+            px + 50.0f,
+            py + painelA - 120.0f,
+            300.0f,
+            70.0f))
     {
         janela.fechar();
     }
