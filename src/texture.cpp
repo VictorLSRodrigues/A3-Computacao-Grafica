@@ -7,41 +7,30 @@
 
 bool Texture::load(const std::string& path)
 {
-    destroy(); // se já havia uma textura aqui, apaga antes
-
     // Imagens começam pela linha de CIMA, mas o OpenGL espera a de BAIXO. Inverte ao ler.
     stbi_set_flip_vertically_on_load(true);
 
-    int channels = 0;
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
-    std::cout << "TEXTURA CARREGADA: " << path
-          << " | " << width << "x" << height
-          << " | Canais: " << channels
-          << std::endl;
-    if (channels >= 3)
-{
-    bool temCor = false;
-
-    for (size_t i = 0; i < (size_t)width * height * channels; i += channels)
-    {
-        if (data[i] != data[i + 1] || data[i + 1] != data[i + 2])
-        {
-            temCor = true;
-            break;
-        }
-    }
-
-    std::cout << "A imagem possui cores? "
-              << (temCor ? "SIM" : "NAO - ESCALA DE CINZA")
-              << std::endl;
-}
-
-
+    int w = 0, h = 0, channels = 0;
+    unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 0);
     if (!data)
     {
         std::cout << "Não consegui carregar a textura: " << path << "\n"
                   << stbi_failure_reason() << std::endl;
-        width = height = 0;
+        return false;
+    }
+
+    bool ok = create(w, h, channels, data);
+    stbi_image_free(data); // a cópia na placa de vídeo basta
+    return ok;
+}
+
+bool Texture::create(int newWidth, int newHeight, int channels, const unsigned char* data)
+{
+    destroy(); // se já havia uma textura aqui, apaga antes
+
+    if (!data || newWidth <= 0 || newHeight <= 0)
+    {
+        std::cout << "Texture::create: dados ou tamanho inválidos." << std::endl;
         return false;
     }
 
@@ -51,11 +40,12 @@ bool Texture::load(const std::string& path)
     else if (channels == 4) format = GL_RGBA;
     else
     {
-        std::cout << "Textura com " << channels << " canais não é suportada: " << path << std::endl;
-        stbi_image_free(data);
-        width = height = 0;
+        std::cout << "Textura com " << channels << " canais não é suportada." << std::endl;
         return false;
     }
+
+    width = newWidth;
+    height = newHeight;
 
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
@@ -71,17 +61,9 @@ bool Texture::load(const std::string& path)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-std::cout << "Textura: " << path << std::endl;
-std::cout << "Largura: " << width << std::endl;
-std::cout << "Altura: " << height << std::endl;
-std::cout << "Canais: " << channels << std::endl;
-
     glBindTexture(GL_TEXTURE_2D, 0);
-    stbi_image_free(data); // a cópia na placa de vídeo basta
-
     return true;
 }
-
 
 void Texture::bind(unsigned int unit) const
 {
