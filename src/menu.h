@@ -22,8 +22,12 @@ private:
     void drawText(const Window &window, const std::string &text, float x, float y, float scale,
                   float red, float green, float blue, float alpha);
 
+    void drawTextCentered(const Window &window, const std::string &text,
+                          float x, float y, float width, float height, float scale,
+                          float red, float green, float blue, float alpha);
+
     bool botao(const Window &janela, float x, float y, float largura, float altura,
-               const std::string &label);
+               const std::string &label, float r, float g, float b, bool enabled = true);
 
 public:
     bool criar();

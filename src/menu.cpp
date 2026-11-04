@@ -2,6 +2,7 @@
 #include "formas.h"
 
 #include <iostream>
+#include <algorithm>
 
 bool Menu::criar()
 {
@@ -75,31 +76,48 @@ void Menu::desenharRetangulo(const Window &janela, float x, float y, float largu
     retangulo.desenhar();
 }
 
-bool Menu::botao(const Window &janela, float x, float y, float largura, float altura,
-                 const std::string &label)
+// Escreve o texto centralizado dentro de um retângulo (x, y, width, height).
+void Menu::drawTextCentered(const Window& window, const std::string& text,
+                            float x, float y, float width, float height, float scale,
+                            float red, float green, float blue, float alpha)
+{
+    float textWidth = font.measure(text, scale);
+    float capHeight = font.getPixelHeight() * scale * 0.62f; // altura das maiúsculas
+
+    drawText(window, text,
+             x + (width - textWidth) / 2.0f,
+             y + (height + capHeight) / 2.0f,
+             scale, red, green, blue, alpha);
+}
+
+// Desenha um botão e devolve true se foi clicado neste quadro.
+// (r, g, b) é a cor do botão; com o mouse em cima ele clareia.
+bool Menu::botao(const Window& janela, float x, float y, float largura, float altura,
+                 const std::string& label, float r, float g, float b, bool enabled)
 {
     float mx = (float)janela.getMouseX();
     float my = (float)janela.getMouseY();
-    bool sobre = mx >= x && mx <= x + largura && my >= y && my <= y + altura;
+    bool hovered = enabled && mx >= x && mx <= x + largura && my >= y && my <= y + altura;
 
-    if (sobre)
-        desenharRetangulo(janela, x, y, largura, altura, 0.9f, 0.2f, 0.2f, 1.0f);
-    else
-        desenharRetangulo(janela, x, y, largura, altura, 0.6f, 0.1f, 0.1f, 1.0f);
+    if (!enabled)
+    {
+        r = 0.22f; g = 0.24f; b = 0.28f; // cinza apagado
+    }
+    else if (hovered)
+    {
+        r = std::min(r * 1.35f, 1.0f);
+        g = std::min(g * 1.35f, 1.0f);
+        b = std::min(b * 1.35f, 1.0f);
+    }
 
-    // Rótulo centralizado (a altura das maiúsculas é cerca de 62% do tamanho assado).
-    const float scale = 0.6f;
-    float textWidth = font.measure(label, scale);
-    float capHeight = font.getPixelHeight() * scale * 0.62f;
-    drawText(janela, label,
-             x + (largura - textWidth) / 2.0f,
-             y + (altura + capHeight) / 2.0f,
-             scale, 1.0f, 1.0f, 1.0f, 1.0f);
+    desenharRetangulo(janela, x, y, largura, altura, r, g, b, 1.0f);
+    drawTextCentered(janela, label, x, y, largura, altura, 0.6f,
+                     1.0f, 1.0f, 1.0f, enabled ? 1.0f : 0.4f);
 
-    return sobre && janela.mouseClicou(GLFW_MOUSE_BUTTON_LEFT);
+    return hovered && janela.mouseClicou(GLFW_MOUSE_BUTTON_LEFT);
 }
 
-void Menu::desenhar(const Window &janela)
+void Menu::desenhar(const Window& janela)
 {
     if (!aberto)
         return;
@@ -111,39 +129,47 @@ void Menu::desenhar(const Window &janela)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    float tela_l = (float)janela.getLargura();
-    float tela_a = (float)janela.getAltura();
+    const float screenW = (float)janela.getLargura();
+    const float screenH = (float)janela.getAltura();
+
+    // Medidas do painel (tudo em pixels). Mexa nestes números pra ajustar o visual.
+    const float panelW = 420.0f;
+    const float margin = 30.0f;  // espaço entre a borda do painel e o conteúdo
+    const float titleH = 70.0f;  // altura reservada pro título
+    const float buttonW = panelW - 2.0f * margin;
+    const float buttonH = 60.0f;
+    const float gap = 16.0f;     // espaço entre os botões
+    const int count = 3;         // quantidade de botões (atualize se acrescentar mais)
+
+    // A altura do painel é calculada, então ele sempre fecha certinho em volta dos botões.
+    const float panelH = margin + titleH + count * buttonH + (count - 1) * gap + margin;
+    const float px = (screenW - panelW) / 2.0f;
+    const float py = (screenH - panelH) / 2.0f;
 
     // Fundo escurecido
-    desenharRetangulo(
-        janela, 0.0f, 0.0f, tela_l, tela_a,
-        0.0f, 0.0f, 0.0f, 0.5f);
+    desenharRetangulo(janela, 0.0f, 0.0f, screenW, screenH, 0.0f, 0.0f, 0.0f, 0.55f);
 
-    // Painel central
-    float painelL = 400.0f;
-    float painelA = 300.0f;
+    // Painel, com uma faixa de destaque no topo
+    desenharRetangulo(janela, px, py, panelW, panelH, 0.08f, 0.10f, 0.15f, 0.96f);
+    desenharRetangulo(janela, px, py, panelW, 4.0f, 0.25f, 0.55f, 0.95f, 1.0f);
 
-    float px = (tela_l - painelL) / 2.0f;
-    float py = (tela_a - painelA) / 2.0f;
+    // Título centralizado
+    drawTextCentered(janela, "Menu", px, py + margin, panelW, titleH, 0.85f,
+                     1.0f, 1.0f, 1.0f, 1.0f);
 
-    desenharRetangulo(
-        janela, px, py, painelL, painelA,
-        0.1f, 0.12f, 0.18f, 0.95f);
+    // Botões empilhados e centralizados
+    const float bx = px + margin;
+    float by = py + margin + titleH;
 
-    // Título do painel   
-    drawText(janela, "Configurações", px + 30.0f, py + 60.0f, 0.8f, 1.0f, 1.0f, 1.0f, 1.0f);
+    if (botao(janela, bx, by, buttonW, buttonH, "Continuar", 0.20f, 0.45f, 0.85f))
+        aberto = false;
+    by += buttonH + gap;
 
-    // Botão sair
-    if (botao(
-            janela,
-            px + 50.0f,
-            py + painelA - 120.0f,
-            300.0f,
-            70.0f,
-            "Sair"))
-    {
+    botao(janela, bx, by, buttonW, buttonH, "Opções", 0.25f, 0.30f, 0.40f, false);
+    by += buttonH + gap;
+
+    if (botao(janela, bx, by, buttonW, buttonH, "Sair", 0.70f, 0.15f, 0.15f))
         janela.fechar();
-    }
 
     // Restaurar renderização 3D
     glDepthMask(GL_TRUE);
