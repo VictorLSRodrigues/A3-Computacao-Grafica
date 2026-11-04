@@ -1,5 +1,5 @@
 #include "texture.h"
-
+#include <utility>
 #include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -65,6 +65,7 @@ bool Texture::create(int newWidth, int newHeight, int channels, const unsigned c
     return true;
 }
 
+
 void Texture::bind(unsigned int unit) const
 {
     glActiveTexture(GL_TEXTURE0 + unit);
@@ -78,3 +79,49 @@ void Texture::destroy()
     id = 0;
     width = height = 0;
 }
+
+
+// Construtor de movimentação
+Texture::Texture(Texture&& other) noexcept
+    : id(other.id),
+      width(other.width),
+      height(other.height),
+      type(std::move(other.type))
+{
+    other.id = 0;
+    other.width = 0;
+    other.height = 0;
+}
+
+// Operador de movimentação
+Texture& Texture::operator=(Texture&& other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+
+        id = other.id;
+        width = other.width;
+        height = other.height;
+        type = std::move(other.type);
+
+        other.id = 0;
+        other.width = 0;
+        other.height = 0;
+    }
+
+    return *this;
+}
+
+// Definir o tipo da textura
+void Texture::setType(const std::string& novoTipo)
+{
+    type = novoTipo;
+}
+
+// Consultar o tipo da textura
+const std::string& Texture::getType() const
+{
+    return type;
+}
+

@@ -106,6 +106,6 @@ void main()
 {
     //configuração da luz dependendo da cena
 	// outputs final color
-	vec4 resultado = direcLight(); // troca tipo de luz 
+	vec4 resultado = spotLight(); // troca tipo de luz 
     FragColor = vec4(resultado.rgb, 1.0);
 }
