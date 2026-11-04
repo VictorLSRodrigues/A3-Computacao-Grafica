@@ -28,6 +28,9 @@ add_executable(OpenGLProjeto
     src/texture.cpp
     src/camera.cpp
     src/font.cpp
+    src/buffers/VAO.cpp
+    src/buffers/VBO.cpp
+    src/buffers/EBO.cpp
     Libraries/glad/src/glad.c
 )
 
