@@ -5,6 +5,7 @@
 #include <limits>
 #include <cstddef>
 #include <utility>
+#include "shader.h"
 
 // Calcula o stride dos vértices
 int Mesh::computeStride(
@@ -122,6 +123,8 @@ bool Mesh::criar(
 
     return true;
 }
+
+
 
 // Criar Mesh com índices
 bool Mesh::criarEbo(
@@ -364,6 +367,31 @@ void Mesh::desenhar() const
     }
 
     vao.Unbind();
+}
+// Desenhar Mesh utilizando suas próprias texturas
+void Mesh::desenhar(Shader& shader) const
+{
+    // Percorrer as texturas armazenadas na Mesh
+    for (const Texture& textura : textures)
+    {
+        // Identificar o tipo da textura
+        if (textura.getType() == "diffuse")
+        {
+            textura.bind(0);
+            shader.setInt("tex0", 0);
+        }
+        else if (textura.getType() == "specular")
+        {
+            textura.bind(1);
+            shader.setInt("specular0", 1);
+        }
+    }
+
+    // Desenhar a geometria
+    desenhar();
+
+    // Restaurar a unidade de textura padrão
+    glActiveTexture(GL_TEXTURE0);
 }
 
 // Liberar recursos
