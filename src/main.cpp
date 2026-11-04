@@ -5,6 +5,7 @@
 #include "menu.h"
 #include "texture.h"
 #include "camera.h"
+#include <utility>
 
 #include <iostream>
 
@@ -42,6 +43,13 @@ int main()
     Texture specular;
     if (!specular.load(ASSETS_DIR "textures/terraSpecular.png"))
         return -1;
+    // Identificar os tipos das texturas
+    texture.setType("diffuse");
+    specular.setType("specular");
+
+    // Transferir as texturas para a Mesh
+    piramide.adicionarTextura(std::move(texture));
+    piramide.adicionarTextura(std::move(specular));
 
     // 4. Shader da pirâmide com iluminação
     Shader shaderCamera;
@@ -179,9 +187,7 @@ int main()
 
         shaderCamera.setMat4("model", model);
 
-        texture.bind(0);
-        specular.bind(1);
-        piramide.desenhar();
+        piramide.desenhar(shaderCamera);
 
         // 14. Desenhar cubo da luz
         shaderLuz.usar();
