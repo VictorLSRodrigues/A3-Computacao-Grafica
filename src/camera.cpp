@@ -28,13 +28,13 @@ void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader &shade
         glm::value_ptr(projection * view));
 }
 
-void Camera::Inputs(Window& window, float deltaTime)
+void Camera::Inputs(Window &window, float deltaTime)
 {
     // Movimento da câmera
     if (window.teclaSegurada(GLFW_KEY_LEFT_SHIFT))
-        speed = 5.0f;
+        speed = sprintSpeed; 
     else
-        speed = 1.5f;
+        speed = walkSpeed; 
 
     if (window.teclaSegurada(GLFW_KEY_W))
         Position += speed * deltaTime * Orientation;

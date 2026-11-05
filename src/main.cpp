@@ -6,10 +6,10 @@
 #include "HUD.h"
 #include "texture.h"
 #include "camera.h"
+#include "settings.h"
+
 #include <utility>
-
 #include <iostream>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -85,6 +85,7 @@ int main()
         return -1;
 
     Menu menu;
+    Settings settings;
     HUD hud;
 
     // 8. Configurar câmera
@@ -133,7 +134,6 @@ int main()
         lastFrame = currentFrame;
 
         hud.update(janela, deltaTime);
-        
 
         menu.atualizar(janela);
         if (menu.estaAberto())
@@ -162,6 +162,11 @@ int main()
 
         camera.setSize(janela.getLargura(), janela.getAltura());
 
+        // Aplicar as opções
+        camera.walkSpeed = settings.walkSpeed;
+        camera.sprintSpeed = settings.sprintSpeed;
+        camera.sensitivity = settings.mouseSensitivity;
+
         // 13. Desenhar pirâmide
         shaderCamera.usar();
 
@@ -185,7 +190,7 @@ int main()
             camera.Position.z);
 
         camera.Matrix(
-            45.0f,
+            settings.fov,
             0.1f,
             100.0f,
             shaderCamera,
@@ -208,7 +213,7 @@ int main()
         shaderLuz.setMat4("model", lightModel);
 
         camera.Matrix(
-            45.0f,
+            settings.fov,
             0.1f,
             100.0f,
             shaderLuz,
@@ -218,8 +223,8 @@ int main()
 
         // 15. Interface (por cima de tudo)
         ui.begin(janela);
-        hud.draw(ui, camera.Position);      
-        menu.desenhar(janela, ui);
+        hud.draw(ui, camera.Position);
+        menu.desenhar(janela, ui, settings);
         ui.end();
 
         // Atualizar janela

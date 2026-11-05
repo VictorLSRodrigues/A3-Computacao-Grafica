@@ -26,6 +26,8 @@ public:
     int height;
 
     float speed = 1.0f;
+    float walkSpeed = 1.5f;
+    float sprintSpeed = 5.0f;
     float sensitivity = 100.0f;
 
     Camera(int width, int height, glm::vec3 position);

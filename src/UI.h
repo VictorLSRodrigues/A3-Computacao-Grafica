@@ -14,25 +14,30 @@ public:
     bool create();
 
     // Chamar antes e depois de desenhar a interface do quadro.
-    void begin(const Window& window);
+    void begin(const Window &window);
     void end();
 
     void drawRect(float x, float y, float width, float height,
                   float r, float g, float b, float a = 1.0f);
 
     // (x, y) é o começo da linha de base do texto.
-    void drawText(const std::string& text, float x, float y, float scale,
+    void drawText(const std::string &text, float x, float y, float scale,
                   float r, float g, float b, float a = 1.0f);
 
-    void drawTextCentered(const std::string& text, float x, float y, float width, float height,
+    void drawTextCentered(const std::string &text, float x, float y, float width, float height,
                           float scale, float r, float g, float b, float a = 1.0f);
 
     // Devolve true se foi clicado neste quadro.
-    bool button(const std::string& label, float x, float y, float width, float height,
+    bool button(const std::string &label, float x, float y, float width, float height,
                 float r, float g, float b, bool enabled = true);
 
+    // Linha de ajuste: "Nome  [-] valor [+]". Altera 'value' (limitado entre minValue e maxValue)
+    // e devolve true se ele mudou neste quadro.
+    bool stepper(const std::string &label, float &value, float step, float minValue, float maxValue,
+                 float x, float y, float width, float height, int decimals = 1);
+
 private:
-    const Window* window = nullptr; // só vale entre begin() e end()
+    const Window *window = nullptr; // só vale entre begin() e end()
     Shader rectShader;
     Shader textShader;
     Mesh quad;
