@@ -24,20 +24,22 @@ add_executable(OpenGLProjeto
     src/mesh.cpp
     src/formas.cpp
     src/window.cpp
-    src/menu.cpp
     src/texture.cpp
     src/camera.cpp
-    src/font.cpp
     src/buffers/VAO.cpp
     src/buffers/VBO.cpp
     src/buffers/EBO.cpp
-    src/UI.cpp
-    src/HUD.cpp
+    src/ui/menu.cpp
+    src/ui/font.cpp
+    src/ui/UI.cpp
+    src/ui/HUD.cpp
     Libraries/glad/src/glad.c
 )
 
 target_include_directories(OpenGLProjeto PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ui"
 )
 
 target_compile_definitions(OpenGLProjeto PRIVATE
