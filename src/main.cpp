@@ -1,3 +1,4 @@
+
 #include "window.h"
 #include "shader.h"
 #include "mesh.h"
@@ -7,9 +8,11 @@
 #include "texture.h"
 #include "camera.h"
 #include "settings.h"
+#include "Model.h"
 
 #include <utility>
 #include <iostream>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -21,7 +24,10 @@ int main()
     if (!janela.criar("OpenGL - RotorGrafico"))
         return -1;
 
-    // 2. Criar pirâmide
+    // 2. Carregar modelo 3D
+    Model macaco(ASSETS_DIR "models/macaco.glb");
+
+    // 3. Criar pirâmide
     Mesh piramide;
 
     if (!piramide.criarEbo(
@@ -35,15 +41,17 @@ int main()
         return -1;
     }
 
-    // 3. Carregar textura
+    // 4. Carregar textura
     Texture texture;
 
     if (!texture.load(ASSETS_DIR "textures/terra.png"))
         return -1;
 
     Texture specular;
+
     if (!specular.load(ASSETS_DIR "textures/terraSpecular.png"))
         return -1;
+
     // Identificar os tipos das texturas
     texture.setType("diffuse");
     specular.setType("specular");
@@ -52,19 +60,22 @@ int main()
     piramide.adicionarTextura(std::move(texture));
     piramide.adicionarTextura(std::move(specular));
 
-    // 4. Shader da pirâmide com iluminação
+    // 5. Shader da pirâmide e do macaco
     Shader shaderCamera;
 
     if (!shaderCamera.criarDeArquivos(
             ASSETS_DIR "shaders/default.vert",
             ASSETS_DIR "shaders/default.frag"))
+    {
+        std::cout << "Falha ao criar o shader da câmera!" << std::endl;
         return -1;
+    }
 
     shaderCamera.usar();
     shaderCamera.setInt("tex0", 0);
     shaderCamera.setInt("specular0", 1);
 
-    // 5. Shader da fonte de luz
+    // 6. Shader da fonte de luz
     Shader shaderLuz;
 
     if (!shaderLuz.criarDeArquivos(
@@ -75,20 +86,24 @@ int main()
         return -1;
     }
 
-    // 6. Ativar profundidade
+    // 7. Ativar profundidade
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    // 7. Criar menu
+    // 8. Criar interface, menu e HUD
     UI ui;
+
     if (!ui.create())
+    {
+        std::cout << "Falha ao inicializar a UI!" << std::endl;
         return -1;
+    }
 
     Menu menu;
     Settings settings;
     HUD hud;
 
-    // 8. Configurar câmera
+    // 9. Configurar câmera
     Camera camera(
         janela.getLargura(),
         janela.getAltura(),
@@ -98,7 +113,7 @@ int main()
     double lastFrame = 0.0f;
     float rotation = 0.0f;
 
-    // 9. Criar malha da luz
+    // 10. Criar malha da luz
     Mesh luz;
 
     if (!luz.criarEbo(
@@ -112,38 +127,52 @@ int main()
         return -1;
     }
 
-    // 10. Configuração da iluminação
+    // 11. Configuração da iluminação
     glm::vec4 lightColor(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec3 lightPos(0.5f, 0.5f, 0.5f);
 
     glm::mat4 lightModel(1.0f);
+
     lightModel = glm::translate(lightModel, lightPos);
     lightModel = glm::scale(lightModel, glm::vec3(0.2f));
 
     glm::vec3 pyramidPos(0.0f, 0.0f, 0.0f);
 
     lastFrame = glfwGetTime();
-    // 11. Loop principal
+
+    // 12. Loop principal
     while (!janela.deveFechar())
     {
         double currentFrame = glfwGetTime();
+
         deltaTime = currentFrame - lastFrame;
+
         // Limita o deltaTime a 0.1 segundos
         if (deltaTime > 0.1f)
             deltaTime = 0.1f;
+
         lastFrame = currentFrame;
 
+        // Atualizar HUD
         hud.update(janela, deltaTime);
 
+        // Atualizar menu
         menu.atualizar(janela);
-        if (menu.estaAberto())
-            janela.setCursorMode(Window::CursorMode::Normal);
-        else
-            camera.Inputs(janela, deltaTime);
 
-        // Atualizar rotação
+        // Controlar câmera conforme estado do menu
+        if (menu.estaAberto())
+        {
+            janela.setCursorMode(Window::CursorMode::Normal);
+        }
+        else
+        {
+            camera.Inputs(janela, deltaTime);
+        }
+
+        // Atualizar rotação da pirâmide
         rotation += 90.0f * deltaTime;
 
+        // Transformação da pirâmide
         glm::mat4 model(1.0f);
 
         model = glm::translate(model, pyramidPos);
@@ -160,14 +189,17 @@ int main()
             GL_COLOR_BUFFER_BIT |
             GL_DEPTH_BUFFER_BIT);
 
-        camera.setSize(janela.getLargura(), janela.getAltura());
+        // Atualizar tamanho da câmera
+        camera.setSize(
+            janela.getLargura(),
+            janela.getAltura());
 
-        // Aplicar as opções
+        // Aplicar configurações do menu
         camera.walkSpeed = settings.walkSpeed;
         camera.sprintSpeed = settings.sprintSpeed;
         camera.sensitivity = settings.mouseSensitivity;
 
-        // 13. Desenhar pirâmide
+        // 13. Desenhar pirâmide e macaco
         shaderCamera.usar();
 
         shaderCamera.setVec4(
@@ -196,9 +228,26 @@ int main()
             shaderCamera,
             "camMatrix");
 
+        // Desenhar pirâmide
         shaderCamera.setMat4("model", model);
 
         piramide.desenhar(shaderCamera);
+
+        // Transformação do macaco
+        glm::mat4 macacoModel(1.0f);
+
+        macacoModel = glm::translate(
+            macacoModel,
+            glm::vec3(1.5f, 0.0f, 0.0f));
+
+        macacoModel = glm::scale(
+            macacoModel,
+            glm::vec3(0.5f));
+
+        // Desenhar macaco
+        shaderCamera.setMat4("model", macacoModel);
+
+        macaco.desenhar(shaderCamera, camera);
 
         // 14. Desenhar cubo da luz
         shaderLuz.usar();
@@ -221,16 +270,25 @@ int main()
 
         luz.desenhar();
 
-        // 15. Interface (por cima de tudo)
+        // 15. Interface por cima de tudo
         ui.begin(janela);
+
         hud.draw(ui, camera.Position);
-        menu.desenhar(janela, ui, settings);
+
+        menu.desenhar(
+            janela,
+            ui,
+            settings);
+
         ui.end();
 
-        // Atualizar janela
+        // 16. Atualizar janela
         janela.trocarBuffers();
         janela.processarEventos();
     }
+
+    // 17. Liberar recursos
+    piramide.limpar();
 
     return 0;
 }

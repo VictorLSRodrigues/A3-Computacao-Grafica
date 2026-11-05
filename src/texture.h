@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <glad/glad.h>
 #include <string>
 
@@ -25,6 +26,7 @@ public:
     Texture& operator=(Texture&& other) noexcept;
 
     bool load(const std::string &path);
+    bool loadFromMemory(const unsigned char* bytes, std::size_t size);
     void bind(unsigned int unit = 0) const; // liga a textura na unidade indicada
     void destroy();
 

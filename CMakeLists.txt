@@ -20,6 +20,7 @@ add_subdirectory(Libraries/glfw-3.5.1)
 
 add_executable(OpenGLProjeto
     src/main.cpp
+    src/Model.cpp
     src/shader.cpp
     src/mesh.cpp
     src/formas.cpp
@@ -33,6 +34,9 @@ add_executable(OpenGLProjeto
     src/ui/font.cpp
     src/ui/UI.cpp
     src/ui/HUD.cpp
+    src/buffers/VAO.cpp
+    src/buffers/VBO.cpp
+    src/buffers/EBO.cpp
     Libraries/glad/src/glad.c
 )
 

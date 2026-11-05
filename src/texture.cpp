@@ -125,3 +125,24 @@ const std::string& Texture::getType() const
     return type;
 }
 
+bool Texture::loadFromMemory(const unsigned char* bytes, std::size_t size)
+{
+    if (!bytes || size == 0 || size > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+        return false;
+
+    stbi_set_flip_vertically_on_load(true);
+
+    int w = 0, h = 0, channels = 0;
+    unsigned char* pixels = stbi_load_from_memory(
+        bytes, static_cast<int>(size), &w, &h, &channels, 0);
+    if (!pixels)
+    {
+        std::cout << "Não consegui decodificar a textura embutida.\n"
+                  << stbi_failure_reason() << std::endl;
+        return false;
+    }
+
+    bool ok = create(w, h, channels, pixels);
+    stbi_image_free(pixels);
+    return ok;
+}
