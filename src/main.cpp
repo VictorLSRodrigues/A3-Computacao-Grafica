@@ -3,6 +3,7 @@
 #include "mesh.h"
 #include "formas.h"
 #include "menu.h"
+#include "HUD.h"
 #include "texture.h"
 #include "camera.h"
 #include <utility>
@@ -19,8 +20,6 @@ int main()
 
     if (!janela.criar("OpenGL - RotorGrafico"))
         return -1;
-
-  
 
     // 2. Criar pirâmide
     Mesh piramide;
@@ -86,6 +85,7 @@ int main()
         return -1;
 
     Menu menu;
+    HUD hud;
 
     // 8. Configurar câmera
     Camera camera(
@@ -131,6 +131,9 @@ int main()
         if (deltaTime > 0.1f)
             deltaTime = 0.1f;
         lastFrame = currentFrame;
+
+        hud.update(janela, deltaTime);
+        
 
         menu.atualizar(janela);
         if (menu.estaAberto())
@@ -215,6 +218,7 @@ int main()
 
         // 15. Interface (por cima de tudo)
         ui.begin(janela);
+        hud.draw(ui, camera.Position);      
         menu.desenhar(janela, ui);
         ui.end();
 
