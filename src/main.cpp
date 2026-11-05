@@ -20,6 +20,8 @@ int main()
     if (!janela.criar("OpenGL - RotorGrafico"))
         return -1;
 
+  
+
     // 2. Criar pirâmide
     Mesh piramide;
 
@@ -79,10 +81,11 @@ int main()
     glEnable(GL_CULL_FACE);
 
     // 7. Criar menu
-    Menu menu;
-
-    if (!menu.criar())
+    UI ui;
+    if (!ui.create())
         return -1;
+
+    Menu menu;
 
     // 8. Configurar câmera
     Camera camera(
@@ -210,16 +213,15 @@ int main()
 
         luz.desenhar();
 
-        // 15. Desenhar menu (por cima de tudo)
-        menu.desenhar(janela);
+        // 15. Interface (por cima de tudo)
+        ui.begin(janela);
+        menu.desenhar(janela, ui);
+        ui.end();
 
         // Atualizar janela
         janela.trocarBuffers();
         janela.processarEventos();
     }
-
-    // 16. Liberar recursos
-    piramide.limpar();
 
     return 0;
 }

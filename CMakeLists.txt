@@ -31,6 +31,7 @@ add_executable(OpenGLProjeto
     src/buffers/VAO.cpp
     src/buffers/VBO.cpp
     src/buffers/EBO.cpp
+    src/UI.cpp
     Libraries/glad/src/glad.c
 )
 
