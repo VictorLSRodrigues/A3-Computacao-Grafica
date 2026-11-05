@@ -80,7 +80,7 @@ void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)
     const float rowW = panelW - 2.0f * margin;
     const float rowH = 48.0f;
     const float gap = 14.0f;
-    const int rows = 6; // 4 ajustes, restaurar e voltar
+    const int rows = 7; // 4 ajustes, tipo de luz, restaurar e voltar
 
     const float panelH = margin + titleH + rows * rowH + (rows - 1) * gap + margin;
 
@@ -100,6 +100,38 @@ void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)
     y += rowH + gap;
 
     ui.stepper("Sensibilidade do mouse", settings.mouseSensitivity, 10.0f, 10.0f, 300.0f, x, y, rowW, rowH, 0);
+    y += rowH + gap;
+
+    const char* lightTypeLabel = "Tipo de luz: Pontual";
+    switch (settings.lightType)
+    {
+    case LightType::Directional:
+        lightTypeLabel = "Tipo de luz: Direcional";
+        break;
+    case LightType::Spot:
+        lightTypeLabel = "Tipo de luz: Holofote";
+        break;
+    case LightType::Point:
+    default:
+        break;
+    }
+
+    if (ui.button(lightTypeLabel, x, y, rowW, rowH, 0.25f, 0.30f, 0.40f))
+    {
+        switch (settings.lightType)
+        {
+        case LightType::Point:
+            settings.lightType = LightType::Directional;
+            break;
+        case LightType::Directional:
+            settings.lightType = LightType::Spot;
+            break;
+        case LightType::Spot:
+        default:
+            settings.lightType = LightType::Point;
+            break;
+        }
+    }
     y += rowH + gap;
 
     if (ui.button("Restaurar padrões", x, y, rowW, rowH, 0.25f, 0.30f, 0.40f))

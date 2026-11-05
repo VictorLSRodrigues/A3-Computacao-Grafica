@@ -16,6 +16,7 @@ in vec3 crntPos;
 // Gets the Texture Units from the main function
 uniform sampler2D tex0;
 uniform sampler2D specular0;
+uniform int lightType;
 // Gets the color of the light from the main function
 uniform vec4 lightColor;
 // Gets the position of the light from the main function
@@ -104,8 +105,13 @@ vec4 spotLight()
 
 void main()
 {
-    //configuração da luz dependendo da cena
-	// outputs final color
-	vec4 resultado = pointLight(); // troca tipo de luz 
+	vec4 resultado;
+	if (lightType == 0)
+		resultado = pointLight();
+	else if (lightType == 1)
+		resultado = direcLight();
+	else
+		resultado = spotLight();
+
     FragColor = vec4(resultado.rgb, 1.0);
 }

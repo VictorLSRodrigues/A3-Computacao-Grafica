@@ -226,6 +226,8 @@ int main()
             camera.Position.y,
             camera.Position.z);
 
+        shaderCamera.setInt("lightType", static_cast<int>(settings.lightType));
+
         camera.Matrix(
             settings.fov,
             0.1f,
