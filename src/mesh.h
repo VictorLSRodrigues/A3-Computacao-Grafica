@@ -97,7 +97,7 @@ public:
     void desenhar() const;
 
     // Desenhar Mesh utilizando suas próprias texturas
-    void desenhar(Shader& shader) const;
+    void desenhar(Shader& shader, const Texture* diffuseFallback = nullptr) const;
 
     // Liberar recursos
     void limpar();

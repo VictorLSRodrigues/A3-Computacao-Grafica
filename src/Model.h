@@ -6,6 +6,7 @@
 #include"Mesh.h"
 #include"camera.h"
 #include"buffers/VAO.h"
+#include"texture.h"
 using json = nlohmann::json;
 
 
@@ -15,7 +16,7 @@ public:
 	// Loads in a model from a file and stores tha information in 'data', 'JSON', and 'file'
 	Model(const char* file);
 
-	void desenhar(Shader& shader, Camera& camera);
+	void desenhar(Shader& shader, Camera& camera, const Texture& diffuseFallback);
 
 private:
 	// Variables for easy access

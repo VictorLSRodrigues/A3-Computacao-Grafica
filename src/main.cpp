@@ -24,6 +24,11 @@ int main()
     if (!janela.criar("OpenGL - RotorGrafico"))
         return -1;
 
+    Texture defaultTexture;
+
+    if (!defaultTexture.load(ASSETS_DIR "textures/default.png"))
+        return -1;
+
     // 2. Carregar modelo 3D
     Model macaco(ASSETS_DIR "models/macaco.glb");
 
@@ -247,7 +252,7 @@ int main()
         // Desenhar macaco
         shaderCamera.setMat4("model", macacoModel);
 
-        macaco.desenhar(shaderCamera, camera);
+        macaco.desenhar(shaderCamera, camera, defaultTexture);
 
         // 14. Desenhar cubo da luz
         shaderLuz.usar();

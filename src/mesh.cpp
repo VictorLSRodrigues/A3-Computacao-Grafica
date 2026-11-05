@@ -369,22 +369,40 @@ void Mesh::desenhar() const
     vao.Unbind();
 }
 // Desenhar Mesh utilizando suas próprias texturas
-void Mesh::desenhar(Shader& shader) const
+void Mesh::desenhar(Shader& shader, const Texture* diffuseFallback) const
 {
+    bool hasDiffuse = false;
+    bool hasSpecular = false;
+
     // Percorrer as texturas armazenadas na Mesh
     for (const Texture& textura : textures)
     {
         // Identificar o tipo da textura
         if (textura.getType() == "diffuse")
         {
+            hasDiffuse = true;
             textura.bind(0);
             shader.setInt("tex0", 0);
         }
         else if (textura.getType() == "specular")
         {
+            hasSpecular = true;
             textura.bind(1);
             shader.setInt("specular0", 1);
         }
+    }
+
+    if (!hasDiffuse && diffuseFallback)
+    {
+        diffuseFallback->bind(0);
+        shader.setInt("tex0", 0);
+    }
+
+    if (!hasSpecular)
+    {
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        shader.setInt("specular0", 1);
     }
 
     // Desenhar a geometria

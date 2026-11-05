@@ -101,12 +101,12 @@ Model::Model(const char* file)
 	traverseNode(0);
 }
 
-void Model::desenhar(Shader& shader, Camera& camera)
+void Model::desenhar(Shader& shader, Camera& camera, const Texture& diffuseFallback)
 {
 	// Go over all meshes and draw each one
 	for (unsigned int i = 0; i < meshes.size(); i++)
 	{
-		meshes[i].Mesh::desenhar(shader);
+		meshes[i].Mesh::desenhar(shader, &diffuseFallback);
 	}
 }
 
