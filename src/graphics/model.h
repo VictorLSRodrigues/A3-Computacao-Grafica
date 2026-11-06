@@ -2,59 +2,58 @@
 #define MODEL_CLASS_H
 
 #include <deque>
-#include<json/json.h>
-#include"mesh.h"
-#include"camera.h"
-#include"buffers/VAO.h"
-#include"texture.h"
-using json = nlohmann::json;
+#include <json/json.h>
 
+#include "buffers/VAO.h"
+#include "camera.h"
+#include "mesh.h"
+#include "texture.h"
+
+using json = nlohmann::json;
 
 class Model
 {
 public:
-	// Loads in a model from a file and stores tha information in 'data', 'JSON', and 'file'
-	Model(const char* file);
+    // Carrega um modelo glTF (.gltf) ou GLB (.glb) e prepara suas partes para desenho.
+    Model(const char *path);
 
-	void draw(Shader& shader, Camera& camera, const Texture& diffuseFallback);
+    void draw(Shader &shader, Camera &camera, const Texture &diffuseFallback);
 
 private:
-	// Variables for easy access
-	const char* file;
-	std::vector<unsigned char> data;
-	json JSON;
+    // Dados do arquivo e descrição de sua estrutura.
+    const char *file;
+    std::vector<unsigned char> data;
+    json JSON;
 
-	// All the meshes and transformations
-	std::deque<Mesh> meshes;
-	std::vector<glm::vec3> translationsMeshes;
-	std::vector<glm::quat> rotationsMeshes;
-	std::vector<glm::vec3> scalesMeshes;
-	std::vector<glm::mat4> matricesMeshes;
+    // Geometria encontrada no arquivo e transformações de cada parte.
+    std::deque<Mesh> meshes;
+    std::vector<glm::vec3> translationsMeshes;
+    std::vector<glm::quat> rotationsMeshes;
+    std::vector<glm::vec3> scalesMeshes;
+    std::vector<glm::mat4> matricesMeshes;
 
-	// Loads a single mesh by its index
-	void loadMesh(unsigned int indMesh);
+    // Lê uma malha descrita no arquivo e prepara seus dados para desenho.
+    void loadMesh(unsigned int meshIndex);
 
-	// Traverses a node recursively, so it essentially traverses all connected nodes
-	void traverseNode(unsigned int nextNode, glm::mat4 matrix = glm::mat4(1.0f));
+    // Percorre a hierarquia de partes do modelo e acumula suas transformações.
+    void traverseNode(unsigned int nodeIndex, glm::mat4 parentTransform = glm::mat4(1.0f));
 
-	// Gets the binary data from a file
-	std::vector<unsigned char> getData();
-	// Interprets the binary data into floats, indices, and textures
-	std::vector<float> getFloats(json accessor);
-	std::vector<GLuint> getIndices(json accessor);
-	std::vector<Texture> getTextures();
+    // Lê os dados binários associados à descrição do modelo.
+    std::vector<unsigned char> getData();
+    // Converte referências do arquivo em dados de vértices, índices e imagens.
+    std::vector<float> getFloats(json accessor);
+    std::vector<GLuint> getIndices(json accessor);
+    std::vector<Texture> getTextures();
 
-	// Assembles all the floats into vertices
-	std::vector<Vertex> assembleVertices
-	(
-		std::vector<glm::vec3> positions, 
-		std::vector<glm::vec3> normals, 
-		std::vector<glm::vec2> texUVs
-	);
+    // Combina os atributos separados do arquivo em vértices completos.
+    std::vector<Vertex> assembleVertices(
+        std::vector<glm::vec3> positions,
+        std::vector<glm::vec3> normals,
+        std::vector<glm::vec2> texUVs);
 
-	// Helps with the assembly from above by grouping floats
-	std::vector<glm::vec2> groupFloatsVec2(std::vector<float> floatVec);
-	std::vector<glm::vec3> groupFloatsVec3(std::vector<float> floatVec);
-	std::vector<glm::vec4> groupFloatsVec4(std::vector<float> floatVec);
+    // Agrupa uma lista de números em vetores com 2, 3 ou 4 componentes.
+    std::vector<glm::vec2> groupFloatsVec2(std::vector<float> values);
+    std::vector<glm::vec3> groupFloatsVec3(std::vector<float> values);
+    std::vector<glm::vec4> groupFloatsVec4(std::vector<float> values);
 };
 #endif

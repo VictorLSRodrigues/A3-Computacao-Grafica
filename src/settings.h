@@ -7,7 +7,7 @@ enum class LightType
     Spot = 2
 };
 
-// Valores que o jogador pode ajustar nas opções.
+// Opções de câmera e iluminação ajustáveis pelo menu.
 struct Settings
 {
     float fov = 45.0f;               // campo de visão, em graus

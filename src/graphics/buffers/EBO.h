@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <vector>
 
+// Armazena índices que permitem reutilizar vértices ao desenhar triângulos.
 class EBO
 {
 private:
@@ -17,6 +18,7 @@ public:
     EBO(const EBO&) = delete;
     EBO& operator=(const EBO&) = delete;
 
+    // Torna este buffer de índices parte do VAO ativo.
     void Bind() const;
 
     void Upload(
@@ -24,6 +26,7 @@ public:
         GLenum usage = GL_STATIC_DRAW
     );
 
+    // Libera o buffer OpenGL.
     void Delete();
 
     GLsizei GetCount() const

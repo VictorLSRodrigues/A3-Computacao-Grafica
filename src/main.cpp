@@ -23,7 +23,7 @@
 
 int main()
 {
-    // 1. Criar janela
+    // Inicializa a janela e os recursos necessários para renderizar.
     Window window;
 
     if (!window.create("OpenGL - RotorGrafico"))
@@ -34,7 +34,7 @@ int main()
     if (!defaultTexture.load(ASSETS_DIR "textures/default.png"))
         return -1;
 
-    // 3. Criar pirâmide
+    // Cada vértice guarda posição (3), cor (3), coordenadas da textura (2) e normal (3).
     auto pyramidMesh = std::make_shared<Mesh>();
     if (!pyramidMesh->createIndexed(
             shapes::pyramid(),
@@ -47,7 +47,7 @@ int main()
         return -1;
     }
 
-    // 4. Carregar textura
+    // Carrega e associa as texturas usadas pela pirâmide.
     Texture texture;
 
     if (!texture.load(ASSETS_DIR "textures/terra.png"))
@@ -58,14 +58,13 @@ int main()
     if (!specular.load(ASSETS_DIR "textures/terraSpecular.png"))
         return -1;
 
-    // Identificar os tipos das texturas
     texture.setType("diffuse");
     specular.setType("specular");
 
-    // Transferir as texturas para a Mesh
     pyramidMesh->addTexture(std::move(texture));
     pyramidMesh->addTexture(std::move(specular));
-    // 5. Shader da pirâmide e do macaco
+
+    // O shader principal desenha os objetos da cena com iluminação e textura.
     Shader cameraShader;
 
     if (!cameraShader.createFromFiles(
@@ -80,7 +79,7 @@ int main()
     cameraShader.setInt("tex0", 0);
     cameraShader.setInt("specular0", 1);
 
-    // 6. Shader da fonte de luz
+    // Este shader desenha a representação visual da fonte de luz.
     Shader lightShader;
 
     if (!lightShader.createFromFiles(
@@ -91,11 +90,11 @@ int main()
         return -1;
     }
 
-    // 7. Ativar profundidade
+    // Objetos próximos escondem os que estão atrás; faces voltadas para longe da câmera são descartadas.
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    // 8. Criar interface, menu e HUD
+    // Prepara a interface, o menu de opções e as informações de depuração.
     UI ui;
 
     if (!ui.create())
@@ -110,6 +109,7 @@ int main()
 
     Scene scene;
 
+    // Adiciona o modelo e a pirâmide à cena.
     if (Scene::Object *monkey = scene.addModel(ASSETS_DIR "models/macaco.glb"))
     {
         monkey->transform.position = glm::vec3(1.5f, 0.0f, 0.0f);
@@ -118,7 +118,7 @@ int main()
 
     Scene::Object *pyramid = scene.addMesh(pyramidMesh, "pyramid");
 
-    // 9. Configurar câmera
+    // A câmera começa em frente aos objetos.
     Camera camera(
         window.getWidth(),
         window.getHeight(),
@@ -128,7 +128,7 @@ int main()
     double lastFrame = 0.0f;
     float rotation = 0.0f;
 
-    // 10. Criar malha da luz
+    // Um cubo simples torna a posição da luz visível na cena.
     Mesh lightMesh;
 
     if (!lightMesh.createIndexed(
@@ -142,7 +142,7 @@ int main()
         return -1;
     }
 
-    // 11. Configuração da iluminação
+    // Cor e posição usadas pelo shader de iluminação.
     glm::vec4 lightColor(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec3 lightPos(0.5f, 0.5f, 0.5f);
 
@@ -154,26 +154,25 @@ int main()
 
     lastFrame = glfwGetTime();
 
-    // 12. Loop principal
+    // Mantém a aplicação atualizando e desenhando até a janela ser fechada.
     while (!window.shouldClose())
     {
         double currentFrame = glfwGetTime();
 
         deltaTime = currentFrame - lastFrame;
 
-        // Limita o deltaTime a 0.1 segundos
+        // Evita um salto grande de movimento se um quadro demorar demais.
         if (deltaTime > 0.1f)
             deltaTime = 0.1f;
 
         lastFrame = currentFrame;
 
-        // Atualizar HUD
+        // Atualiza informações e controles da interface.
         hud.update(window, deltaTime);
 
-        // Atualizar menu
         menu.update(window);
 
-        // Controlar câmera conforme estado do menu
+        // A câmera só recebe controles quando o menu está fechado.
         if (menu.isOpen())
         {
             window.setCursorMode(Window::CursorMode::Normal);
@@ -183,28 +182,28 @@ int main()
             camera.processInput(window, deltaTime);
         }
 
-        // Atualizar rotação da pirâmide
+        // Anima a rotação da pirâmide usando o tempo do quadro.
         rotation += 90.0f * deltaTime;
         pyramid->transform.rotation.y = rotation;
 
-        // Limpar a tela e o buffer de profundidade
+        // Começa um novo quadro, limpando a imagem anterior e a profundidade.
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 
         glClear(
             GL_COLOR_BUFFER_BIT |
             GL_DEPTH_BUFFER_BIT);
 
-        // Atualizar tamanho da câmera
+        // Mantém a projeção da câmera compatível com o tamanho atual da janela.
         camera.setViewportSize(
             window.getWidth(),
             window.getHeight());
 
-        // Aplicar configurações do menu
+        // Copia para a câmera os ajustes escolhidos no menu.
         camera.walkSpeed = settings.walkSpeed;
         camera.sprintSpeed = settings.sprintSpeed;
         camera.sensitivity = settings.mouseSensitivity;
 
-        // 13. Desenhar pirâmide e macaco
+        // Envia os parâmetros de iluminação e câmera, depois desenha os objetos da cena.
         cameraShader.use();
 
         cameraShader.setVec4(
@@ -235,9 +234,9 @@ int main()
             cameraShader,
             "camMatrix");
 
-        // Desenhar os modelos da cena
         scene.draw(cameraShader, camera, defaultTexture);
-        // 14. Desenhar cubo da luz
+
+        // Desenha o cubo que indica a posição da fonte de luz.
         lightShader.use();
 
         lightShader.setVec4(
@@ -258,7 +257,7 @@ int main()
 
         lightMesh.draw();
 
-        // 15. Interface por cima de tudo
+        // Desenha HUD e menu por cima da cena 3D.
         ui.begin(window);
 
         hud.draw(ui, camera.position);
@@ -270,7 +269,7 @@ int main()
 
         ui.end();
 
-        // 16. Atualizar janela
+        // Mostra o quadro pronto e processa eventos de teclado e mouse.
         window.swapBuffers();
         window.pollEvents();
     }

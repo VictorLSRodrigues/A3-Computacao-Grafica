@@ -7,7 +7,7 @@
 #include <utility>
 #include "shader.h"
 
-// Calcula o stride dos vértices
+// Calcula o número de valores por vértice, conforme o layout informado.
 int Mesh::computeStride(
     int componentCount,
     const std::vector<int>& layout)
@@ -29,7 +29,7 @@ int Mesh::computeStride(
     return stride;
 }
 
-// Configura os atributos do VAO que estiver ligado
+// Informa ao VAO como separar os atributos dentro de cada vértice.
 void Mesh::setupAttributes(
     int componentCount,
     const std::vector<int>& layout)
@@ -65,7 +65,7 @@ void Mesh::setupAttributes(
     }
 }
 
-// Criar Mesh sem índices
+// Cria uma malha sem índices.
 bool Mesh::create(
     const std::vector<float>& vertices,
     int componentCount,
@@ -97,7 +97,7 @@ bool Mesh::create(
         return false;
     }
 
-    // Salvar os dados na CPU
+    // Mantém uma cópia dos dados para consulta e desenho.
     vertexData = vertices;
     structuredVertices.clear();
     indexData.clear();
@@ -106,13 +106,12 @@ bool Mesh::create(
     this->drawMode = drawMode;
     usesIndices = false;
 
-    // Configurar os objetos OpenGL
+    // Envia os vértices e configura seus atributos no VAO.
     vao.Bind();
 
     vbo.Upload(vertexData);
 
-    // O Upload do VBO desvincula o GL_ARRAY_BUFFER.
-    // Precisamos ligá-lo novamente para configurar os atributos.
+    // Upload desvincula GL_ARRAY_BUFFER; associe-o novamente antes de configurar os atributos.
     vbo.Bind();
 
     setupAttributes(componentCount, layout);
@@ -126,7 +125,7 @@ bool Mesh::create(
 
 
 
-// Criar Mesh com índices
+// Cria uma malha cujos triângulos referenciam vértices por índice.
 bool Mesh::createIndexed(
     const std::vector<float>& vertices,
     const std::vector<unsigned int>& indices,
@@ -176,7 +175,7 @@ bool Mesh::createIndexed(
         }
     }
 
-    // Salvar os dados na CPU
+    // Mantém cópias dos vértices e índices para consulta.
     vertexData = vertices;
     structuredVertices.clear();
     indexData = indices;
@@ -185,19 +184,18 @@ bool Mesh::createIndexed(
     this->drawMode = drawMode;
     usesIndices = true;
 
-    // Configurar VAO, VBO e EBO
+    // Configura os vértices no VBO e os índices no EBO associado ao VAO.
     vao.Bind();
 
     vbo.Upload(vertexData);
 
-    // Associar o VBO aos atributos
     vbo.Bind();
 
     setupAttributes(componentCount, layout);
 
     vbo.Unbind();
 
-    // Associar os índices ao VAO atual
+    // O EBO fica associado ao VAO que está ativo.
     ebo.Upload(indexData);
 
     vao.Unbind();
@@ -206,13 +204,12 @@ bool Mesh::createIndexed(
 }
 
 
-// NOVO FORMATO: VERTEX
-// Configura os atributos da estrutura Vertex
+// Configura o layout fixo da estrutura Vertex.
 void Mesh::setupVertexAttributes()
 {
     const GLsizei stride = static_cast<GLsizei>(sizeof(Vertex));
 
-    // Location 0: posição
+    // Localização 0: posição.
     glVertexAttribPointer(
         0, 3, GL_FLOAT, GL_FALSE,
         stride,
@@ -220,7 +217,7 @@ void Mesh::setupVertexAttributes()
     );
     glEnableVertexAttribArray(0);
 
-    // Location 1: cor
+    // Localização 1: cor.
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE,
         stride,
@@ -228,7 +225,7 @@ void Mesh::setupVertexAttributes()
     );
     glEnableVertexAttribArray(1);
 
-    // Location 2: coordenadas UV
+    // Localização 2: coordenadas da textura.
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE,
         stride,
@@ -236,7 +233,7 @@ void Mesh::setupVertexAttributes()
     );
     glEnableVertexAttribArray(2);
 
-    // Location 3: normal
+    // Localização 3: normal.
     glVertexAttribPointer(
         3, 3, GL_FLOAT, GL_FALSE,
         stride,
@@ -245,7 +242,7 @@ void Mesh::setupVertexAttributes()
     glEnableVertexAttribArray(3);
 }
 
-// Criar Mesh com Vertex sem índices
+// Cria uma malha de vértices estruturados sem índices.
 bool Mesh::create(
     const std::vector<Vertex>& vertices,
     GLenum drawMode)
@@ -258,7 +255,7 @@ bool Mesh::create(
         return false;
     }
 
-    // Salvar os dados na CPU
+    // Mantém uma cópia dos vértices para consulta.
     structuredVertices = vertices;
     vertexData.clear();
     indexData.clear();
@@ -267,12 +264,11 @@ bool Mesh::create(
     this->drawMode = drawMode;
     usesIndices = false;
 
-    // Configurar os objetos OpenGL
+    // Envia os vértices e configura seus atributos no VAO.
     vao.Bind();
 
     vbo.Upload(structuredVertices);
 
-    // Associar o VBO aos atributos
     vbo.Bind();
 
     setupVertexAttributes();
@@ -284,7 +280,7 @@ bool Mesh::create(
     return true;
 }
 
-// Criar Mesh com Vertex e índices
+// Cria uma malha de vértices estruturados com índices.
 bool Mesh::createIndexed(
     const std::vector<Vertex>& vertices,
     const std::vector<unsigned int>& indices,
@@ -314,7 +310,7 @@ bool Mesh::createIndexed(
         }
     }
 
-    // Salvar os dados na CPU
+    // Mantém cópias dos vértices e índices para consulta.
     structuredVertices = vertices;
     vertexData.clear();
     indexData = indices;
@@ -323,19 +319,18 @@ bool Mesh::createIndexed(
     this->drawMode = drawMode;
     usesIndices = true;
 
-    // Configurar VAO, VBO e EBO
+    // Configura os vértices no VBO e os índices no EBO associado ao VAO.
     vao.Bind();
 
     vbo.Upload(structuredVertices);
 
-    // Associar o VBO aos atributos
     vbo.Bind();
 
     setupVertexAttributes();
 
     vbo.Unbind();
 
-    // Associar os índices ao VAO atual
+    // O EBO fica associado ao VAO que está ativo.
     ebo.Upload(indexData);
 
     vao.Unbind();
@@ -343,7 +338,6 @@ bool Mesh::createIndexed(
     return true;
 }
 
-// Desenhar Mesh
 void Mesh::draw() const
 {
     vao.Bind();
@@ -368,16 +362,14 @@ void Mesh::draw() const
 
     vao.Unbind();
 }
-// Desenhar Mesh utilizando suas próprias texturas
 void Mesh::draw(Shader& shader, const Texture* diffuseFallback) const
 {
     bool hasDiffuse = false;
     bool hasSpecular = false;
 
-    // Percorrer as texturas armazenadas na Mesh
+    // Associa cada textura à unidade usada pelo shader.
     for (const Texture& texture : textures)
     {
-        // Identificar o tipo da textura
         if (texture.getType() == "diffuse")
         {
             hasDiffuse = true;
@@ -405,14 +397,12 @@ void Mesh::draw(Shader& shader, const Texture* diffuseFallback) const
         shader.setInt("specular0", 1);
     }
 
-    // Desenhar a geometria
     draw();
 
     // Restaurar a unidade de textura padrão
     glActiveTexture(GL_TEXTURE0);
 }
 
-// Liberar recursos
 void Mesh::destroy()
 {
     vao.Delete();
@@ -428,31 +418,26 @@ void Mesh::destroy()
     usesIndices = false;
 }
 
-// Acessar os dados mantidos na CPU
 const std::vector<float>& Mesh::getVertexData() const
 {
     return vertexData;
 }
 
-// Acessar os vértices estruturados mantidos na CPU
 const std::vector<Vertex>& Mesh::getStructuredVertices() const
 {
     return structuredVertices;
 }
 
-// Acessar os índices mantidos na CPU
 const std::vector<unsigned int>& Mesh::getIndexData() const
 {
     return indexData;
 }
 
-// Adicionar textura à Mesh
 void Mesh::addTexture(Texture&& texture)
 {
     textures.push_back(std::move(texture));
 }
 
-// Acessar as texturas mantidas na Mesh
 const std::vector<Texture>& Mesh::getTextures() const
 {
     return textures;

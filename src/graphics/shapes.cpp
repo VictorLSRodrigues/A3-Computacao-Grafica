@@ -8,7 +8,7 @@ std::vector<float> shapes::triangle(float side)
 {
     float height = side * std::sqrt(3.0f) / 2.0f;
 
-    // O centro do triângulo fica na origem: base em -altura/3, topo em 2*altura/3.
+    // Posiciona a base e o topo para que o centro geométrico fique na origem.
     return {
         -side / 2.0f, -height / 3.0f, 0.0f,
         side / 2.0f, -height / 3.0f, 0.0f,
@@ -43,7 +43,7 @@ std::vector<unsigned int> shapes::rectangleIndices()
 
 // 3D
 
-// Pirâmide: 8 floats por vértice = posição (3) + normal (3) + UV (2).
+// Cada vértice da pirâmide tem 11 valores: posição (3), cor (3), UV (2) e normal (3).
 // A base usa a imagem inteira. Cada face lateral usa um triângulo da imagem.
 
 std::vector<float> shapes::pyramid()
@@ -90,7 +90,7 @@ std::vector<unsigned int> shapes::pyramidIndices()
     };
 }
 
-// CUBO
+// Cubo
 std::vector<float> shapes::cube()
 {
     return {

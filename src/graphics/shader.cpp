@@ -5,16 +5,15 @@
 #include <sstream>
 #include <glm/gtc/type_ptr.hpp>
 
-// Cria o programa de shader a partir dos dois textos (vertex e fragment).
-// Devolve true se deu tudo certo e false se algo falhou.
+// Compila os shaders de vértice e fragmento e os combina em um programa.
 bool Shader::create(const char *vertexSource, const char *fragmentSource)
 {
-    destroy(); // se já existia um programa, apaga antes de criar outro
+    destroy(); // Descarta o programa anterior antes de substituí-lo.
 
     GLint sucesso;
     char log[512];
 
-    // 1. vertex shader
+    // Compila o shader de vértice.
     GLuint vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vertexSource, nullptr);
     glCompileShader(vertex);
@@ -28,7 +27,7 @@ bool Shader::create(const char *vertexSource, const char *fragmentSource)
         return false;
     }
 
-    // 2. fragment shader
+    // Compila o shader de fragmento.
     GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fragmentSource, nullptr);
     glCompileShader(fragment);
@@ -43,14 +42,14 @@ bool Shader::create(const char *vertexSource, const char *fragmentSource)
         return false;
     }
 
-    // 3. juntar no programa e ligar
+    // Vincula os dois shaders em um programa.
     program = glCreateProgram();
     glAttachShader(program, vertex);
     glAttachShader(program, fragment);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &sucesso);
 
-    // 4. os shaders soltos não são mais necessários (deu certo ou não)
+    // Após a vinculação, o programa mantém o código necessário.
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 
@@ -67,13 +66,12 @@ bool Shader::create(const char *vertexSource, const char *fragmentSource)
     return true;
 }
 
-// Escolhe este shader para os próximos desenhos.
 void Shader::use() const
 {
     glUseProgram(program);
 }
 
-// Apaga o programa da placa de vídeo (chamar antes de fechar a janela).
+// Libera o programa enquanto o contexto OpenGL ainda está ativo.
 void Shader::destroy()
 {
     glDeleteProgram(program);
@@ -81,8 +79,7 @@ void Shader::destroy()
     ID = 0;
 }
 
-// Lê um arquivo de texto inteiro para dentro de uma string.
-// Devolve false se não conseguir abrir o arquivo.
+// Lê o conteúdo inteiro do arquivo; retorna false se ele não puder ser aberto.
 static bool readFile(const std::string &path, std::string &content)
 {
     std::ifstream file(path);
@@ -98,7 +95,7 @@ static bool readFile(const std::string &path, std::string &content)
     return true;
 }
 
-// Lê o vertex e o fragment shader de arquivos e cria o programa.
+// Lê os dois arquivos e cria o programa de shader.
 bool Shader::createFromFiles(const std::string &vertexPath, const std::string &fragmentPath)
 {
     std::string vertexSource, fragmentSource;

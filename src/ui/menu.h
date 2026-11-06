@@ -4,7 +4,7 @@
 #include "settings.h"
 #include "window.h"
 
-// O menu: decide o que aparece e o que cada botão faz. Quem desenha é a UI.
+// Controla as páginas e ações do menu; a classe UI desenha seus elementos.
 class Menu
 {
 private:
@@ -16,12 +16,12 @@ private:
     void drawMain(const Window& window, UI& ui);
     void drawOptions(const Window& window, UI& ui, Settings& settings);
 
-    // Fundo escurecido, painel centralizado e título. Devolve o canto superior esquerdo do painel.
+    // Desenha o fundo e o painel; px e py recebem a posição do canto superior esquerdo.
     void drawPanel(const Window& window, UI& ui, const char* title,
                    float panelW, float panelH, float& px, float& py);
 
 public:
-    void update(const Window& window);                       // ESC abre, fecha e volta
+    void update(const Window& window); // ESC abre, fecha ou retorna à página anterior.
     void draw(const Window& window, UI& ui, Settings& settings);
     bool isOpen() const { return open; }
 };

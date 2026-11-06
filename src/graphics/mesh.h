@@ -15,28 +15,25 @@ class Shader;
 class Mesh
 {
 private:
-    // Gerenciadores OpenGL
     VAO vao;
     VBO vbo;
     EBO ebo;
 
-    // Texturas pertencentes à Mesh
     std::vector<Texture> textures;
 
-    // Dados antigos: vector<float>
+    // Vértices em uma lista de números, com o formato descrito por layout.
     std::vector<float> vertexData;
 
-    // Dados novos: vector<Vertex>
+    // Forma alternativa: cada vértice agrupa posição, cor, UV e normal.
     std::vector<Vertex> structuredVertices;
 
-    // Índices
     std::vector<unsigned int> indexData;
 
     GLsizei vertexCount = 0;
     GLenum drawMode = GL_TRIANGLES;
     bool usesIndices = false;
 
-    // Configuração do formato antigo
+    // Calcula quantos números compõem cada vértice.
     static int computeStride(
         int componentCount,
         const std::vector<int>& layout
@@ -47,7 +44,7 @@ private:
         const std::vector<int>& layout
     );
 
-    // Configuração do formato Vertex
+    // Configura como os campos de Vertex são enviados ao OpenGL.
     static void setupVertexAttributes();
 
 public:
@@ -57,13 +54,13 @@ public:
     Mesh(const Mesh&) = delete;
     Mesh& operator=(const Mesh&) = delete;
 
-    // Adicionar textura à Mesh
     void addTexture(Texture&& texture);
 
-    // Consultar texturas da Mesh
     const std::vector<Texture>& getTextures() const;
 
-    // Criar Mesh antiga, sem índices
+    // Em layout, cada número informa quantos valores formam um atributo do vértice.
+    // Exemplo: {3, 3, 2, 3} representa posição, cor, coordenadas da textura e normal.
+    // Cria uma malha a partir de números, sem reutilizar vértices por índice.
     bool create(
         const std::vector<float>& vertices,
         int componentCount = 3,
@@ -71,7 +68,7 @@ public:
         const std::vector<int>& layout = {}
     );
 
-    // Criar Mesh antiga, com índices
+    // Cria uma malha a partir de números e índices de vértice.
     bool createIndexed(
         const std::vector<float>& vertices,
         const std::vector<unsigned int>& indices,
@@ -80,34 +77,29 @@ public:
         const std::vector<int>& layout = {}
     );
 
-    // Criar Mesh com Vertex, sem índices
+    // Cria uma malha a partir de vértices estruturados, sem índices.
     bool create(
         const std::vector<Vertex>& vertices,
         GLenum drawMode = GL_TRIANGLES
     );
 
-    // Criar Mesh com Vertex, com índices
+    // Cria uma malha a partir de vértices estruturados e índices.
     bool createIndexed(
         const std::vector<Vertex>& vertices,
         const std::vector<unsigned int>& indices,
         GLenum drawMode = GL_TRIANGLES
     );
 
-    // Desenhar Mesh
     void draw() const;
 
-    // Desenhar Mesh utilizando suas próprias texturas
+    // Associa as texturas e desenha a malha; usa diffuseFallback se não houver textura difusa.
     void draw(Shader& shader, const Texture* diffuseFallback = nullptr) const;
 
-    // Liberar recursos
     void destroy();
 
-    // Acesso aos dados antigos
     const std::vector<float>& getVertexData() const;
 
-    // Acesso aos dados estruturados
     const std::vector<Vertex>& getStructuredVertices() const;
 
-    // Acesso aos índices
     const std::vector<unsigned int>& getIndexData() const;
 };

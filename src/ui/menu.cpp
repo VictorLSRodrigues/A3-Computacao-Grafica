@@ -7,7 +7,7 @@ void Menu::update(const Window& window)
 
     if (open && page == Page::Options)
     {
-        page = Page::Main; // ESC nas opções volta pro menu, sem fechar tudo
+        page = Page::Main; // ESC nas opções retorna ao menu principal.
     }
     else
     {
@@ -80,7 +80,7 @@ void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)
     const float rowW = panelW - 2.0f * margin;
     const float rowH = 48.0f;
     const float gap = 14.0f;
-    const int rows = 7; // 4 ajustes, tipo de luz, restaurar e voltar
+    const int rows = 7; // Quatro ajustes, tipo de luz, restaurar e voltar.
 
     const float panelH = margin + titleH + rows * rowH + (rows - 1) * gap + margin;
 

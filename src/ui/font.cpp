@@ -9,7 +9,7 @@
 
 namespace
 {
-    // ASCII mais os acentos do português (Latin-1).
+    // Inclui ASCII básico e caracteres Latin-1 usados em textos acentuados.
     constexpr unsigned int FIRST_CHAR = 32;
     constexpr unsigned int LAST_CHAR = 255;
     constexpr int ATLAS_SIZE = 1024;
@@ -17,7 +17,7 @@ namespace
 
 bool Font::load(const std::string& path, float newPixelHeight)
 {
-    // 1. Ler o arquivo .ttf inteiro pra memória
+    // Lê a fonte para a memória antes de preparar os caracteres.
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open())
     {
@@ -27,7 +27,7 @@ bool Font::load(const std::string& path, float newPixelHeight)
     std::vector<unsigned char> ttf((std::istreambuf_iterator<char>(file)),
                                    std::istreambuf_iterator<char>());
 
-    // 2. Assar as letras num atlas (o stb_truetype faz o trabalho pesado)
+    // Organiza os glifos em uma imagem que será usada como atlas da fonte.
     const int count = static_cast<int>(LAST_CHAR - FIRST_CHAR + 1);
     std::vector<stbtt_bakedchar> baked(count);
     std::vector<unsigned char> pixels(ATLAS_SIZE * ATLAS_SIZE);
@@ -41,11 +41,11 @@ bool Font::load(const std::string& path, float newPixelHeight)
         return false;
     }
 
-    // 3. Subir o atlas pra placa de vídeo como textura de um canal
+    // Envia o atlas como textura de um canal de intensidade.
     if (!atlas.create(ATLAS_SIZE, ATLAS_SIZE, 1, pixels.data()))
         return false;
 
-    // 4. Guardar as medidas de cada letra, já relativas ao ponto de partida
+    // Guarda limites, coordenadas no atlas e avanço de cada glifo.
     glyphs.assign(count, Glyph{});
     for (int i = 0; i < count; ++i)
     {
@@ -56,7 +56,7 @@ bool Font::load(const std::string& path, float newPixelHeight)
         Glyph& g = glyphs[i];
         g.x0 = q.x0; g.y0 = q.y0; g.x1 = q.x1; g.y1 = q.y1;
         g.s0 = q.s0; g.t0 = q.t0; g.s1 = q.s1; g.t1 = q.t1;
-        g.advance = x; // o x avançou exatamente o "advance" da letra
+        g.advance = x; // O valor final de x é o avanço calculado pelo stb_truetype.
     }
 
     pixelHeight = newPixelHeight;
@@ -84,7 +84,7 @@ float Font::measure(const std::string& text, float scale) const
     return width * scale;
 }
 
-// UTF-8: letras comuns usam 1 byte, mas "ç" ou "ã" usam 2 (ou mais pra outros símbolos).
+// Converte cada sequência UTF-8 em um ponto de código Unicode.
 std::vector<unsigned int> Font::decodeUtf8(const std::string& text)
 {
     std::vector<unsigned int> result;
@@ -93,7 +93,7 @@ std::vector<unsigned int> Font::decodeUtf8(const std::string& text)
     {
         unsigned char c = static_cast<unsigned char>(text[i]);
         unsigned int codepoint = c;
-        int extra = 0; // quantos bytes de continuação seguem
+        int extra = 0; // Número de bytes de continuação após o byte inicial.
 
         if (c < 0x80)
             extra = 0;
@@ -113,7 +113,7 @@ std::vector<unsigned int> Font::decodeUtf8(const std::string& text)
             extra = 3;
         }
         else
-            codepoint = '?'; // byte inválido
+            codepoint = '?'; // Substitui um byte inicial inválido.
 
         ++i;
         for (int k = 0; k < extra && i < text.size(); ++k, ++i)

@@ -5,7 +5,7 @@
 #include "UI.h"
 #include "window.h"
 
-// Informações de depuração no canto da tela (FPS e posição da câmera). F3 liga e desliga.
+// Exibe FPS e posição da câmera no canto da tela; F3 alterna a visibilidade.
 class HUD
 {
 public:

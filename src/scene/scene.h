@@ -12,30 +12,30 @@
 #include "graphics/texture.h"
 #include "transform.h"
 
-// Lista de objetos que aparecem na tela. Quem carrega e desenha.
+// Mantém os objetos da cena e coordena o carregamento e o desenho deles.
 class Scene
 {
 public:
     struct Object
     {
         std::string name;
-        std::shared_ptr<Model> model; // um modelo carregado de arquivo...
-        std::shared_ptr<Mesh> mesh;   // ...ou uma malha criada no código (só um dos dois é usado)
+        std::shared_ptr<Model> model; // Modelo carregado de arquivo.
+        std::shared_ptr<Mesh> mesh;   // Malha criada no código; apenas um dos dois é usado.
         Transform transform;
     };
 
-    // Carrega o modelo (ou reaproveita, se o mesmo arquivo já foi carregado) e põe na cena.
-    // Devolve o objeto criado pra você ajustar a posição, ou nullptr se o carregamento falhar.
+    // Adiciona o modelo à cena, reutilizando-o se o caminho já estiver no cache.
+    // Retorna o objeto criado ou nullptr se o carregamento falhar.
     Object* addModel(const std::string& path, const Transform& transform = Transform{});
 
-    // Põe na cena uma malha já pronta (com as texturas já adicionadas a ela).
+    // Adiciona à cena uma malha já criada e configurada.
     Object* addMesh(std::shared_ptr<Mesh> mesh, const std::string& name = "",
                     const Transform& transform = Transform{});
 
-    // Desenha todos os objetos. O shader precisa estar em uso e com a câmera já configurada.
+    // Desenha os objetos com o shader ativo e a câmera configurada.
     void draw(Shader& shader, Camera& camera, const Texture& fallbackTexture);
 
 private:
     std::map<std::string, std::shared_ptr<Model>> modelCache;
-    std::deque<Object> objects; // deque: o ponteiro devolvido continua válido ao acrescentar
+    std::deque<Object> objects; // Mantém válidos os ponteiros retornados ao adicionar objetos.
 };

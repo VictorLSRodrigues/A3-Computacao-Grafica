@@ -3,11 +3,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-// Posição, rotação e escala de um objeto. Só dados.
+// Transformação de um objeto; a rotação é expressa em graus.
 struct Transform
 {
     glm::vec3 position{0.0f};
-    glm::vec3 rotation{0.0f}; // em graus, em torno dos eixos x, y e z
+    glm::vec3 rotation{0.0f}; // ângulos em torno dos eixos X, Y e Z
     glm::vec3 scale{1.0f};
 
     glm::mat4 matrix() const

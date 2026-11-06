@@ -7,7 +7,7 @@ void HUD::update(const Window& window, float deltaTime)
     if (window.keyPressed(GLFW_KEY_F3))
         visible = !visible;
 
-    // FPS: média a cada meio segundo, pro número não ficar tremendo
+    // Atualiza o FPS a cada meio segundo para reduzir oscilações na leitura.
     timeAccumulator += deltaTime;
     ++frameCount;
 
@@ -27,10 +27,10 @@ void HUD::draw(UI& ui, const glm::vec3& cameraPosition)
     char line[64];
     const float scale = 0.4f;
     const float x = 16.0f;
-    float y = 32.0f; // linha de base da primeira linha
+    float y = 32.0f; // Linha de base do primeiro texto.
 
     std::snprintf(line, sizeof(line), "FPS: %.0f", fps);
-    ui.drawText(line, x + 1.0f, y + 1.0f, scale, 0.0f, 0.0f, 0.0f, 0.8f); // sombra
+    ui.drawText(line, x + 1.0f, y + 1.0f, scale, 0.0f, 0.0f, 0.0f, 0.8f); // Sombra do texto.
     ui.drawText(line, x, y, scale, 1.0f, 1.0f, 1.0f);
 
     y += 26.0f;

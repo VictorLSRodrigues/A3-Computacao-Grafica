@@ -72,13 +72,13 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
     }
     glfwInitialized = true;
 
-    // OpenGL 3.3 no perfil Core.
+    // Solicita OpenGL 3.3 no perfil Core.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_SAMPLES, 4); // suaviza as bordas (MSAA 4x)
+    glfwWindowHint(GLFW_SAMPLES, 4); // Ativa antisserrilhamento com quatro amostras.
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Em tela cheia, passa o monitor e usa a resolução dele.
+    // Em tela cheia, associa a janela ao monitor principal.
     GLFWmonitor *monitor = nullptr;
     if (fullscreen)
     {
@@ -98,7 +98,7 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
 
     glfwMakeContextCurrent(windowHandle);
 
-    glfwSwapInterval(1); // vsync
+    glfwSwapInterval(1); // Sincroniza a troca de quadros com a tela.
 
     if (!gladLoadGL())
     {
@@ -109,7 +109,7 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
 
     glfwGetFramebufferSize(windowHandle, &width, &height);
 
-    // Guarda "this" na janela pra o callback conseguir atualizar width/height.
+    // Permite que os callbacks encontrem esta instância e atualizem seus dados.
     glfwSetWindowUserPointer(windowHandle, this);
     glfwSetFramebufferSizeCallback(windowHandle, onFramebufferResize);
 
@@ -128,7 +128,7 @@ void Window::swapBuffers() const { glfwSwapBuffers(windowHandle); }
 
 void Window::pollEvents()
 {
-    // Limpa o "aconteceu neste quadro" do quadro anterior, depois lê os eventos novos.
+    // Limpa os eventos de um quadro e registra os novos recebidos do GLFW.
     std::fill(std::begin(keysPressedThisFrame), std::end(keysPressedThisFrame), false);
     std::fill(std::begin(mouseClicksThisFrame), std::end(mouseClicksThisFrame), false);
     glfwPollEvents();
@@ -162,6 +162,6 @@ void Window::setCursorMode(CursorMode mode)
 void Window::setMousePosition(double x, double y)
 {
     glfwSetCursorPos(windowHandle, x, y);
-    mouseX = x; // já guarda o valor novo, sem esperar o GLFW avisar
+    mouseX = x; // Atualiza o estado local sem aguardar outro callback.
     mouseY = y;
 }

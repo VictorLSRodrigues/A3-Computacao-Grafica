@@ -21,7 +21,7 @@ void VBO::Unbind() const
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-// Enviar vértices antigos (vector<float>)
+// Envia uma lista de valores float para o buffer de vértices.
 void VBO::Upload(
     const std::vector<float>& vertices,
     GLenum usage
@@ -41,7 +41,7 @@ void VBO::Upload(
     Unbind();
 }
 
-// Enviar vértices estruturados (vector<Vertex>)
+// Envia vértices completos armazenados na estrutura Vertex.
 void VBO::Upload(
     const std::vector<Vertex>& vertices,
     GLenum usage

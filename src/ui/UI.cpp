@@ -29,7 +29,7 @@ bool UI::create()
     return font.load(ASSETS_DIR "fonts/DejaVuSans.ttf");
 }
 
-// Liga o que a interface precisa: sem profundidade, com transparência, sem descartar faces.
+// Configura o OpenGL para desenhar a interface transparente sobre a cena.
 void UI::begin(const Window &w)
 {
     window = &w;
@@ -42,7 +42,7 @@ void UI::begin(const Window &w)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-// Restaura o estado do 3D.
+// Restaura o estado usado para desenhar a cena 3D.
 void UI::end()
 {
     glDepthMask(GL_TRUE);
@@ -97,7 +97,7 @@ void UI::drawTextCentered(const std::string &text, float x, float y, float width
                           float scale, float r, float g, float b, float a)
 {
     float textWidth = font.measure(text, scale);
-    float capHeight = font.getPixelHeight() * scale * 0.62f; // altura das maiúsculas
+    float capHeight = font.getPixelHeight() * scale * 0.62f; // Aproxima a altura das maiúsculas.
 
     drawText(text,
              x + (width - textWidth) / 2.0f,
@@ -119,7 +119,7 @@ bool UI::button(const std::string &label, float x, float y, float width, float h
     {
         r = 0.22f;
         g = 0.24f;
-        b = 0.28f; // cinza apagado
+        b = 0.28f; // Mantém a cor do botão desativado em tons de cinza.
     }
     else if (hovered)
     {
@@ -146,12 +146,12 @@ bool UI::stepper(const std::string &label, float &value, float step, float minVa
     const float controlsX = x + width - controlsW;
     const float old = value;
 
-    // Nome do ajuste, alinhado à esquerda
+    // Mostra o nome do ajuste à esquerda dos controles.
     const float labelScale = 0.5f;
     const float capHeight = font.getPixelHeight() * labelScale * 0.62f;
     drawText(label, x, y + (height + capHeight) / 2.0f, labelScale, 1.0f, 1.0f, 1.0f);
 
-    // Botões primeiro: eles podem mudar o valor, e o número mostrado já tem que ser o novo
+    // Atualiza o valor antes de desenhá-lo para exibir a alteração no mesmo quadro.
     if (button("-", controlsX, y, buttonSize, height, 0.25f, 0.30f, 0.40f))
         value -= step;
     if (button("+", controlsX + buttonSize + valueW, y, buttonSize, height, 0.25f, 0.30f, 0.40f))
@@ -159,7 +159,7 @@ bool UI::stepper(const std::string &label, float &value, float step, float minVa
 
     value = std::clamp(value, minValue, maxValue);
 
-    // Valor no meio, numa caixa escura
+    // Destaca o valor entre os botões de decremento e incremento.
     drawRect(controlsX + buttonSize, y, valueW, height, 0.04f, 0.05f, 0.08f, 1.0f);
 
     char text[32];

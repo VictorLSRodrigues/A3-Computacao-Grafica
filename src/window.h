@@ -11,11 +11,11 @@ private:
     int height = 0;
     bool glfwInitialized = false;
 
-    // Teclado e mouse
-    bool keyStates[GLFW_KEY_LAST + 1] = {};         // true enquanto a tecla está segurada
-    bool keysPressedThisFrame[GLFW_KEY_LAST + 1] = {}; // true só no quadro em que apertou
+    // Estados contínuos e eventos de pressionamento de teclado e mouse.
+    bool keyStates[GLFW_KEY_LAST + 1] = {};             // true enquanto a tecla estiver pressionada
+    bool keysPressedThisFrame[GLFW_KEY_LAST + 1] = {};  // true no quadro em que a tecla foi pressionada
     bool mouseClicksThisFrame[GLFW_MOUSE_BUTTON_LAST + 1] = {};
-    bool mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {}; // segurado agora
+    bool mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {}; // true enquanto o botão estiver pressionado
     double mouseX = 0.0;
     double mouseY = 0.0;
 
@@ -23,7 +23,7 @@ private:
     static void onMouseMove(GLFWwindow *window, double x, double y);
     static void onMouseButton(GLFWwindow *window, int button, int action, int mods);
 
-    // Chamada pelo GLFW quando a janela muda de tamanho.
+    // Atualiza o viewport e as dimensões ao redimensionar a janela.
     static void onFramebufferResize(GLFWwindow *window, int width, int height);
 
 public:
@@ -33,15 +33,16 @@ public:
     Window(const Window &) = delete;
     Window &operator=(const Window &) = delete;
 
-    // fullscreen = true usa a resolução do monitor; senão usa windowWidth x windowHeight.
+    // Em tela cheia usa a resolução do monitor; caso contrário, usa as dimensões informadas.
     bool create(const char *title, bool fullscreen = true,
                 int windowWidth = 1280, int windowHeight = 720);
 
     bool shouldClose() const;
-    void close() const; // pede pra janela fechar
+    void close() const; // Solicita o fechamento da janela.
     void swapBuffers() const;
     void pollEvents();
 
+    // keyPressed detecta o evento de pressionar; keyDown indica que a tecla continua pressionada.
     bool keyPressed(int key) const { return key >= 0 && key <= GLFW_KEY_LAST && keysPressedThisFrame[key]; }
     bool keyDown(int key) const { return key >= 0 && key <= GLFW_KEY_LAST && keyStates[key]; }
     bool mouseClicked(int button) const { return button >= 0 && button <= GLFW_MOUSE_BUTTON_LAST && mouseClicksThisFrame[button]; }

@@ -7,7 +7,7 @@
 
 bool Texture::load(const std::string& path)
 {
-    // Imagens começam pela linha de CIMA, mas o OpenGL espera a de BAIXO. Inverte ao ler.
+    // Ajusta a origem vertical da imagem para a convenção de coordenadas do OpenGL.
     stbi_set_flip_vertically_on_load(true);
 
     int w = 0, h = 0, channels = 0;
@@ -20,13 +20,13 @@ bool Texture::load(const std::string& path)
     }
 
     bool ok = create(w, h, channels, data);
-    stbi_image_free(data); // a cópia na placa de vídeo basta
+    stbi_image_free(data); // Os pixels já foram enviados para a textura OpenGL.
     return ok;
 }
 
 bool Texture::create(int newWidth, int newHeight, int channels, const unsigned char* data)
 {
-    destroy(); // se já havia uma textura aqui, apaga antes
+    destroy(); // Substitui com segurança qualquer textura já armazenada neste objeto.
 
     if (!data || newWidth <= 0 || newHeight <= 0)
     {
@@ -50,11 +50,11 @@ bool Texture::create(int newWidth, int newHeight, int channels, const unsigned c
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
 
-    // Linhas de imagens RGB nem sempre são múltiplas de 4 bytes.
+    // Permite ler linhas cujo tamanho em bytes não seja múltiplo de quatro.
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D); // versões menores, pra não "tremer" de longe
+    glGenerateMipmap(GL_TEXTURE_2D); // Gera versões menores para amostragem à distância.
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -81,7 +81,6 @@ void Texture::destroy()
 }
 
 
-// Construtor de movimentação
 Texture::Texture(Texture&& other) noexcept
     : id(other.id),
       width(other.width),
@@ -93,7 +92,6 @@ Texture::Texture(Texture&& other) noexcept
     other.height = 0;
 }
 
-// Operador de movimentação
 Texture& Texture::operator=(Texture&& other) noexcept
 {
     if (this != &other)
@@ -113,13 +111,11 @@ Texture& Texture::operator=(Texture&& other) noexcept
     return *this;
 }
 
-// Definir o tipo da textura
 void Texture::setType(const std::string& newType)
 {
     type = newType;
 }
 
-// Consultar o tipo da textura
 const std::string& Texture::getType() const
 {
     return type;

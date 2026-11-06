@@ -30,7 +30,7 @@ void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane
 
 void Camera::processInput(Window &window, float deltaTime)
 {
-    // Movimento da câmera
+    // WASD move no plano horizontal; Espaço e Ctrl movem no eixo vertical.
     if (window.keyDown(GLFW_KEY_LEFT_SHIFT))
         speed = sprintSpeed; 
     else
@@ -54,7 +54,7 @@ void Camera::processInput(Window &window, float deltaTime)
     if (window.keyDown(GLFW_KEY_LEFT_CONTROL))
         position += speed * deltaTime * -up;
 
-    // Controle do mouse
+    // Enquanto o botão esquerdo estiver pressionado, o mouse controla a orientação.
     if (window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
     {
         window.setCursorMode(Window::CursorMode::Hidden);
@@ -96,8 +96,7 @@ void Camera::processInput(Window &window, float deltaTime)
     }
 }
 
-// Atualiza o tamanho usado na projeção. Ignora tamanhos inválidos
-// (janela minimizada tem altura 0), mantendo o último tamanho bom.
+// Mantém as dimensões usadas na projeção; ignora valores inválidos durante a minimização.
 void Camera::setViewportSize(int width, int height)
 {
     if (width <= 0 || height <= 0)

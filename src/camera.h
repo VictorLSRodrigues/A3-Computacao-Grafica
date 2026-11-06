@@ -16,6 +16,7 @@ class Camera
 {
 
 public:
+    // Posição, direção para onde a câmera olha e eixo vertical da câmera.
     glm::vec3 position;
     glm::vec3 orientation = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -32,8 +33,13 @@ public:
 
     Camera(int width, int height, glm::vec3 position);
 
+    // Envia ao shader as matrizes de visão e projeção da câmera.
     void setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName);
+
+    // Atualiza posição e orientação a partir do teclado e do mouse.
     void processInput(Window &window, float deltaTime);
+
+    // Atualiza a área usada para calcular a projeção.
     void setViewportSize(int width, int height);
 };
 #endif
