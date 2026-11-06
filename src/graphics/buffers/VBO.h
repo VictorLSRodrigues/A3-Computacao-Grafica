@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 #include <vector>
 
-#include "../Vertex.h"
+#include "../vertex.h"
 
 class VBO
 {

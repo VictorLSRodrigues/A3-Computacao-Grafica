@@ -1,9 +1,9 @@
-#include"Model.h"
+#include"graphics/model.h"
 #include<json/json.h>
-#include"Mesh.h"
-#include"camera.h"
-#include"texture.h"
-#include"buffers/VAO.h"
+#include"graphics/mesh.h"
+#include"graphics/camera.h"
+#include"graphics/texture.h"
+#include"graphics/buffers/VAO.h"
 #include <fstream>
 #include <iterator>
 #include <cctype>

@@ -20,27 +20,31 @@ add_subdirectory(Libraries/glfw-3.5.1)
 
 add_executable(OpenGLProjeto
     src/main.cpp
-    src/model.cpp
-    src/shader.cpp
-    src/mesh.cpp
-    src/formas.cpp
     src/window.cpp
-    src/texture.cpp
     src/camera.cpp
-    src/buffers/VAO.cpp
-    src/buffers/VBO.cpp
-    src/buffers/EBO.cpp
-    src/ui/menu.cpp
-    src/ui/font.cpp
+
+    src/scene/scene.cpp
+
+    src/graphics/shader.cpp
+    src/graphics/texture.cpp
+    src/graphics/mesh.cpp
+    src/graphics/model.cpp
+    src/graphics/formas.cpp
+    src/graphics/buffers/VAO.cpp
+    src/graphics/buffers/VBO.cpp
+    src/graphics/buffers/EBO.cpp
+
     src/ui/UI.cpp
     src/ui/HUD.cpp
+    src/ui/menu.cpp
+    src/ui/font.cpp
+
     Libraries/glad/src/glad.c
 )
 
 target_include_directories(OpenGLProjeto PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ui"
 )
 
 target_compile_definitions(OpenGLProjeto PRIVATE

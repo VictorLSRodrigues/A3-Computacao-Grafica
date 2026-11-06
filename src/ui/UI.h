@@ -3,8 +3,8 @@
 #include <string>
 
 #include "font.h"
-#include "mesh.h"
-#include "shader.h"
+#include "graphics/mesh.h"
+#include "graphics/shader.h"
 #include "window.h"
 
 // Desenha elementos 2D em pixels (retângulos, texto, botões) por cima da cena.

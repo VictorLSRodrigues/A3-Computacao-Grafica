@@ -7,7 +7,7 @@
 #include "buffers/VAO.h"
 #include "buffers/VBO.h"
 #include "buffers/EBO.h"
-#include "Vertex.h"
+#include "vertex.h"
 #include "texture.h"
 
 class Shader;

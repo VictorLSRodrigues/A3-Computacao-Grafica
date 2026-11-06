@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "texture.h"
+#include "graphics/texture.h"
 
 // Fonte TrueType "assada" num atlas: uma textura com todas as letras lado a lado.
 class Font

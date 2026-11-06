@@ -1,14 +1,18 @@
 
 #include "window.h"
-#include "shader.h"
-#include "mesh.h"
-#include "formas.h"
-#include "menu.h"
-#include "HUD.h"
-#include "texture.h"
+
+#include "graphics/shader.h"
+#include "graphics/mesh.h"
+#include "graphics/formas.h"
+#include "graphics/texture.h"
+
 #include "camera.h"
 #include "settings.h"
-#include "Model.h"
+
+#include "scene/scene.h"
+
+#include "ui/menu.h"
+#include "ui/HUD.h"
 
 #include <utility>
 #include <iostream>
@@ -29,13 +33,9 @@ int main()
     if (!defaultTexture.load(ASSETS_DIR "textures/default.png"))
         return -1;
 
-    // 2. Carregar modelo 3D
-    Model macaco(ASSETS_DIR "models/macaco.glb");
-
     // 3. Criar pirâmide
-    Mesh piramide;
-
-    if (!piramide.criarEbo(
+    auto piramide = std::make_shared<Mesh>();
+    if (!piramide->criarEbo(
             formas::piramide(),
             formas::indicesPiramide(),
             3,
@@ -62,9 +62,8 @@ int main()
     specular.setType("specular");
 
     // Transferir as texturas para a Mesh
-    piramide.adicionarTextura(std::move(texture));
-    piramide.adicionarTextura(std::move(specular));
-
+    piramide->adicionarTextura(std::move(texture));
+    piramide->adicionarTextura(std::move(specular));
     // 5. Shader da pirâmide e do macaco
     Shader shaderCamera;
 
@@ -107,6 +106,16 @@ int main()
     Menu menu;
     Settings settings;
     HUD hud;
+
+    Scene scene;
+
+    if (Scene::Object *monkey = scene.addModel(ASSETS_DIR "models/macaco.glb"))
+    {
+        monkey->transform.position = glm::vec3(1.5f, 0.0f, 0.0f);
+        monkey->transform.scale = glm::vec3(0.5f);
+    }
+
+    Scene::Object *pyramid = scene.addMesh(piramide, "piramide");
 
     // 9. Configurar câmera
     Camera camera(
@@ -176,16 +185,7 @@ int main()
 
         // Atualizar rotação da pirâmide
         rotation += 90.0f * deltaTime;
-
-        // Transformação da pirâmide
-        glm::mat4 model(1.0f);
-
-        model = glm::translate(model, pyramidPos);
-
-        model = glm::rotate(
-            model,
-            glm::radians(rotation),
-            glm::vec3(0.0f, 1.0f, 0.0f));
+        pyramid->transform.rotation.y = rotation;
 
         // Limpar a tela e o buffer de profundidade
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
@@ -235,27 +235,8 @@ int main()
             shaderCamera,
             "camMatrix");
 
-        // Desenhar pirâmide
-        shaderCamera.setMat4("model", model);
-
-        piramide.desenhar(shaderCamera);
-
-        // Transformação do macaco
-        glm::mat4 macacoModel(1.0f);
-
-        macacoModel = glm::translate(
-            macacoModel,
-            glm::vec3(1.5f, 0.0f, 0.0f));
-
-        macacoModel = glm::scale(
-            macacoModel,
-            glm::vec3(0.5f));
-
-        // Desenhar macaco
-        shaderCamera.setMat4("model", macacoModel);
-
-        macaco.desenhar(shaderCamera, camera, defaultTexture);
-
+        // Desenhar os modelos da cena
+        scene.draw(shaderCamera, camera, defaultTexture);
         // 14. Desenhar cubo da luz
         shaderLuz.usar();
 
@@ -293,9 +274,6 @@ int main()
         janela.trocarBuffers();
         janela.processarEventos();
     }
-
-    // 17. Liberar recursos
-    piramide.limpar();
 
     return 0;
 }

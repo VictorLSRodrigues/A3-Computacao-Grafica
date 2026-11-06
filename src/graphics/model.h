@@ -3,7 +3,7 @@
 
 #include <deque>
 #include<json/json.h>
-#include"Mesh.h"
+#include"mesh.h"
 #include"camera.h"
 #include"buffers/VAO.h"
 #include"texture.h"
