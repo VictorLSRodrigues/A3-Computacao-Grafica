@@ -4,23 +4,23 @@
 #include <iostream>
 #include <cstdio>
 
-#include "graphics/formas.h"
+#include "graphics/shapes.h"
 
 bool UI::create()
 {
-    if (!rectShader.criarDeArquivos(ASSETS_DIR "shaders/ui.vert", ASSETS_DIR "shaders/ui.frag"))
+    if (!rectShader.createFromFiles(ASSETS_DIR "shaders/ui.vert", ASSETS_DIR "shaders/ui.frag"))
     {
         std::cout << "Falha ao criar o shader da UI!" << std::endl;
         return false;
     }
 
-    if (!textShader.criarDeArquivos(ASSETS_DIR "shaders/text.vert", ASSETS_DIR "shaders/text.frag"))
+    if (!textShader.createFromFiles(ASSETS_DIR "shaders/text.vert", ASSETS_DIR "shaders/text.frag"))
     {
         std::cout << "Falha ao criar o shader de texto!" << std::endl;
         return false;
     }
 
-    if (!quad.criarEbo(formas::retangulo(), formas::indicesRetangulo(), 2))
+    if (!quad.createIndexed(shapes::rectangle(), shapes::rectangleIndices(), 2))
     {
         std::cout << "Falha ao criar o retangulo da UI!" << std::endl;
         return false;
@@ -59,12 +59,12 @@ void UI::drawRect(float x, float y, float width, float height,
     if (!window)
         return;
 
-    rectShader.usar();
-    rectShader.setVec2("uTela", (float)window->getLargura(), (float)window->getAltura());
+    rectShader.use();
+    rectShader.setVec2("uTela", (float)window->getWidth(), (float)window->getHeight());
     rectShader.setVec2("uPos", x, y);
     rectShader.setVec2("uTamanho", width, height);
     rectShader.setVec4("uCor", r, g, b, a);
-    quad.desenhar();
+    quad.draw();
 }
 
 void UI::drawText(const std::string &text, float x, float y, float scale,
@@ -73,8 +73,8 @@ void UI::drawText(const std::string &text, float x, float y, float scale,
     if (!window)
         return;
 
-    textShader.usar();
-    textShader.setVec2("uScreen", (float)window->getLargura(), (float)window->getAltura());
+    textShader.use();
+    textShader.setVec2("uScreen", (float)window->getWidth(), (float)window->getHeight());
     textShader.setVec4("uColor", r, g, b, a);
     font.getTexture().bind(0);
 
@@ -87,7 +87,7 @@ void UI::drawText(const std::string &text, float x, float y, float scale,
         textShader.setVec2("uSize", (glyph.x1 - glyph.x0) * scale, (glyph.y1 - glyph.y0) * scale);
         textShader.setVec2("uUVPos", glyph.s0, glyph.t0);
         textShader.setVec2("uUVSize", glyph.s1 - glyph.s0, glyph.t1 - glyph.t0);
-        quad.desenhar();
+        quad.draw();
 
         cursorX += glyph.advance * scale;
     }
@@ -131,7 +131,7 @@ bool UI::button(const std::string &label, float x, float y, float width, float h
     drawRect(x, y, width, height, r, g, b, 1.0f);
     drawTextCentered(label, x, y, width, height, 0.6f, 1.0f, 1.0f, 1.0f, enabled ? 1.0f : 0.4f);
 
-    return hovered && window->mouseClicou(GLFW_MOUSE_BUTTON_LEFT);
+    return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
 }
 
 bool UI::stepper(const std::string &label, float &value, float step, float minValue, float maxValue,

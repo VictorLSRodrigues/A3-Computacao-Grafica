@@ -16,14 +16,14 @@ class Camera
 {
 
 public:
-    glm::vec3 Position;
-    glm::vec3 Orientation = glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 position;
+    glm::vec3 orientation = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
-    bool firstClick = true;
+    bool firstMouseClick = true;
 
-    int width;
-    int height;
+    int viewportWidth;
+    int viewportHeight;
 
     float speed = 1.0f;
     float walkSpeed = 1.5f;
@@ -32,8 +32,8 @@ public:
 
     Camera(int width, int height, glm::vec3 position);
 
-    void Matrix(float FOVdeg, float nearPlane, float farPlane, Shader &shader, const char *uniform);
-    void Inputs(Window &window, float deltaTime);
-    void setSize(int newWidth, int newHeight);
+    void setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName);
+    void processInput(Window &window, float deltaTime);
+    void setViewportSize(int width, int height);
 };
 #endif

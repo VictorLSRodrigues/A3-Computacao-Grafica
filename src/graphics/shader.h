@@ -7,25 +7,25 @@
 class Shader
 {
 private:
-    GLuint programa = 0;
+    GLuint program = 0;
 
 public:
     GLuint ID = 0;
 
     Shader() = default;
-    ~Shader() { limpar(); }
+    ~Shader() { destroy(); }
 
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
 
-    bool criar(const char *vertexFonte, const char *fragmentFonte);
-    bool criarDeArquivos(const std::string &caminhoVertex, const std::string &caminhoFragment);
-    void usar() const;
-    void limpar();
-    void setVec2(const char *nome, float x, float y) const;
-    void setVec3(const char *nome, float x, float y, float z) const;
-    void setVec4(const char *nome, float x, float y, float z, float w) const;
-    void setMat4(const char *nome, const glm::mat4 &matriz) const;
-    void setInt(const char *nome, int valor) const;
+    bool create(const char *vertexSource, const char *fragmentSource);
+    bool createFromFiles(const std::string &vertexPath, const std::string &fragmentPath);
+    void use() const;
+    void destroy();
+    void setVec2(const char *name, float x, float y) const;
+    void setVec3(const char *name, float x, float y, float z) const;
+    void setVec4(const char *name, float x, float y, float z, float w) const;
+    void setMat4(const char *name, const glm::mat4 &matrix) const;
+    void setInt(const char *name, int value) const;
     void Default();
 };

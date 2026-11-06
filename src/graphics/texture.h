@@ -34,7 +34,7 @@ public:
     int getHeight() const { return height; }
 
     // Identificação do tipo da textura
-    void setType(const std::string& novoTipo);
+    void setType(const std::string& newType);
     const std::string& getType() const;
 
     // Cria a textura a partir de dados já em memória (sem arquivo).

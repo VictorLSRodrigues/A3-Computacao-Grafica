@@ -32,7 +32,7 @@ void EBO::Upload(
         usage
     );
 
-    quantidadeIndices = static_cast<GLsizei>(indices.size());
+    indexCount = static_cast<GLsizei>(indices.size());
 }
 
 void EBO::Delete()
@@ -41,6 +41,6 @@ void EBO::Delete()
     {
         glDeleteBuffers(1, &ID);
         ID = 0;
-        quantidadeIndices = 0;
+        indexCount = 0;
     }
 }

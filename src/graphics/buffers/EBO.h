@@ -8,7 +8,7 @@ class EBO
 {
 private:
     GLuint ID = 0;
-    GLsizei quantidadeIndices = 0;
+    GLsizei indexCount = 0;
 
 public:
     EBO();
@@ -28,6 +28,6 @@ public:
 
     GLsizei GetCount() const
     {
-        return quantidadeIndices;
+        return indexCount;
     }
 };

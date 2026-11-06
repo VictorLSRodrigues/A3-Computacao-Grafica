@@ -24,26 +24,26 @@ private:
     std::vector<Texture> textures;
 
     // Dados antigos: vector<float>
-    std::vector<float> verticesCPU;
+    std::vector<float> vertexData;
 
     // Dados novos: vector<Vertex>
-    std::vector<Vertex> verticesEstruturadosCPU;
+    std::vector<Vertex> structuredVertices;
 
     // Índices
-    std::vector<unsigned int> indicesCPU;
+    std::vector<unsigned int> indexData;
 
-    GLsizei quantidadeVertices = 0;
-    GLenum modo = GL_TRIANGLES;
-    bool usaIndices = false;
+    GLsizei vertexCount = 0;
+    GLenum drawMode = GL_TRIANGLES;
+    bool usesIndices = false;
 
     // Configuração do formato antigo
     static int computeStride(
-        int componentes,
+        int componentCount,
         const std::vector<int>& layout
     );
 
     static void setupAttributes(
-        int componentes,
+        int componentCount,
         const std::vector<int>& layout
     );
 
@@ -52,62 +52,62 @@ private:
 
 public:
     Mesh() = default;
-    ~Mesh() { limpar(); }
+    ~Mesh() { destroy(); }
 
     Mesh(const Mesh&) = delete;
     Mesh& operator=(const Mesh&) = delete;
 
     // Adicionar textura à Mesh
-    void adicionarTextura(Texture&& textura);
+    void addTexture(Texture&& texture);
 
     // Consultar texturas da Mesh
     const std::vector<Texture>& getTextures() const;
 
     // Criar Mesh antiga, sem índices
-    bool criar(
+    bool create(
         const std::vector<float>& vertices,
-        int componentes = 3,
-        GLenum modoDesenho = GL_TRIANGLES,
+        int componentCount = 3,
+        GLenum drawMode = GL_TRIANGLES,
         const std::vector<int>& layout = {}
     );
 
     // Criar Mesh antiga, com índices
-    bool criarEbo(
+    bool createIndexed(
         const std::vector<float>& vertices,
         const std::vector<unsigned int>& indices,
-        int componentes = 3,
-        GLenum modoDesenho = GL_TRIANGLES,
+        int componentCount = 3,
+        GLenum drawMode = GL_TRIANGLES,
         const std::vector<int>& layout = {}
     );
 
     // Criar Mesh com Vertex, sem índices
-    bool criar(
+    bool create(
         const std::vector<Vertex>& vertices,
-        GLenum modoDesenho = GL_TRIANGLES
+        GLenum drawMode = GL_TRIANGLES
     );
 
     // Criar Mesh com Vertex, com índices
-    bool criarEbo(
+    bool createIndexed(
         const std::vector<Vertex>& vertices,
         const std::vector<unsigned int>& indices,
-        GLenum modoDesenho = GL_TRIANGLES
+        GLenum drawMode = GL_TRIANGLES
     );
 
     // Desenhar Mesh
-    void desenhar() const;
+    void draw() const;
 
     // Desenhar Mesh utilizando suas próprias texturas
-    void desenhar(Shader& shader, const Texture* diffuseFallback = nullptr) const;
+    void draw(Shader& shader, const Texture* diffuseFallback = nullptr) const;
 
     // Liberar recursos
-    void limpar();
+    void destroy();
 
     // Acesso aos dados antigos
-    const std::vector<float>& getVerticesCPU() const;
+    const std::vector<float>& getVertexData() const;
 
     // Acesso aos dados estruturados
-    const std::vector<Vertex>& getVerticesEstruturadosCPU() const;
+    const std::vector<Vertex>& getStructuredVertices() const;
 
     // Acesso aos índices
-    const std::vector<unsigned int>& getIndicesCPU() const;
+    const std::vector<unsigned int>& getIndexData() const;
 };

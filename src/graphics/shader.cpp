@@ -7,16 +7,16 @@
 
 // Cria o programa de shader a partir dos dois textos (vertex e fragment).
 // Devolve true se deu tudo certo e false se algo falhou.
-bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
+bool Shader::create(const char *vertexSource, const char *fragmentSource)
 {
-    limpar(); // se já existia um programa, apaga antes de criar outro
+    destroy(); // se já existia um programa, apaga antes de criar outro
 
     GLint sucesso;
     char log[512];
 
     // 1. vertex shader
     GLuint vertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex, 1, &vertexFonte, nullptr);
+    glShaderSource(vertex, 1, &vertexSource, nullptr);
     glCompileShader(vertex);
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &sucesso);
     if (!sucesso)
@@ -30,7 +30,7 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
 
     // 2. fragment shader
     GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, 1, &fragmentFonte, nullptr);
+    glShaderSource(fragment, 1, &fragmentSource, nullptr);
     glCompileShader(fragment);
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &sucesso);
     if (!sucesso)
@@ -44,11 +44,11 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
     }
 
     // 3. juntar no programa e ligar
-    programa = glCreateProgram();
-    glAttachShader(programa, vertex);
-    glAttachShader(programa, fragment);
-    glLinkProgram(programa);
-    glGetProgramiv(programa, GL_LINK_STATUS, &sucesso);
+    program = glCreateProgram();
+    glAttachShader(program, vertex);
+    glAttachShader(program, fragment);
+    glLinkProgram(program);
+    glGetProgramiv(program, GL_LINK_STATUS, &sucesso);
 
     // 4. os shaders soltos não são mais necessários (deu certo ou não)
     glDeleteShader(vertex);
@@ -56,92 +56,92 @@ bool Shader::criar(const char *vertexFonte, const char *fragmentFonte)
 
     if (!sucesso)
     {
-        glGetProgramInfoLog(programa, 512, nullptr, log);
+        glGetProgramInfoLog(program, 512, nullptr, log);
         std::cout << "Erro ao ligar o programa:\n"
                   << log << std::endl;
-        glDeleteProgram(programa);
-        programa = 0;
+        glDeleteProgram(program);
+        program = 0;
         return false;
     }
-    ID = programa;
+    ID = program;
     return true;
 }
 
 // Escolhe este shader para os próximos desenhos.
-void Shader::usar() const
+void Shader::use() const
 {
-    glUseProgram(programa);
+    glUseProgram(program);
 }
 
 // Apaga o programa da placa de vídeo (chamar antes de fechar a janela).
-void Shader::limpar()
+void Shader::destroy()
 {
-    glDeleteProgram(programa);
-    programa = 0;
+    glDeleteProgram(program);
+    program = 0;
     ID = 0;
 }
 
 // Lê um arquivo de texto inteiro para dentro de uma string.
 // Devolve false se não conseguir abrir o arquivo.
-static bool lerArquivo(const std::string &caminho, std::string &conteudo)
+static bool readFile(const std::string &path, std::string &content)
 {
-    std::ifstream arquivo(caminho);
-    if (!arquivo.is_open())
+    std::ifstream file(path);
+    if (!file.is_open())
     {
-        std::cout << "Não consegui abrir o arquivo: " << caminho << std::endl;
+        std::cout << "Não consegui abrir o arquivo: " << path << std::endl;
         return false;
     }
 
     std::stringstream buffer;
-    buffer << arquivo.rdbuf();
-    conteudo = buffer.str();
+    buffer << file.rdbuf();
+    content = buffer.str();
     return true;
 }
 
 // Lê o vertex e o fragment shader de arquivos e cria o programa.
-bool Shader::criarDeArquivos(const std::string &caminhoVertex, const std::string &caminhoFragment)
+bool Shader::createFromFiles(const std::string &vertexPath, const std::string &fragmentPath)
 {
-    std::string vertexFonte, fragmentFonte;
-    if (!lerArquivo(caminhoVertex, vertexFonte) || !lerArquivo(caminhoFragment, fragmentFonte))
+    std::string vertexSource, fragmentSource;
+    if (!readFile(vertexPath, vertexSource) || !readFile(fragmentPath, fragmentSource))
         return false;
 
-    return criar(vertexFonte.c_str(), fragmentFonte.c_str());
+    return create(vertexSource.c_str(), fragmentSource.c_str());
 }
 
-void Shader::setVec2(const char *nome, float x, float y) const
+void Shader::setVec2(const char *name, float x, float y) const
 {
-    glUniform2f(glGetUniformLocation(programa, nome), x, y);
+    glUniform2f(glGetUniformLocation(program, name), x, y);
 }
 
-void Shader::setVec3(const char *nome, float x, float y, float z) const
+void Shader::setVec3(const char *name, float x, float y, float z) const
 {
-    glUniform3f(glGetUniformLocation(programa, nome), x, y, z);
+    glUniform3f(glGetUniformLocation(program, name), x, y, z);
 }
 
-void Shader::setVec4(const char *nome, float x, float y, float z, float w) const
+void Shader::setVec4(const char *name, float x, float y, float z, float w) const
 {
-    glUniform4f(glGetUniformLocation(programa, nome), x, y, z, w);
+    glUniform4f(glGetUniformLocation(program, name), x, y, z, w);
 }
 
-void Shader::setMat4(const char *nome, const glm::mat4 &matriz) const
+void Shader::setMat4(const char *name, const glm::mat4 &matrix) const
 {
-    GLint localizacao = glGetUniformLocation(programa, nome);
+    GLint location = glGetUniformLocation(program, name);
 
     glUniformMatrix4fv(
-        localizacao,
+        location,
         1,
         GL_FALSE,
-        glm::value_ptr(matriz));
+        glm::value_ptr(matrix));
 }
 
-void Shader::setInt(const char *nome, int valor) const
+void Shader::setInt(const char *name, int value) const
 {
-    glUniform1i(glGetUniformLocation(programa, nome), valor);
+    glUniform1i(glGetUniformLocation(program, name), value);
 }
 
 void Shader::Default()
 {
-    criarDeArquivos(
+    createFromFiles(
         "shaders/default.vert",
         "shaders/default.frag");
 }

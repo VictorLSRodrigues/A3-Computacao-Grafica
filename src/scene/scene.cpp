@@ -47,8 +47,8 @@ void Scene::draw(Shader& shader, Camera& camera, const Texture& fallbackTexture)
         shader.setMat4("model", object.transform.matrix());
 
         if (object.model)
-            object.model->desenhar(shader, camera, fallbackTexture);
+            object.model->draw(shader, camera, fallbackTexture);
         else if (object.mesh)
-            object.mesh->desenhar(shader, &fallbackTexture);
+            object.mesh->draw(shader, &fallbackTexture);
     }
 }

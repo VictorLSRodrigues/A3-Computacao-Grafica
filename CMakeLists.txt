@@ -29,7 +29,7 @@ add_executable(OpenGLProjeto
     src/graphics/texture.cpp
     src/graphics/mesh.cpp
     src/graphics/model.cpp
-    src/graphics/formas.cpp
+    src/graphics/shapes.cpp
     src/graphics/buffers/VAO.cpp
     src/graphics/buffers/VBO.cpp
     src/graphics/buffers/EBO.cpp

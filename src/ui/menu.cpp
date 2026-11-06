@@ -1,37 +1,37 @@
 #include "menu.h"
 
-void Menu::atualizar(const Window& janela)
+void Menu::update(const Window& window)
 {
-    if (!janela.teclaApertou(GLFW_KEY_ESCAPE))
+    if (!window.keyPressed(GLFW_KEY_ESCAPE))
         return;
 
-    if (aberto && page == Page::Options)
+    if (open && page == Page::Options)
     {
         page = Page::Main; // ESC nas opções volta pro menu, sem fechar tudo
     }
     else
     {
-        aberto = !aberto;
+        open = !open;
         page = Page::Main;
     }
 }
 
-void Menu::desenhar(const Window& janela, UI& ui, Settings& settings)
+void Menu::draw(const Window& window, UI& ui, Settings& settings)
 {
-    if (!aberto)
+    if (!open)
         return;
 
     if (page == Page::Options)
-        drawOptions(janela, ui, settings);
+        drawOptions(window, ui, settings);
     else
-        drawMain(janela, ui);
+        drawMain(window, ui);
 }
 
 void Menu::drawPanel(const Window& window, UI& ui, const char* title,
                      float panelW, float panelH, float& px, float& py)
 {
-    const float screenW = (float)window.getLargura();
-    const float screenH = (float)window.getAltura();
+    const float screenW = (float)window.getWidth();
+    const float screenH = (float)window.getHeight();
 
     px = (screenW - panelW) / 2.0f;
     py = (screenH - panelH) / 2.0f;
@@ -61,7 +61,7 @@ void Menu::drawMain(const Window& window, UI& ui)
     float by = py + margin + titleH;
 
     if (ui.button("Continuar", bx, by, buttonW, buttonH, 0.20f, 0.45f, 0.85f))
-        aberto = false;
+        open = false;
     by += buttonH + gap;
 
     if (ui.button("Opções", bx, by, buttonW, buttonH, 0.25f, 0.30f, 0.40f))
@@ -69,7 +69,7 @@ void Menu::drawMain(const Window& window, UI& ui)
     by += buttonH + gap;
 
     if (ui.button("Sair", bx, by, buttonW, buttonH, 0.70f, 0.15f, 0.15f))
-        window.fechar();
+        window.close();
 }
 
 void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)

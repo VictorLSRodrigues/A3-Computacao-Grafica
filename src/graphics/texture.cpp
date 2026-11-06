@@ -114,9 +114,9 @@ Texture& Texture::operator=(Texture&& other) noexcept
 }
 
 // Definir o tipo da textura
-void Texture::setType(const std::string& novoTipo)
+void Texture::setType(const std::string& newType)
 {
-    type = novoTipo;
+    type = newType;
 }
 
 // Consultar o tipo da textura

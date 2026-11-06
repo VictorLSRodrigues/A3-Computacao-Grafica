@@ -1,21 +1,21 @@
-#include "formas.h"
+#include "shapes.h"
 
 #include <cmath>
 
 // 2D
 
-std::vector<float> formas::triangulo(float lado)
+std::vector<float> shapes::triangle(float side)
 {
-    float altura = lado * std::sqrt(3.0f) / 2.0f;
+    float height = side * std::sqrt(3.0f) / 2.0f;
 
     // O centro do triângulo fica na origem: base em -altura/3, topo em 2*altura/3.
     return {
-        -lado / 2.0f, -altura / 3.0f, 0.0f,
-        lado / 2.0f, -altura / 3.0f, 0.0f,
-        0.0f, 2.0f * altura / 3.0f, 0.0f};
+        -side / 2.0f, -height / 3.0f, 0.0f,
+        side / 2.0f, -height / 3.0f, 0.0f,
+        0.0f, 2.0f * height / 3.0f, 0.0f};
 }
 
-std::vector<float> formas::quadrado()
+std::vector<float> shapes::square()
 {
     return {
         -0.15f, -0.15f,
@@ -27,7 +27,7 @@ std::vector<float> formas::quadrado()
         -0.15f, 0.15f};
 }
 
-std::vector<float> formas::retangulo()
+std::vector<float> shapes::rectangle()
 {
     return {
         0.0f, 0.0f,
@@ -36,7 +36,7 @@ std::vector<float> formas::retangulo()
         0.0f, 1.0f};
 }
 
-std::vector<unsigned int> formas::indicesRetangulo()
+std::vector<unsigned int> shapes::rectangleIndices()
 {
     return {0, 1, 2, 0, 2, 3};
 }
@@ -46,7 +46,7 @@ std::vector<unsigned int> formas::indicesRetangulo()
 // Pirâmide: 8 floats por vértice = posição (3) + normal (3) + UV (2).
 // A base usa a imagem inteira. Cada face lateral usa um triângulo da imagem.
 
-std::vector<float> formas::piramide()
+std::vector<float> shapes::pyramid()
 {
     const float n = 0.894427f;
     const float m = 0.447214f;
@@ -79,7 +79,7 @@ std::vector<float> formas::piramide()
         0.0f, 0.5f, 0.0f, 0.92f, 0.86f, 0.76f, 0.5f, 1.0f, 0.0f, m, n};
 }
 
-std::vector<unsigned int> formas::indicesPiramide()
+std::vector<unsigned int> shapes::pyramidIndices()
 {
     return {
         0, 1, 2, 0, 2, 3, // base
@@ -91,7 +91,7 @@ std::vector<unsigned int> formas::indicesPiramide()
 }
 
 // CUBO
-std::vector<float> formas::cubo()
+std::vector<float> shapes::cube()
 {
     return {
         // Frente
@@ -108,7 +108,7 @@ std::vector<float> formas::cubo()
     };
 }
 
-std::vector<unsigned int> formas::indicesCubo()
+std::vector<unsigned int> shapes::cubeIndices()
 {
     return {
         // Frente

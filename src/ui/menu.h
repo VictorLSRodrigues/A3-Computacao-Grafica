@@ -10,7 +10,7 @@ class Menu
 private:
     enum class Page { Main, Options };
 
-    bool aberto = false;
+    bool open = false;
     Page page = Page::Main;
 
     void drawMain(const Window& window, UI& ui);
@@ -21,7 +21,7 @@ private:
                    float panelW, float panelH, float& px, float& py);
 
 public:
-    void atualizar(const Window& janela);                       // ESC abre, fecha e volta
-    void desenhar(const Window& janela, UI& ui, Settings& settings);
-    bool estaAberto() const { return aberto; }
+    void update(const Window& window);                       // ESC abre, fecha e volta
+    void draw(const Window& window, UI& ui, Settings& settings);
+    bool isOpen() const { return open; }
 };

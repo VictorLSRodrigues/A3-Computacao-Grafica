@@ -6,54 +6,54 @@
 class Window
 {
 private:
-    GLFWwindow *janela = nullptr;
-    int largura = 0;
-    int altura = 0;
-    bool glfwIniciado = false;
+    GLFWwindow *windowHandle = nullptr;
+    int width = 0;
+    int height = 0;
+    bool glfwInitialized = false;
 
     // Teclado e mouse
-    bool teclas[GLFW_KEY_LAST + 1] = {};         // true enquanto a tecla está segurada
-    bool teclasNoQuadro[GLFW_KEY_LAST + 1] = {}; // true só no quadro em que apertou
-    bool cliquesNoQuadro[GLFW_MOUSE_BUTTON_LAST + 1] = {};
+    bool keyStates[GLFW_KEY_LAST + 1] = {};         // true enquanto a tecla está segurada
+    bool keysPressedThisFrame[GLFW_KEY_LAST + 1] = {}; // true só no quadro em que apertou
+    bool mouseClicksThisFrame[GLFW_MOUSE_BUTTON_LAST + 1] = {};
     bool mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {}; // segurado agora
     double mouseX = 0.0;
     double mouseY = 0.0;
 
-    static void aoTeclar(GLFWwindow *janela, int tecla, int scancode, int acao, int mods);
-    static void aoMoverMouse(GLFWwindow *janela, double x, double y);
-    static void aoClicarMouse(GLFWwindow *janela, int botao, int acao, int mods);
+    static void onKey(GLFWwindow *window, int key, int scancode, int action, int mods);
+    static void onMouseMove(GLFWwindow *window, double x, double y);
+    static void onMouseButton(GLFWwindow *window, int button, int action, int mods);
 
     // Chamada pelo GLFW quando a janela muda de tamanho.
-    static void aoRedimensionar(GLFWwindow *janela, int largura, int altura);
+    static void onFramebufferResize(GLFWwindow *window, int width, int height);
 
 public:
     Window() = default;
-    ~Window() { limpar(); }
+    ~Window() { destroy(); }
 
     Window(const Window &) = delete;
     Window &operator=(const Window &) = delete;
 
-    // telaCheia = true usa a resolução do monitor; senão usa largura x altura.
-    bool criar(const char *titulo, bool telaCheia = true,
-               int larguraJanela = 1280, int alturaJanela = 720);
+    // fullscreen = true usa a resolução do monitor; senão usa windowWidth x windowHeight.
+    bool create(const char *title, bool fullscreen = true,
+                int windowWidth = 1280, int windowHeight = 720);
 
-    bool deveFechar() const;
-    void fechar() const; // pede pra janela fechar
-    void trocarBuffers() const;
-    void processarEventos();
+    bool shouldClose() const;
+    void close() const; // pede pra janela fechar
+    void swapBuffers() const;
+    void pollEvents();
 
-    bool teclaApertou(int tecla) const { return tecla >= 0 && tecla <= GLFW_KEY_LAST && teclasNoQuadro[tecla]; }
-    bool teclaSegurada(int tecla) const { return tecla >= 0 && tecla <= GLFW_KEY_LAST && teclas[tecla]; }
-    bool mouseClicou(int botao) const { return botao >= 0 && botao <= GLFW_MOUSE_BUTTON_LAST && cliquesNoQuadro[botao]; }
+    bool keyPressed(int key) const { return key >= 0 && key <= GLFW_KEY_LAST && keysPressedThisFrame[key]; }
+    bool keyDown(int key) const { return key >= 0 && key <= GLFW_KEY_LAST && keyStates[key]; }
+    bool mouseClicked(int button) const { return button >= 0 && button <= GLFW_MOUSE_BUTTON_LAST && mouseClicksThisFrame[button]; }
     double getMouseX() const { return mouseX; }
     double getMouseY() const { return mouseY; }
 
-    void limpar();
+    void destroy();
 
-    GLFWwindow *ponteiro() const { return janela; }
-    int getLargura() const { return largura; }
-    int getAltura() const { return altura; }
-    float aspecto() const { return altura > 0 ? static_cast<float>(largura) / altura : 1.0f; }
+    GLFWwindow *getHandle() const { return windowHandle; }
+    int getWidth() const { return width; }
+    int getHeight() const { return height; }
+    float aspectRatio() const { return height > 0 ? static_cast<float>(width) / height : 1.0f; }
     
     enum class CursorMode { Normal, Hidden, Disabled };
 

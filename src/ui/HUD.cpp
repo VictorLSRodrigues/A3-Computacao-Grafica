@@ -4,7 +4,7 @@
 
 void HUD::update(const Window& window, float deltaTime)
 {
-    if (window.teclaApertou(GLFW_KEY_F3))
+    if (window.keyPressed(GLFW_KEY_F3))
         visible = !visible;
 
     // FPS: média a cada meio segundo, pro número não ficar tremendo

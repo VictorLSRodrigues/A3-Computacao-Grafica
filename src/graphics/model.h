@@ -16,7 +16,7 @@ public:
 	// Loads in a model from a file and stores tha information in 'data', 'JSON', and 'file'
 	Model(const char* file);
 
-	void desenhar(Shader& shader, Camera& camera, const Texture& diffuseFallback);
+	void draw(Shader& shader, Camera& camera, const Texture& diffuseFallback);
 
 private:
 	// Variables for easy access

@@ -9,12 +9,12 @@
 
 // Calcula o stride dos vértices
 int Mesh::computeStride(
-    int componentes,
+    int componentCount,
     const std::vector<int>& layout)
 {
     if (layout.empty())
-        return (componentes >= 1 && componentes <= 4)
-            ? componentes : 0;
+        return (componentCount >= 1 && componentCount <= 4)
+            ? componentCount : 0;
 
     int stride = 0;
 
@@ -31,26 +31,26 @@ int Mesh::computeStride(
 
 // Configura os atributos do VAO que estiver ligado
 void Mesh::setupAttributes(
-    int componentes,
+    int componentCount,
     const std::vector<int>& layout)
 {
-    const std::vector<int> atributos =
+    const std::vector<int> attributes =
         layout.empty()
-        ? std::vector<int>{componentes}
+        ? std::vector<int>{componentCount}
         : layout;
 
     int stride = 0;
 
-    for (int c : atributos)
+    for (int c : attributes)
         stride += c;
 
     int offset = 0;
 
-    for (size_t i = 0; i < atributos.size(); ++i)
+    for (size_t i = 0; i < attributes.size(); ++i)
     {
         glVertexAttribPointer(
             static_cast<GLuint>(i),
-            atributos[i],
+            attributes[i],
             GL_FLOAT,
             GL_FALSE,
             static_cast<GLsizei>(stride * sizeof(float)),
@@ -61,18 +61,18 @@ void Mesh::setupAttributes(
             static_cast<GLuint>(i)
         );
 
-        offset += atributos[i];
+        offset += attributes[i];
     }
 }
 
 // Criar Mesh sem índices
-bool Mesh::criar(
+bool Mesh::create(
     const std::vector<float>& vertices,
-    int componentes,
-    GLenum modoDesenho,
+    int componentCount,
+    GLenum drawMode,
     const std::vector<int>& layout)
 {
-    const int stride = computeStride(componentes, layout);
+    const int stride = computeStride(componentCount, layout);
 
     if (stride == 0)
     {
@@ -98,24 +98,24 @@ bool Mesh::criar(
     }
 
     // Salvar os dados na CPU
-    verticesCPU = vertices;
-    verticesEstruturadosCPU.clear();
-    indicesCPU.clear();
+    vertexData = vertices;
+    structuredVertices.clear();
+    indexData.clear();
 
-    quantidadeVertices = static_cast<GLsizei>(totalVertices);
-    modo = modoDesenho;
-    usaIndices = false;
+    vertexCount = static_cast<GLsizei>(totalVertices);
+    this->drawMode = drawMode;
+    usesIndices = false;
 
     // Configurar os objetos OpenGL
     vao.Bind();
 
-    vbo.Upload(verticesCPU);
+    vbo.Upload(vertexData);
 
     // O Upload do VBO desvincula o GL_ARRAY_BUFFER.
     // Precisamos ligá-lo novamente para configurar os atributos.
     vbo.Bind();
 
-    setupAttributes(componentes, layout);
+    setupAttributes(componentCount, layout);
 
     vbo.Unbind();
 
@@ -127,14 +127,14 @@ bool Mesh::criar(
 
 
 // Criar Mesh com índices
-bool Mesh::criarEbo(
+bool Mesh::createIndexed(
     const std::vector<float>& vertices,
     const std::vector<unsigned int>& indices,
-    int componentes,
-    GLenum modoDesenho,
+    int componentCount,
+    GLenum drawMode,
     const std::vector<int>& layout)
 {
-    const int stride = computeStride(componentes, layout);
+    const int stride = computeStride(componentCount, layout);
 
     if (stride == 0)
     {
@@ -167,9 +167,9 @@ bool Mesh::criarEbo(
         return false;
     }
 
-    for (unsigned int indice : indices)
+    for (unsigned int index : indices)
     {
-        if (indice >= totalVertices)
+        if (index >= totalVertices)
         {
             std::cout << "Mesh: indice fora do intervalo." << std::endl;
             return false;
@@ -177,28 +177,28 @@ bool Mesh::criarEbo(
     }
 
     // Salvar os dados na CPU
-    verticesCPU = vertices;
-    verticesEstruturadosCPU.clear();
-    indicesCPU = indices;
+    vertexData = vertices;
+    structuredVertices.clear();
+    indexData = indices;
 
-    quantidadeVertices = static_cast<GLsizei>(totalVertices);
-    modo = modoDesenho;
-    usaIndices = true;
+    vertexCount = static_cast<GLsizei>(totalVertices);
+    this->drawMode = drawMode;
+    usesIndices = true;
 
     // Configurar VAO, VBO e EBO
     vao.Bind();
 
-    vbo.Upload(verticesCPU);
+    vbo.Upload(vertexData);
 
     // Associar o VBO aos atributos
     vbo.Bind();
 
-    setupAttributes(componentes, layout);
+    setupAttributes(componentCount, layout);
 
     vbo.Unbind();
 
     // Associar os índices ao VAO atual
-    ebo.Upload(indicesCPU);
+    ebo.Upload(indexData);
 
     vao.Unbind();
 
@@ -246,9 +246,9 @@ void Mesh::setupVertexAttributes()
 }
 
 // Criar Mesh com Vertex sem índices
-bool Mesh::criar(
+bool Mesh::create(
     const std::vector<Vertex>& vertices,
-    GLenum modoDesenho)
+    GLenum drawMode)
 {
     if (vertices.empty() ||
         vertices.size() > static_cast<size_t>(
@@ -259,18 +259,18 @@ bool Mesh::criar(
     }
 
     // Salvar os dados na CPU
-    verticesEstruturadosCPU = vertices;
-    verticesCPU.clear();
-    indicesCPU.clear();
+    structuredVertices = vertices;
+    vertexData.clear();
+    indexData.clear();
 
-    quantidadeVertices = static_cast<GLsizei>(vertices.size());
-    modo = modoDesenho;
-    usaIndices = false;
+    vertexCount = static_cast<GLsizei>(vertices.size());
+    this->drawMode = drawMode;
+    usesIndices = false;
 
     // Configurar os objetos OpenGL
     vao.Bind();
 
-    vbo.Upload(verticesEstruturadosCPU);
+    vbo.Upload(structuredVertices);
 
     // Associar o VBO aos atributos
     vbo.Bind();
@@ -285,10 +285,10 @@ bool Mesh::criar(
 }
 
 // Criar Mesh com Vertex e índices
-bool Mesh::criarEbo(
+bool Mesh::createIndexed(
     const std::vector<Vertex>& vertices,
     const std::vector<unsigned int>& indices,
-    GLenum modoDesenho)
+    GLenum drawMode)
 {
     if (vertices.empty() || indices.empty())
     {
@@ -305,9 +305,9 @@ bool Mesh::criarEbo(
         return false;
     }
 
-    for (unsigned int indice : indices)
+    for (unsigned int index : indices)
     {
-        if (indice >= vertices.size())
+        if (index >= vertices.size())
         {
             std::cout << "Mesh: indice fora do intervalo." << std::endl;
             return false;
@@ -315,18 +315,18 @@ bool Mesh::criarEbo(
     }
 
     // Salvar os dados na CPU
-    verticesEstruturadosCPU = vertices;
-    verticesCPU.clear();
-    indicesCPU = indices;
+    structuredVertices = vertices;
+    vertexData.clear();
+    indexData = indices;
 
-    quantidadeVertices = static_cast<GLsizei>(vertices.size());
-    modo = modoDesenho;
-    usaIndices = true;
+    vertexCount = static_cast<GLsizei>(vertices.size());
+    this->drawMode = drawMode;
+    usesIndices = true;
 
     // Configurar VAO, VBO e EBO
     vao.Bind();
 
-    vbo.Upload(verticesEstruturadosCPU);
+    vbo.Upload(structuredVertices);
 
     // Associar o VBO aos atributos
     vbo.Bind();
@@ -336,7 +336,7 @@ bool Mesh::criarEbo(
     vbo.Unbind();
 
     // Associar os índices ao VAO atual
-    ebo.Upload(indicesCPU);
+    ebo.Upload(indexData);
 
     vao.Unbind();
 
@@ -344,14 +344,14 @@ bool Mesh::criarEbo(
 }
 
 // Desenhar Mesh
-void Mesh::desenhar() const
+void Mesh::draw() const
 {
     vao.Bind();
 
-    if (usaIndices)
+    if (usesIndices)
     {
         glDrawElements(
-            modo,
+            drawMode,
             ebo.GetCount(),
             GL_UNSIGNED_INT,
             nullptr
@@ -360,34 +360,34 @@ void Mesh::desenhar() const
     else
     {
         glDrawArrays(
-            modo,
+            drawMode,
             0,
-            quantidadeVertices
+            vertexCount
         );
     }
 
     vao.Unbind();
 }
 // Desenhar Mesh utilizando suas próprias texturas
-void Mesh::desenhar(Shader& shader, const Texture* diffuseFallback) const
+void Mesh::draw(Shader& shader, const Texture* diffuseFallback) const
 {
     bool hasDiffuse = false;
     bool hasSpecular = false;
 
     // Percorrer as texturas armazenadas na Mesh
-    for (const Texture& textura : textures)
+    for (const Texture& texture : textures)
     {
         // Identificar o tipo da textura
-        if (textura.getType() == "diffuse")
+        if (texture.getType() == "diffuse")
         {
             hasDiffuse = true;
-            textura.bind(0);
+            texture.bind(0);
             shader.setInt("tex0", 0);
         }
-        else if (textura.getType() == "specular")
+        else if (texture.getType() == "specular")
         {
             hasSpecular = true;
-            textura.bind(1);
+            texture.bind(1);
             shader.setInt("specular0", 1);
         }
     }
@@ -406,50 +406,50 @@ void Mesh::desenhar(Shader& shader, const Texture* diffuseFallback) const
     }
 
     // Desenhar a geometria
-    desenhar();
+    draw();
 
     // Restaurar a unidade de textura padrão
     glActiveTexture(GL_TEXTURE0);
 }
 
 // Liberar recursos
-void Mesh::limpar()
+void Mesh::destroy()
 {
     vao.Delete();
     vbo.Delete();
     ebo.Delete();
 
-    verticesCPU.clear();
-    verticesEstruturadosCPU.clear();
-    indicesCPU.clear();
+    vertexData.clear();
+    structuredVertices.clear();
+    indexData.clear();
     textures.clear();
 
-    quantidadeVertices = 0;
-    usaIndices = false;
+    vertexCount = 0;
+    usesIndices = false;
 }
 
 // Acessar os dados mantidos na CPU
-const std::vector<float>& Mesh::getVerticesCPU() const
+const std::vector<float>& Mesh::getVertexData() const
 {
-    return verticesCPU;
+    return vertexData;
 }
 
 // Acessar os vértices estruturados mantidos na CPU
-const std::vector<Vertex>& Mesh::getVerticesEstruturadosCPU() const
+const std::vector<Vertex>& Mesh::getStructuredVertices() const
 {
-    return verticesEstruturadosCPU;
+    return structuredVertices;
 }
 
 // Acessar os índices mantidos na CPU
-const std::vector<unsigned int>& Mesh::getIndicesCPU() const
+const std::vector<unsigned int>& Mesh::getIndexData() const
 {
-    return indicesCPU;
+    return indexData;
 }
 
 // Adicionar textura à Mesh
-void Mesh::adicionarTextura(Texture&& textura)
+void Mesh::addTexture(Texture&& texture)
 {
-    textures.push_back(std::move(textura));
+    textures.push_back(std::move(texture));
 }
 
 // Acessar as texturas mantidas na Mesh

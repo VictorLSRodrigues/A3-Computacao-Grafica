@@ -4,38 +4,38 @@
 
 #include <iostream>
 
-void Window::aoRedimensionar(GLFWwindow *janela, int largura, int altura)
+void Window::onFramebufferResize(GLFWwindow *window, int width, int height)
 {
-    glViewport(0, 0, largura, altura);
+    glViewport(0, 0, width, height);
 
-    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
     if (self)
     {
-        self->largura = largura;
-        self->altura = altura;
+        self->width = width;
+        self->height = height;
     }
 }
 
-void Window::aoTeclar(GLFWwindow *janela, int tecla, int /*scancode*/, int acao, int /*mods*/)
+void Window::onKey(GLFWwindow *window, int key, int /*scancode*/, int action, int /*mods*/)
 {
-    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
-    if (!self || tecla < 0 || tecla > GLFW_KEY_LAST)
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+    if (!self || key < 0 || key > GLFW_KEY_LAST)
         return;
 
-    if (acao == GLFW_PRESS)
+    if (action == GLFW_PRESS)
     {
-        self->teclas[tecla] = true;
-        self->teclasNoQuadro[tecla] = true;
+        self->keyStates[key] = true;
+        self->keysPressedThisFrame[key] = true;
     }
-    else if (acao == GLFW_RELEASE)
+    else if (action == GLFW_RELEASE)
     {
-        self->teclas[tecla] = false;
+        self->keyStates[key] = false;
     }
 }
 
-void Window::aoMoverMouse(GLFWwindow *janela, double x, double y)
+void Window::onMouseMove(GLFWwindow *window, double x, double y)
 {
-    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
     if (self)
     {
         self->mouseX = x;
@@ -43,34 +43,34 @@ void Window::aoMoverMouse(GLFWwindow *janela, double x, double y)
     }
 }
 
-void Window::aoClicarMouse(GLFWwindow *janela, int botao, int acao, int /*mods*/)
+void Window::onMouseButton(GLFWwindow *window, int button, int action, int /*mods*/)
 {
-    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(janela));
-    if (!self || botao < 0 || botao > GLFW_MOUSE_BUTTON_LAST)
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+    if (!self || button < 0 || button > GLFW_MOUSE_BUTTON_LAST)
         return;
 
-    if (acao == GLFW_PRESS)
+    if (action == GLFW_PRESS)
     {
-        self->mouseButtons[botao] = true;
-        self->cliquesNoQuadro[botao] = true;
+        self->mouseButtons[button] = true;
+        self->mouseClicksThisFrame[button] = true;
     }
-    else if (acao == GLFW_RELEASE)
+    else if (action == GLFW_RELEASE)
     {
-        self->mouseButtons[botao] = false;
+        self->mouseButtons[button] = false;
     }
 }
 
-bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int alturaJanela)
+bool Window::create(const char *title, bool fullscreen, int windowWidth, int windowHeight)
 {
-    glfwSetErrorCallback([](int codigo, const char *descricao)
-                         { std::cout << "Erro do GLFW (" << codigo << "): " << descricao << std::endl; });
+    glfwSetErrorCallback([](int errorCode, const char *description)
+                         { std::cout << "Erro do GLFW (" << errorCode << "): " << description << std::endl; });
 
     if (!glfwInit())
     {
         std::cout << "Erro ao inicializar o GLFW!" << std::endl;
         return false;
     }
-    glfwIniciado = true;
+    glfwInitialized = true;
 
     // OpenGL 3.3 no perfil Core.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -80,71 +80,71 @@ bool Window::criar(const char *titulo, bool telaCheia, int larguraJanela, int al
 
     // Em tela cheia, passa o monitor e usa a resolução dele.
     GLFWmonitor *monitor = nullptr;
-    if (telaCheia)
+    if (fullscreen)
     {
         monitor = glfwGetPrimaryMonitor();
         const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-        larguraJanela = mode->width;
-        alturaJanela = mode->height;
+        windowWidth = mode->width;
+        windowHeight = mode->height;
     }
 
-    janela = glfwCreateWindow(larguraJanela, alturaJanela, titulo, monitor, nullptr);
-    if (!janela)
+    windowHandle = glfwCreateWindow(windowWidth, windowHeight, title, monitor, nullptr);
+    if (!windowHandle)
     {
         std::cout << "Erro ao criar a janela!" << std::endl;
-        limpar();
+        destroy();
         return false;
     }
 
-    glfwMakeContextCurrent(janela);
+    glfwMakeContextCurrent(windowHandle);
 
     glfwSwapInterval(1); // vsync
 
     if (!gladLoadGL())
     {
         std::cout << "Erro ao inicializar o GLAD!" << std::endl;
-        limpar();
+        destroy();
         return false;
     }
 
-    glfwGetFramebufferSize(janela, &largura, &altura);
+    glfwGetFramebufferSize(windowHandle, &width, &height);
 
-    // Guarda "this" na janela pra o callback conseguir atualizar largura/altura.
-    glfwSetWindowUserPointer(janela, this);
-    glfwSetFramebufferSizeCallback(janela, aoRedimensionar);
+    // Guarda "this" na janela pra o callback conseguir atualizar width/height.
+    glfwSetWindowUserPointer(windowHandle, this);
+    glfwSetFramebufferSizeCallback(windowHandle, onFramebufferResize);
 
-    glfwSetKeyCallback(janela, aoTeclar);
-    glfwSetCursorPosCallback(janela, aoMoverMouse);
-    glfwSetMouseButtonCallback(janela, aoClicarMouse);
-    glfwGetCursorPos(janela, &mouseX, &mouseY);
+    glfwSetKeyCallback(windowHandle, onKey);
+    glfwSetCursorPosCallback(windowHandle, onMouseMove);
+    glfwSetMouseButtonCallback(windowHandle, onMouseButton);
+    glfwGetCursorPos(windowHandle, &mouseX, &mouseY);
 
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << std::endl;
     return true;
 }
 
-bool Window::deveFechar() const { return glfwWindowShouldClose(janela); }
-void Window::fechar() const { glfwSetWindowShouldClose(janela, GLFW_TRUE); }
-void Window::trocarBuffers() const { glfwSwapBuffers(janela); }
+bool Window::shouldClose() const { return glfwWindowShouldClose(windowHandle); }
+void Window::close() const { glfwSetWindowShouldClose(windowHandle, GLFW_TRUE); }
+void Window::swapBuffers() const { glfwSwapBuffers(windowHandle); }
 
-void Window::processarEventos()
+void Window::pollEvents()
 {
     // Limpa o "aconteceu neste quadro" do quadro anterior, depois lê os eventos novos.
-    std::fill(std::begin(teclasNoQuadro), std::end(teclasNoQuadro), false);
-    std::fill(std::begin(cliquesNoQuadro), std::end(cliquesNoQuadro), false);
+    std::fill(std::begin(keysPressedThisFrame), std::end(keysPressedThisFrame), false);
+    std::fill(std::begin(mouseClicksThisFrame), std::end(mouseClicksThisFrame), false);
     glfwPollEvents();
 }
 
-void Window::limpar()
+void Window::destroy()
 {
-    if (janela)
+    if (windowHandle)
     {
-        glfwDestroyWindow(janela);
-        janela = nullptr;
+        glfwDestroyWindow(windowHandle);
+        windowHandle = nullptr;
     }
-    if (glfwIniciado)
+    if (glfwInitialized)
     {
         glfwTerminate();
-        glfwIniciado = false;
+        glfwInitialized = false;
     }
 }
 
@@ -156,12 +156,12 @@ void Window::setCursorMode(CursorMode mode)
     else if (mode == CursorMode::Disabled)
         value = GLFW_CURSOR_DISABLED;
 
-    glfwSetInputMode(janela, GLFW_CURSOR, value);
+    glfwSetInputMode(windowHandle, GLFW_CURSOR, value);
 }
 
 void Window::setMousePosition(double x, double y)
 {
-    glfwSetCursorPos(janela, x, y);
+    glfwSetCursorPos(windowHandle, x, y);
     mouseX = x; // já guarda o valor novo, sem esperar o GLFW avisar
     mouseY = y;
 }

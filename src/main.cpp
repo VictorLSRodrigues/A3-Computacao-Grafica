@@ -3,7 +3,7 @@
 
 #include "graphics/shader.h"
 #include "graphics/mesh.h"
-#include "graphics/formas.h"
+#include "graphics/shapes.h"
 #include "graphics/texture.h"
 
 #include "camera.h"
@@ -15,6 +15,7 @@
 #include "ui/HUD.h"
 
 #include <utility>
+#include <memory>
 #include <iostream>
 
 #include <glm/glm.hpp>
@@ -23,9 +24,9 @@
 int main()
 {
     // 1. Criar janela
-    Window janela;
+    Window window;
 
-    if (!janela.criar("OpenGL - RotorGrafico"))
+    if (!window.create("OpenGL - RotorGrafico"))
         return -1;
 
     Texture defaultTexture;
@@ -34,10 +35,10 @@ int main()
         return -1;
 
     // 3. Criar pirâmide
-    auto piramide = std::make_shared<Mesh>();
-    if (!piramide->criarEbo(
-            formas::piramide(),
-            formas::indicesPiramide(),
+    auto pyramidMesh = std::make_shared<Mesh>();
+    if (!pyramidMesh->createIndexed(
+            shapes::pyramid(),
+            shapes::pyramidIndices(),
             3,
             GL_TRIANGLES,
             {3, 3, 2, 3}))
@@ -62,12 +63,12 @@ int main()
     specular.setType("specular");
 
     // Transferir as texturas para a Mesh
-    piramide->adicionarTextura(std::move(texture));
-    piramide->adicionarTextura(std::move(specular));
+    pyramidMesh->addTexture(std::move(texture));
+    pyramidMesh->addTexture(std::move(specular));
     // 5. Shader da pirâmide e do macaco
-    Shader shaderCamera;
+    Shader cameraShader;
 
-    if (!shaderCamera.criarDeArquivos(
+    if (!cameraShader.createFromFiles(
             ASSETS_DIR "shaders/default.vert",
             ASSETS_DIR "shaders/default.frag"))
     {
@@ -75,14 +76,14 @@ int main()
         return -1;
     }
 
-    shaderCamera.usar();
-    shaderCamera.setInt("tex0", 0);
-    shaderCamera.setInt("specular0", 1);
+    cameraShader.use();
+    cameraShader.setInt("tex0", 0);
+    cameraShader.setInt("specular0", 1);
 
     // 6. Shader da fonte de luz
-    Shader shaderLuz;
+    Shader lightShader;
 
-    if (!shaderLuz.criarDeArquivos(
+    if (!lightShader.createFromFiles(
             ASSETS_DIR "shaders/light.vert",
             ASSETS_DIR "shaders/light.frag"))
     {
@@ -115,12 +116,12 @@ int main()
         monkey->transform.scale = glm::vec3(0.5f);
     }
 
-    Scene::Object *pyramid = scene.addMesh(piramide, "piramide");
+    Scene::Object *pyramid = scene.addMesh(pyramidMesh, "pyramid");
 
     // 9. Configurar câmera
     Camera camera(
-        janela.getLargura(),
-        janela.getAltura(),
+        window.getWidth(),
+        window.getHeight(),
         glm::vec3(0.0f, 0.0f, 2.0f));
 
     float deltaTime = 0.0f;
@@ -128,11 +129,11 @@ int main()
     float rotation = 0.0f;
 
     // 10. Criar malha da luz
-    Mesh luz;
+    Mesh lightMesh;
 
-    if (!luz.criarEbo(
-            formas::cubo(),
-            formas::indicesCubo(),
+    if (!lightMesh.createIndexed(
+            shapes::cube(),
+            shapes::cubeIndices(),
             3,
             GL_TRIANGLES,
             {3}))
@@ -150,12 +151,11 @@ int main()
     lightModel = glm::translate(lightModel, lightPos);
     lightModel = glm::scale(lightModel, glm::vec3(0.2f));
 
-    glm::vec3 pyramidPos(0.0f, 0.0f, 0.0f);
 
     lastFrame = glfwGetTime();
 
     // 12. Loop principal
-    while (!janela.deveFechar())
+    while (!window.shouldClose())
     {
         double currentFrame = glfwGetTime();
 
@@ -168,19 +168,19 @@ int main()
         lastFrame = currentFrame;
 
         // Atualizar HUD
-        hud.update(janela, deltaTime);
+        hud.update(window, deltaTime);
 
         // Atualizar menu
-        menu.atualizar(janela);
+        menu.update(window);
 
         // Controlar câmera conforme estado do menu
-        if (menu.estaAberto())
+        if (menu.isOpen())
         {
-            janela.setCursorMode(Window::CursorMode::Normal);
+            window.setCursorMode(Window::CursorMode::Normal);
         }
         else
         {
-            camera.Inputs(janela, deltaTime);
+            camera.processInput(window, deltaTime);
         }
 
         // Atualizar rotação da pirâmide
@@ -195,9 +195,9 @@ int main()
             GL_DEPTH_BUFFER_BIT);
 
         // Atualizar tamanho da câmera
-        camera.setSize(
-            janela.getLargura(),
-            janela.getAltura());
+        camera.setViewportSize(
+            window.getWidth(),
+            window.getHeight());
 
         // Aplicar configurações do menu
         camera.walkSpeed = settings.walkSpeed;
@@ -205,74 +205,74 @@ int main()
         camera.sensitivity = settings.mouseSensitivity;
 
         // 13. Desenhar pirâmide e macaco
-        shaderCamera.usar();
+        cameraShader.use();
 
-        shaderCamera.setVec4(
+        cameraShader.setVec4(
             "lightColor",
             lightColor.x,
             lightColor.y,
             lightColor.z,
             lightColor.w);
 
-        shaderCamera.setVec3(
+        cameraShader.setVec3(
             "lightPos",
             lightPos.x,
             lightPos.y,
             lightPos.z);
 
-        shaderCamera.setVec3(
+        cameraShader.setVec3(
             "camPos",
-            camera.Position.x,
-            camera.Position.y,
-            camera.Position.z);
+            camera.position.x,
+            camera.position.y,
+            camera.position.z);
 
-        shaderCamera.setInt("lightType", static_cast<int>(settings.lightType));
+        cameraShader.setInt("lightType", static_cast<int>(settings.lightType));
 
-        camera.Matrix(
+        camera.setViewProjection(
             settings.fov,
             0.1f,
             100.0f,
-            shaderCamera,
+            cameraShader,
             "camMatrix");
 
         // Desenhar os modelos da cena
-        scene.draw(shaderCamera, camera, defaultTexture);
+        scene.draw(cameraShader, camera, defaultTexture);
         // 14. Desenhar cubo da luz
-        shaderLuz.usar();
+        lightShader.use();
 
-        shaderLuz.setVec4(
+        lightShader.setVec4(
             "lightColor",
             lightColor.x,
             lightColor.y,
             lightColor.z,
             lightColor.w);
 
-        shaderLuz.setMat4("model", lightModel);
+        lightShader.setMat4("model", lightModel);
 
-        camera.Matrix(
+        camera.setViewProjection(
             settings.fov,
             0.1f,
             100.0f,
-            shaderLuz,
+            lightShader,
             "camMatrix");
 
-        luz.desenhar();
+        lightMesh.draw();
 
         // 15. Interface por cima de tudo
-        ui.begin(janela);
+        ui.begin(window);
 
-        hud.draw(ui, camera.Position);
+        hud.draw(ui, camera.position);
 
-        menu.desenhar(
-            janela,
+        menu.draw(
+            window,
             ui,
             settings);
 
         ui.end();
 
         // 16. Atualizar janela
-        janela.trocarBuffers();
-        janela.processarEventos();
+        window.swapBuffers();
+        window.pollEvents();
     }
 
     return 0;

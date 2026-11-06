@@ -3,106 +3,106 @@
 
 Camera::Camera(int width, int height, glm::vec3 position)
 {
-    Camera::width = width;
-    Camera::height = height;
-    Position = position;
+    viewportWidth = width;
+    viewportHeight = height;
+    this->position = position;
 }
 
-void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader &shader, const char *uniform)
+void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName)
 {
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
 
-    view = glm::lookAt(Position, Position + Orientation, Up);
+    view = glm::lookAt(position, position + orientation, up);
 
     projection = glm::perspective(
-        glm::radians(FOVdeg),
-        static_cast<float>(width) / static_cast<float>(height),
+        glm::radians(fovDegrees),
+        static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight),
         nearPlane,
         farPlane);
 
     glUniformMatrix4fv(
-        glGetUniformLocation(shader.ID, uniform),
+        glGetUniformLocation(shader.ID, uniformName),
         1,
         GL_FALSE,
         glm::value_ptr(projection * view));
 }
 
-void Camera::Inputs(Window &window, float deltaTime)
+void Camera::processInput(Window &window, float deltaTime)
 {
     // Movimento da câmera
-    if (window.teclaSegurada(GLFW_KEY_LEFT_SHIFT))
+    if (window.keyDown(GLFW_KEY_LEFT_SHIFT))
         speed = sprintSpeed; 
     else
         speed = walkSpeed; 
 
-    if (window.teclaSegurada(GLFW_KEY_W))
-        Position += speed * deltaTime * Orientation;
+    if (window.keyDown(GLFW_KEY_W))
+        position += speed * deltaTime * orientation;
 
-    if (window.teclaSegurada(GLFW_KEY_A))
-        Position += speed * deltaTime * -glm::normalize(glm::cross(Orientation, Up));
+    if (window.keyDown(GLFW_KEY_A))
+        position += speed * deltaTime * -glm::normalize(glm::cross(orientation, up));
 
-    if (window.teclaSegurada(GLFW_KEY_S))
-        Position += speed * deltaTime * -Orientation;
+    if (window.keyDown(GLFW_KEY_S))
+        position += speed * deltaTime * -orientation;
 
-    if (window.teclaSegurada(GLFW_KEY_D))
-        Position += speed * deltaTime * glm::normalize(glm::cross(Orientation, Up));
+    if (window.keyDown(GLFW_KEY_D))
+        position += speed * deltaTime * glm::normalize(glm::cross(orientation, up));
 
-    if (window.teclaSegurada(GLFW_KEY_SPACE))
-        Position += speed * deltaTime * Up;
+    if (window.keyDown(GLFW_KEY_SPACE))
+        position += speed * deltaTime * up;
 
-    if (window.teclaSegurada(GLFW_KEY_LEFT_CONTROL))
-        Position += speed * deltaTime * -Up;
+    if (window.keyDown(GLFW_KEY_LEFT_CONTROL))
+        position += speed * deltaTime * -up;
 
     // Controle do mouse
     if (window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
     {
         window.setCursorMode(Window::CursorMode::Hidden);
 
-        if (firstClick)
+        if (firstMouseClick)
         {
-            window.setMousePosition(width / 2, height / 2);
-            firstClick = false;
+            window.setMousePosition(viewportWidth / 2, viewportHeight / 2);
+            firstMouseClick = false;
         }
 
         double mouseX = window.getMouseX();
         double mouseY = window.getMouseY();
 
-        float rotX = sensitivity * static_cast<float>(mouseY - (height / 2)) / height;
-        float rotY = sensitivity * static_cast<float>(mouseX - (width / 2)) / width;
+        float rotationX = sensitivity * static_cast<float>(mouseY - (viewportHeight / 2)) / viewportHeight;
+        float rotationY = sensitivity * static_cast<float>(mouseX - (viewportWidth / 2)) / viewportWidth;
 
         glm::vec3 newOrientation = glm::rotate(
-            Orientation,
-            glm::radians(-rotX),
-            glm::normalize(glm::cross(Orientation, Up)));
+            orientation,
+            glm::radians(-rotationX),
+            glm::normalize(glm::cross(orientation, up)));
 
-        if (!(glm::angle(newOrientation, Up) <= glm::radians(5.0f) ||
-              glm::angle(newOrientation, -Up) <= glm::radians(5.0f)))
+        if (!(glm::angle(newOrientation, up) <= glm::radians(5.0f) ||
+              glm::angle(newOrientation, -up) <= glm::radians(5.0f)))
         {
-            Orientation = newOrientation;
+            orientation = newOrientation;
         }
 
-        Orientation = glm::rotate(
-            Orientation,
-            glm::radians(-rotY),
-            Up);
+        orientation = glm::rotate(
+            orientation,
+            glm::radians(-rotationY),
+            up);
 
-        window.setMousePosition(width / 2, height / 2);
+        window.setMousePosition(viewportWidth / 2, viewportHeight / 2);
     }
     else
     {
         window.setCursorMode(Window::CursorMode::Normal);
-        firstClick = true;
+        firstMouseClick = true;
     }
 }
 
 // Atualiza o tamanho usado na projeção. Ignora tamanhos inválidos
 // (janela minimizada tem altura 0), mantendo o último tamanho bom.
-void Camera::setSize(int newWidth, int newHeight)
+void Camera::setViewportSize(int width, int height)
 {
-    if (newWidth <= 0 || newHeight <= 0)
+    if (width <= 0 || height <= 0)
         return;
 
-    width = newWidth;
-    height = newHeight;
+    viewportWidth = width;
+    viewportHeight = height;
 }

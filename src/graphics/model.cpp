@@ -101,12 +101,12 @@ Model::Model(const char* file)
 	traverseNode(0);
 }
 
-void Model::desenhar(Shader& shader, Camera& camera, const Texture& diffuseFallback)
+void Model::draw(Shader& shader, Camera& camera, const Texture& diffuseFallback)
 {
 	// Go over all meshes and draw each one
 	for (unsigned int i = 0; i < meshes.size(); i++)
 	{
-		meshes[i].Mesh::desenhar(shader, &diffuseFallback);
+		meshes[i].Mesh::draw(shader, &diffuseFallback);
 	}
 }
 
@@ -132,11 +132,11 @@ void Model::loadMesh(unsigned int indMesh)
 	std::vector<Texture> textures = getTextures();
 
 	Mesh& mesh = meshes.emplace_back();
-	if (!mesh.criarEbo(vertices, indices))
+	if (!mesh.createIndexed(vertices, indices))
 		throw std::runtime_error("Failed to create model mesh.");
 
 	for (Texture& texture : textures)
-		mesh.adicionarTextura(std::move(texture));
+		mesh.addTexture(std::move(texture));
 }
 
 void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix)
