@@ -92,6 +92,8 @@ cmake --version
 
 Se os comandos exibirem as versões instaladas, as ferramentas estão disponíveis no terminal.
 
+No VS Code, abra a pasta do projeto e selecione o preset **MinGW (MSYS2 UCRT64)** quando o CMake Tools solicitar um preset de configuração.
+
 ## 🔨 Como compilar
 
 Abra o PowerShell **na raiz do projeto**, na mesma pasta onde está o arquivo `CMakeLists.txt`.
@@ -99,15 +101,15 @@ Abra o PowerShell **na raiz do projeto**, na mesma pasta onde está o arquivo `C
 ### 1. Configurar o projeto
 
 ```powershell
-cmake -S . -B build -G "MinGW Makefiles"
+cmake --preset mingw
 ```
 
-Esse comando configura o projeto e gera os arquivos de compilação na pasta `build`.
+O preset seleciona o gerador **MinGW Makefiles** e configura os arquivos de compilação na pasta `build`.
 
 ### 2. Compilar
 
 ```powershell
-cmake --build build
+cmake --build --preset mingw
 ```
 
 O CMake configurará e compilará o GLFW a partir do código-fonte incluído no projeto, além de compilar os arquivos do programa.

@@ -23,7 +23,10 @@ add_executable(OpenGLProjeto
     src/window.cpp
     src/camera.cpp
 
+    src/core/application.cpp
+
     src/scene/scene.cpp
+    src/scene/light.cpp
 
     src/graphics/shader.cpp
     src/graphics/texture.cpp
