@@ -1,18 +1,19 @@
-
 #include "VBO.h"
-
-VBO::VBO()
-{
-    glGenBuffers(1, &ID);
-}
 
 VBO::~VBO()
 {
     Delete();
 }
 
+void VBO::ensureCreated() const
+{
+    if (ID == 0)
+        glGenBuffers(1, &ID);
+}
+
 void VBO::Bind() const
 {
+    ensureCreated();
     glBindBuffer(GL_ARRAY_BUFFER, ID);
 }
 

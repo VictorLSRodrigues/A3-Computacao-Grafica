@@ -1,18 +1,20 @@
-
 #pragma once
 
 #include <glad/glad.h>
 #include <vector>
 
 // Armazena índices que permitem reutilizar vértices ao desenhar triângulos.
+// O buffer OpenGL só é criado no primeiro uso, então a classe pode ser construída antes da janela.
 class EBO
 {
 private:
-    GLuint ID = 0;
+    mutable GLuint ID = 0;
     GLsizei indexCount = 0;
 
+    void ensureCreated() const;
+
 public:
-    EBO();
+    EBO() = default;
     ~EBO();
 
     EBO(const EBO&) = delete;

@@ -45,12 +45,10 @@ private:
 
     Scene scene;
     Scene::Object *pyramid = nullptr;
-    std::unique_ptr<Light> light; // Criados em init(): o construtor deles usa OpenGL.
-
+    Light light;
     Camera camera{1, 1, glm::vec3(0.0f, 0.0f, 2.0f)};
 
-    std::unique_ptr<UI> ui;
-    Menu menu;
+    UI ui;    Menu menu;
     HUD hud;
 
     float pyramidRotation = 0.0f;

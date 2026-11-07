@@ -1,18 +1,19 @@
-
 #include "VAO.h"
-
-VAO::VAO()
-{
-    glGenVertexArrays(1, &ID);
-}
 
 VAO::~VAO()
 {
     Delete();
 }
 
+void VAO::ensureCreated() const
+{
+    if (ID == 0)
+        glGenVertexArrays(1, &ID);
+}
+
 void VAO::Bind() const
 {
+    ensureCreated();
     glBindVertexArray(ID);
 }
 

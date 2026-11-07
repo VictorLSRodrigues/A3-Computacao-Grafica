@@ -3,6 +3,7 @@
         {
             "name": "Win32",
             "includePath": [
+                "${workspaceFolder}/src",
                 "${workspaceFolder}/Libraries/include",
                 "${workspaceFolder}/Libraries/glfw-3.5.1/include"
             ],
@@ -10,6 +11,7 @@
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE",
+                "GLM_ENABLE_EXPERIMENTAL",
                 "ASSETS_DIR=\"${workspaceFolder}/assets/\""
             ],
             "compilerPath": "C:\\msys64\\ucrt64\\bin\\g++.exe",

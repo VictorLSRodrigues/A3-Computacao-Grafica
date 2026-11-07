@@ -1,16 +1,18 @@
-
 #pragma once
 
 #include <glad/glad.h>
 
 // Guarda a configuração que explica ao OpenGL como interpretar os dados dos vértices.
+// O objeto OpenGL só é criado no primeiro uso, então a classe pode ser construída antes da janela.
 class VAO
 {
 private:
-    GLuint ID = 0;
+    mutable GLuint ID = 0;
+
+    void ensureCreated() const;
 
 public:
-    VAO();
+    VAO() = default;
     ~VAO();
 
     VAO(const VAO&) = delete;

@@ -1,18 +1,19 @@
-
 #include "EBO.h"
-
-EBO::EBO()
-{
-    glGenBuffers(1, &ID);
-}
 
 EBO::~EBO()
 {
     Delete();
 }
 
+void EBO::ensureCreated() const
+{
+    if (ID == 0)
+        glGenBuffers(1, &ID);
+}
+
 void EBO::Bind() const
 {
+    ensureCreated();
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ID);
 }
 

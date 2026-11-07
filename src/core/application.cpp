@@ -18,15 +18,13 @@ bool Application::init()
     if (!loadShaders())
         return false;
 
-    light = std::make_unique<Light>();
-    if (!light->create())
+    if (!light.create())
     {
         std::cout << "Erro ao criar a malha da luz." << std::endl;
         return false;
     }
 
-    ui = std::make_unique<UI>();
-    if (!ui->create())
+    if (!ui.create())
     {
         std::cout << "Falha ao inicializar a UI!" << std::endl;
         return false;
@@ -152,19 +150,19 @@ void Application::render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     sceneShader.use();
-    light->apply(sceneShader, settings.lightType, camera);
+    light.apply(sceneShader, settings.lightType, camera);
     camera.setViewProjection(settings.fov, 0.1f, 100.0f, sceneShader, "camMatrix");
     scene.draw(sceneShader, camera, defaultTexture);
 
     // Na luz direcional a posição não importa, então o marcador fica escondido.
     if (settings.lightType != LightType::Directional)
-        light->drawMarker(lightShader, camera, settings.fov);
+        light.drawMarker(lightShader, camera, settings.fov);
 }
 
 void Application::renderUI()
 {
-    ui->begin(window);
-    hud.draw(*ui, camera.position);
-    menu.draw(window, *ui, settings);
-    ui->end();
+    ui.begin(window);
+    hud.draw(ui, camera.position);
+    menu.draw(window, ui, settings);
+    ui.end();
 }
