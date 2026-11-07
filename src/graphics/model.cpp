@@ -101,11 +101,15 @@ Model::Model(const char *path)
 	traverseNode(0);
 }
 
-void Model::draw(Shader &shader, Camera &camera, const Texture &diffuseFallback)
+void Model::draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
+                 const glm::mat4 &objectMatrix)
 {
-	// Um modelo pode conter várias malhas; desenha cada uma com o mesmo shader.
+	(void)camera;
+
+	// Um modelo pode conter várias partes; cada uma é desenhada na posição que o arquivo define para ela.
 	for (unsigned int i = 0; i < meshes.size(); i++)
 	{
+		shader.setMat4("model", objectMatrix * matricesMeshes[i]);
 		meshes[i].Mesh::draw(shader, &diffuseFallback);
 	}
 }

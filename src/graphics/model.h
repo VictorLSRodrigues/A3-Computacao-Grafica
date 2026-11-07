@@ -17,7 +17,9 @@ public:
     // Carrega um modelo glTF (.gltf) ou GLB (.glb) e prepara suas partes para desenho.
     Model(const char *path);
 
-    void draw(Shader &shader, Camera &camera, const Texture &diffuseFallback);
+    // objectMatrix é a transformação do objeto na cena; ela é combinada com a de cada parte do modelo.
+    void draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
+              const glm::mat4 &objectMatrix = glm::mat4(1.0f));
 
 private:
     // Dados do arquivo e descrição de sua estrutura.

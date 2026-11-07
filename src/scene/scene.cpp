@@ -3,7 +3,7 @@
 #include <iostream>
 #include <utility>
 
-Scene::Object* Scene::addModel(const std::string& path, const Transform& transform)
+Scene::Object *Scene::addModel(const std::string &path, const Transform &transform)
 {
     std::shared_ptr<Model> model;
 
@@ -18,7 +18,7 @@ Scene::Object* Scene::addModel(const std::string& path, const Transform& transfo
         {
             model = std::make_shared<Model>(path.c_str());
         }
-        catch (const std::exception& error)
+        catch (const std::exception &error)
         {
             std::cout << "Falha ao carregar o modelo " << path << ": " << error.what() << std::endl;
             return nullptr;
@@ -30,8 +30,8 @@ Scene::Object* Scene::addModel(const std::string& path, const Transform& transfo
     return &objects.back();
 }
 
-Scene::Object* Scene::addMesh(std::shared_ptr<Mesh> mesh, const std::string& name,
-                              const Transform& transform)
+Scene::Object *Scene::addMesh(std::shared_ptr<Mesh> mesh, const std::string &name,
+                              const Transform &transform)
 {
     if (!mesh)
         return nullptr;
@@ -40,15 +40,21 @@ Scene::Object* Scene::addMesh(std::shared_ptr<Mesh> mesh, const std::string& nam
     return &objects.back();
 }
 
-void Scene::draw(Shader& shader, Camera& camera, const Texture& fallbackTexture)
+void Scene::draw(Shader &shader, Camera &camera, const Texture &fallbackTexture)
 {
-    for (Object& object : objects)
+    for (Object &object : objects)
     {
-        shader.setMat4("model", object.transform.matrix());
+        const glm::mat4 matrix = object.transform.matrix();
 
         if (object.model)
-            object.model->draw(shader, camera, fallbackTexture);
+        {
+            // O modelo envia a matriz de cada parte dele, já combinada com a do objeto.
+            object.model->draw(shader, camera, fallbackTexture, matrix);
+        }
         else if (object.mesh)
+        {
+            shader.setMat4("model", matrix);
             object.mesh->draw(shader, &fallbackTexture);
+        }
     }
 }
