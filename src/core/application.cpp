@@ -66,6 +66,7 @@ bool Application::loadShaders()
 
 bool Application::loadScene()
 {
+    // Cada vértice guarda posição (3), cor (3), coordenadas da textura (2) e normal (3).
     auto pyramidMesh = std::make_shared<Mesh>();
     if (!pyramidMesh->createIndexed(
             shapes::pyramid(),
@@ -91,17 +92,24 @@ bool Application::loadScene()
     pyramidMesh->addTexture(std::move(diffuse));
     pyramidMesh->addTexture(std::move(specular));
 
-    // O macaco é opcional: se falhar, a cena continua com a pirâmide.
+    // Os modelos são opcionais: se algum falhar, a cena continua sem ele.
     if (Scene::Object *monkey = scene.addModel(ASSETS_DIR "models/macaco.glb"))
     {
         monkey->transform.position = glm::vec3(1.5f, 0.0f, 0.0f);
         monkey->transform.scale = glm::vec3(0.5f);
     }
 
+    // Troque o nome do arquivo pelo do seu modelo.
+    if (Scene::Object *multi = scene.addModel(ASSETS_DIR "models/multi.glb"))
+    {
+        const float multiScale = 0.3f; // ajuste aqui: menor = modelo menor
+        multi->transform.position = glm::vec3(-1.5f, 0.0f, 0.0f);
+        multi->transform.scale = glm::vec3(multiScale);
+    }
+
     pyramid = scene.addMesh(pyramidMesh, "pyramid");
     return pyramid != nullptr;
 }
-
 void Application::run()
 {
     double lastFrame = glfwGetTime();

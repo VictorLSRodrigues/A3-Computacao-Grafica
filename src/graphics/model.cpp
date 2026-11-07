@@ -1,9 +1,9 @@
-#include"model.h"
-#include<json/json.h>
-#include"mesh.h"
-#include"camera.h"
-#include"texture.h"
-#include"buffers/VAO.h"
+#include "model.h"
+#include <json/json.h>
+#include "mesh.h"
+#include "camera.h"
+#include "texture.h"
+#include "buffers/VAO.h"
 #include <fstream>
 #include <iterator>
 #include <cctype>
@@ -15,29 +15,29 @@
 
 namespace
 {
-std::string get_file_contents(const char *path)
-{
-	  if (path == nullptr)
-        throw std::invalid_argument("O caminho do arquivo não pode ser nulo.");
-		
-	std::ifstream file(path, std::ios::binary);
-	if (!file)
-		throw std::runtime_error("Could not open file: " + std::string(path));
-	return std::string(
-		std::istreambuf_iterator<char>(file),
-		std::istreambuf_iterator<char>());	
-}
+	std::string get_file_contents(const char *path)
+	{
+		if (path == nullptr)
+			throw std::invalid_argument("O caminho do arquivo não pode ser nulo.");
 
-std::uint32_t read_u32_le(const std::string& bytes, std::size_t offset)
-{
-	if (offset > bytes.size() || bytes.size() - offset < 4)
-		throw std::runtime_error("Invalid GLB header or chunk.");
+		std::ifstream file(path, std::ios::binary);
+		if (!file)
+			throw std::runtime_error("Could not open file: " + std::string(path));
+		return std::string(
+			std::istreambuf_iterator<char>(file),
+			std::istreambuf_iterator<char>());
+	}
 
-	return static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset])) |
-		(static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + 1])) << 8) |
-		(static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + 2])) << 16) |
-		(static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + 3])) << 24);
-}
+	std::uint32_t read_u32_le(const std::string &bytes, std::size_t offset)
+	{
+		if (offset > bytes.size() || bytes.size() - offset < 4)
+			throw std::runtime_error("Invalid GLB header or chunk.");
+
+		return static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset])) |
+			   (static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + 1])) << 8) |
+			   (static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + 2])) << 16) |
+			   (static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + 3])) << 24);
+	}
 }
 
 Model::Model(const char *path)
@@ -72,7 +72,7 @@ Model::Model(const char *path)
 			{
 				std::string jsonText = contents.substr(offset, chunkLength);
 				while (!jsonText.empty() &&
-					(jsonText.back() == '\0' || std::isspace(static_cast<unsigned char>(jsonText.back()))))
+					   (jsonText.back() == '\0' || std::isspace(static_cast<unsigned char>(jsonText.back()))))
 					jsonText.pop_back();
 				JSON = json::parse(jsonText);
 				hasJson = true;
@@ -97,12 +97,23 @@ Model::Model(const char *path)
 		data = getData();
 	}
 
-	// Começa pela raiz da hierarquia de partes do modelo.
-	traverseNode(0);
+	// A cena do arquivo pode ter várias raízes; percorre cada uma delas.
+	// Se o arquivo não descreve a cena, começa pelo primeiro nó.
+	const unsigned int sceneIndex = JSON.value("scene", 0u);
+	if (JSON.contains("scenes") && sceneIndex < JSON["scenes"].size() &&
+		JSON["scenes"][sceneIndex].contains("nodes"))
+	{
+		for (const auto &root : JSON["scenes"][sceneIndex]["nodes"])
+			traverseNode(root.get<unsigned int>());
+	}
+	else
+	{
+		traverseNode(0);
+	}
 }
 
 void Model::draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
-                 const glm::mat4 &objectMatrix)
+				 const glm::mat4 &objectMatrix)
 {
 	(void)camera;
 
@@ -135,11 +146,11 @@ void Model::loadMesh(unsigned int meshIndex)
 	std::vector<GLuint> indices = getIndices(JSON["accessors"][indAccInd]);
 	std::vector<Texture> textures = getTextures();
 
-	Mesh& mesh = meshes.emplace_back();
+	Mesh &mesh = meshes.emplace_back();
 	if (!mesh.createIndexed(vertices, indices))
 		throw std::runtime_error("Failed to create model mesh.");
 
-	for (Texture& texture : textures)
+	for (Texture &texture : textures)
 		mesh.addTexture(std::move(texture));
 }
 
@@ -161,12 +172,11 @@ void Model::traverseNode(unsigned int nodeIndex, glm::mat4 matrix)
 	if (node.find("rotation") != node.end())
 	{
 		float rotValues[4] =
-		{
-			node["rotation"][3],
-			node["rotation"][0],
-			node["rotation"][1],
-			node["rotation"][2]
-		};
+			{
+				node["rotation"][3],
+				node["rotation"][0],
+				node["rotation"][1],
+				node["rotation"][2]};
 		rotation = glm::make_quat(rotValues);
 	}
 	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -247,18 +257,23 @@ std::vector<float> Model::getFloats(json accessor)
 
 	// O tipo define quantos valores formam cada elemento.
 	unsigned int numPerVert;
-	if (type == "SCALAR") numPerVert = 1;
-	else if (type == "VEC2") numPerVert = 2;
-	else if (type == "VEC3") numPerVert = 3;
-	else if (type == "VEC4") numPerVert = 4;
-	else throw std::invalid_argument("Type is invalid (not SCALAR, VEC2, VEC3, or VEC4)");
+	if (type == "SCALAR")
+		numPerVert = 1;
+	else if (type == "VEC2")
+		numPerVert = 2;
+	else if (type == "VEC3")
+		numPerVert = 3;
+	else if (type == "VEC4")
+		numPerVert = 4;
+	else
+		throw std::invalid_argument("Type is invalid (not SCALAR, VEC2, VEC3, or VEC4)");
 
 	// Converte cada grupo de quatro bytes em um número de ponto flutuante.
 	unsigned int beginningOfData = byteOffset + accByteOffset;
 	unsigned int lengthOfData = count * 4 * numPerVert;
 	for (unsigned int i = beginningOfData; i < beginningOfData + lengthOfData; i += 4)
 	{
-		unsigned char bytes[] = { data[i], data[i + 1], data[i + 2], data[i + 3] };
+		unsigned char bytes[] = {data[i], data[i + 1], data[i + 2], data[i + 3]};
 		float value;
 		std::memcpy(&value, bytes, sizeof(float));
 		floatVec.push_back(value);
@@ -286,7 +301,7 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	{
 		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i += 4)
 		{
-			unsigned char bytes[] = { data[i], data[i + 1], data[i + 2], data[i + 3] };
+			unsigned char bytes[] = {data[i], data[i + 1], data[i + 2], data[i + 3]};
 			unsigned int value;
 			std::memcpy(&value, bytes, sizeof(unsigned int));
 			indices.push_back((GLuint)value);
@@ -296,7 +311,7 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	{
 		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i += 2)
 		{
-			unsigned char bytes[] = { data[i], data[i + 1] };
+			unsigned char bytes[] = {data[i], data[i + 1]};
 			unsigned short value;
 			std::memcpy(&value, bytes, sizeof(unsigned short));
 			indices.push_back((GLuint)value);
@@ -306,7 +321,7 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	{
 		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i += 2)
 		{
-			unsigned char bytes[] = { data[i], data[i + 1] };
+			unsigned char bytes[] = {data[i], data[i + 1]};
 			short value;
 			std::memcpy(&value, bytes, sizeof(short));
 			indices.push_back((GLuint)value);
@@ -326,7 +341,7 @@ std::vector<Texture> Model::getTextures()
 	// As imagens podem estar em arquivos separados ou dentro do próprio GLB.
 	for (unsigned int i = 0; i < JSON["images"].size(); i++)
 	{
-		const json& image = JSON["images"][i];
+		const json &image = JSON["images"][i];
 		const std::string texPath = image.value("uri", image.value("name", std::string()));
 
 		Texture texture;
@@ -340,7 +355,7 @@ std::vector<Texture> Model::getTextures()
 		else if (image.contains("bufferView"))
 		{
 			const unsigned int viewIndex = image["bufferView"].get<unsigned int>();
-			const json& view = JSON["bufferViews"][viewIndex];
+			const json &view = JSON["bufferViews"][viewIndex];
 			const std::size_t offset = view.value("byteOffset", std::size_t(0));
 			const std::size_t length = view["byteLength"].get<std::size_t>();
 			if (offset > data.size() || length > data.size() - offset)
@@ -351,33 +366,28 @@ std::vector<Texture> Model::getTextures()
 		if (!loaded)
 			throw std::runtime_error("Failed to load model texture: " + texPath);
 		texture.setType(texPath.find("metallicRoughness") != std::string::npos
-			? "specular" : "diffuse");
+							? "specular"
+							: "diffuse");
 		textures.push_back(std::move(texture));
 	}
 
 	return textures;
 }
 
-std::vector<Vertex> Model::assembleVertices
-(
+std::vector<Vertex> Model::assembleVertices(
 	std::vector<glm::vec3> positions,
 	std::vector<glm::vec3> normals,
-	std::vector<glm::vec2> texUVs
-)
+	std::vector<glm::vec2> texUVs)
 {
 	std::vector<Vertex> vertices;
 	for (int i = 0; i < positions.size(); i++)
 	{
-		vertices.push_back
-		(
-			Vertex
-			{
+		vertices.push_back(
+			Vertex{
 				positions[i],
 				glm::vec3(1.0f, 1.0f, 1.0f),
 				texUVs[i],
-				normals[i]
-			}
-		);
+				normals[i]});
 	}
 	return vertices;
 }
@@ -385,7 +395,7 @@ std::vector<Vertex> Model::assembleVertices
 std::vector<glm::vec2> Model::groupFloatsVec2(std::vector<float> values)
 {
 	const unsigned int floatsPerVector = 2;
-	
+
 	std::vector<glm::vec2> vectors;
 	for (unsigned int i = 0; i < values.size(); i += floatsPerVector)
 	{
