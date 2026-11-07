@@ -34,7 +34,9 @@ public:
     Camera(int width, int height, glm::vec3 position);
 
     // Envia ao shader as matrizes de visão e projeção da câmera.
-    void setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName);
+    // Com ignoreTranslation, a posição da câmera é ignorada (usado no céu).
+    void setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName,
+                           bool ignoreTranslation = false);
 
     // Atualiza posição e orientação a partir do teclado e do mouse.
     void processInput(Window &window, float deltaTime);

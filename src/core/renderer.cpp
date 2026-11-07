@@ -13,6 +13,10 @@ bool Renderer::init()
     if (!loadShaders())
         return false;
 
+    // O céu é opcional: sem ele, a cena usa a cor de fundo lisa.
+    if (!skybox.load(ASSETS_DIR "skybox/"))
+        std::cout << "Ceu desativado: nao consegui carregar a pasta assets/skybox." << std::endl;
+
     // Objetos próximos escondem os que estão atrás; faces voltadas para longe da câmera são descartadas.
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -45,7 +49,7 @@ bool Renderer::loadShaders()
     return true;
 }
 
-void Renderer::render(Scene& scene, const Light& light, Camera& camera, const Settings& settings)
+void Renderer::render(Scene &scene, const Light &light, Camera &camera, const Settings &settings)
 {
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -60,4 +64,8 @@ void Renderer::render(Scene& scene, const Light& light, Camera& camera, const Se
     lightShader.use();
     camera.setViewProjection(settings.fov, nearPlane, farPlane, lightShader, "camMatrix");
     light.drawMarker(lightShader);
+    
+    // O céu vai por último: só ocupa o que nenhum objeto cobriu.
+    if (settings.showSkybox)
+        skybox.draw(camera, settings.fov, nearPlane, farPlane);
 }

@@ -16,6 +16,7 @@ struct Settings
     float sprintSpeed = 5.0f;        // velocidade da câmera com Shift
     float mouseSensitivity = 100.0f; // sensibilidade do mouse
     LightType lightType = LightType::Point;
+    bool showSkybox = true;                    // mostra o céu ao redor da cena
     glm::vec3 lightPosition{0.5f, 0.5f, 0.5f}; // onde a luz está
     glm::vec3 lightTarget{0.0f, 0.0f, 0.0f};   // ponto para onde a luz aponta
 };

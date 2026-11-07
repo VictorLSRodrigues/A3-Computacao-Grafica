@@ -8,12 +8,16 @@ Camera::Camera(int width, int height, glm::vec3 position)
     this->position = position;
 }
 
-void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName)
+void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName, bool ignoreTranslation)
 {
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
 
     view = glm::lookAt(position, position + orientation, up);
+
+        // Sem a translação, só a rotação da câmera vale: o céu parece infinitamente distante.
+    if (ignoreTranslation)
+        view = glm::mat4(glm::mat3(view));
 
     projection = glm::perspective(
         glm::radians(fovDegrees),
@@ -32,9 +36,9 @@ void Camera::processInput(Window &window, float deltaTime)
 {
     // WASD move no plano horizontal; Espaço e Ctrl movem no eixo vertical.
     if (window.keyDown(GLFW_KEY_LEFT_SHIFT))
-        speed = sprintSpeed; 
+        speed = sprintSpeed;
     else
-        speed = walkSpeed; 
+        speed = walkSpeed;
 
     if (window.keyDown(GLFW_KEY_W))
         position += speed * deltaTime * orientation;

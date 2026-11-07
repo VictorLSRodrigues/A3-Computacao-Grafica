@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "graphics/shader.h"
+#include "graphics/skybox.h"
 #include "graphics/texture.h"
 #include "scene/light.h"
 #include "scene/scene.h"
@@ -16,7 +17,7 @@ public:
     bool init();
 
     // Desenha um quadro: a cena iluminada e o marcador da luz.
-    void render(Scene& scene, const Light& light, Camera& camera, const Settings& settings);
+    void render(Scene &scene, const Light &light, Camera &camera, const Settings &settings);
 
 private:
     bool loadShaders();
@@ -28,4 +29,5 @@ private:
     Shader sceneShader;
     Shader lightShader;
     Texture defaultTexture;
+    Skybox skybox;
 };

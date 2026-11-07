@@ -32,6 +32,8 @@ add_executable(OpenGLProjeto
 
     src/graphics/shader.cpp
     src/graphics/texture.cpp
+    src/graphics/cubemap.cpp
+    src/graphics/skybox.cpp
     src/graphics/mesh.cpp
     src/graphics/model.cpp
     src/graphics/shapes.cpp
