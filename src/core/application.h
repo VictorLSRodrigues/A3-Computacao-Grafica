@@ -1,10 +1,7 @@
 #pragma once
 
-#include <memory>
-
 #include "camera.h"
-#include "graphics/shader.h"
-#include "graphics/texture.h"
+#include "renderer.h"
 #include "scene/light.h"
 #include "scene/scene.h"
 #include "settings.h"
@@ -13,7 +10,8 @@
 #include "ui/menu.h"
 #include "window.h"
 
-// Dona de tudo o que vive durante a execução: janela, recursos, cena e interface.
+// Dona de tudo o que vive durante a execução: janela, cena, luz e interface.
+// O main só cria a aplicação, chama init() e depois run().
 class Application
 {
 public:
@@ -22,29 +20,30 @@ public:
     Application(const Application &) = delete;
     Application &operator=(const Application &) = delete;
 
-    bool init(); // Cria a janela, carrega recursos e monta a cena.
-    void run();  // Laço principal: roda até a janela ser fechada.
+    // Cria a janela, carrega os recursos e monta a cena. Retorna false se algo falhar.
+    bool init();
+
+    // Laço principal: roda até a janela ser fechada.
+    void run();
 
 private:
-    bool loadShaders();
     void update(float deltaTime);
-    void render();
     void renderUI();
 
-    // A janela vem primeiro para ser destruída por último,
+    // A janela é declarada primeiro para ser destruída por último,
     // depois dos recursos OpenGL que dependem do contexto dela.
     Window window;
 
     Settings settings;
 
-    Shader sceneShader;
-    Shader lightShader;
-    Texture defaultTexture;
-
+    Renderer renderer;
     Scene scene;
     Light light;
+
+    // O tamanho real do viewport é atualizado a cada quadro em update().
     Camera camera{1, 1, glm::vec3(0.0f, 0.0f, 2.0f)};
 
-    UI ui;    Menu menu;
+    UI ui;
+    Menu menu;
     HUD hud;
 };

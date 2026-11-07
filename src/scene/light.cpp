@@ -35,8 +35,7 @@ void Light::apply(Shader &shader, LightType type, const Camera &camera) const
     shader.setInt("lightType", static_cast<int>(type));
 }
 
-void Light::drawMarker(Shader &markerShader, Camera &camera, float fov)
-{
+void Light::drawMarker(Shader &markerShader) const{
     glm::mat4 model(1.0f);
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(0.2f));
@@ -44,7 +43,6 @@ void Light::drawMarker(Shader &markerShader, Camera &camera, float fov)
     markerShader.use();
     markerShader.setVec4("lightColor", color.x, color.y, color.z, color.w);
     markerShader.setMat4("model", model);
-    camera.setViewProjection(fov, 0.1f, 100.0f, markerShader, "camMatrix");
 
     marker.draw();
 }

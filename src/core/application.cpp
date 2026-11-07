@@ -1,17 +1,16 @@
 #include "application.h"
-#include "scene/world.h"
+
 #include <algorithm>
 #include <iostream>
+
+#include "scene/world.h"
 
 bool Application::init()
 {
     if (!window.create("OpenGL - RotorGrafico"))
         return false;
 
-    if (!defaultTexture.load(ASSETS_DIR "textures/default.png"))
-        return false;
-
-    if (!loadShaders())
+    if (!renderer.init())
         return false;
 
     if (!light.create())
@@ -26,39 +25,8 @@ bool Application::init()
         return false;
     }
 
-    if (!buildWorld(scene))
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-
-    return true;
+    return buildWorld(scene);
 }
-
-bool Application::loadShaders()
-{
-    if (!sceneShader.createFromFiles(
-            ASSETS_DIR "shaders/default.vert",
-            ASSETS_DIR "shaders/default.frag"))
-    {
-        std::cout << "Falha ao criar o shader da cena!" << std::endl;
-        return false;
-    }
-
-    sceneShader.use();
-    sceneShader.setInt("tex0", 0);
-    sceneShader.setInt("specular0", 1);
-
-    if (!lightShader.createFromFiles(
-            ASSETS_DIR "shaders/light.vert",
-            ASSETS_DIR "shaders/light.frag"))
-    {
-        std::cout << "Falha ao criar o shader da luz!" << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
 
 void Application::run()
 {
@@ -73,7 +41,7 @@ void Application::run()
         lastFrame = currentFrame;
 
         update(deltaTime);
-        render();
+        renderer.render(scene, light, camera, settings);
         renderUI();
 
         window.swapBuffers();
@@ -92,26 +60,16 @@ void Application::update(float deltaTime)
     else
         camera.processInput(window, deltaTime);
 
+    // Copia para a luz e para a câmera os ajustes escolhidos no menu.
     light.position = settings.lightPosition;
     light.target = settings.lightTarget;
+
     camera.walkSpeed = settings.walkSpeed;
     camera.sprintSpeed = settings.sprintSpeed;
     camera.sensitivity = settings.mouseSensitivity;
     camera.setViewportSize(window.getWidth(), window.getHeight());
+
     scene.update(deltaTime);
-}
-
-void Application::render()
-{
-    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    sceneShader.use();
-    light.apply(sceneShader, settings.lightType, camera);
-    camera.setViewProjection(settings.fov, 0.1f, 100.0f, sceneShader, "camMatrix");
-    scene.draw(sceneShader, camera, defaultTexture);
-
-    light.drawMarker(lightShader, camera, settings.fov);
 }
 
 void Application::renderUI()

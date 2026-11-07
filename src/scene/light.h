@@ -23,8 +23,8 @@ public:
     // Envia ao shader da cena os dados da luz e da câmera usados na iluminação.
     void apply(Shader &shader, LightType type, const Camera &camera) const;
 
-    // Desenha o cubo que indica a posição da luz (não faz sentido na luz direcional).
-    void drawMarker(Shader &markerShader, Camera &camera, float fov);
+    // Desenha o cubo que indica a posição da luz. O shader precisa já ter a matriz da câmera.
+    void drawMarker(Shader &markerShader) const;
 
 private:
     Mesh marker;
