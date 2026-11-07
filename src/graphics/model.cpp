@@ -125,37 +125,96 @@ void Model::draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
 	}
 }
 
-void Model::loadMesh(unsigned int meshIndex)
+// Calcula normais suaves a partir dos triângulos, para modelos que não trazem normais.
+static std::vector<glm::vec3> computeNormals(const std::vector<glm::vec3> &positions,
+											 const std::vector<GLuint> &indices)
 {
-	// O arquivo guarda referências separadas para posição, normal, UV e índices.
-	unsigned int posAccInd = JSON["meshes"][meshIndex]["primitives"][0]["attributes"]["POSITION"];
-	unsigned int normalAccInd = JSON["meshes"][meshIndex]["primitives"][0]["attributes"]["NORMAL"];
-	unsigned int texAccInd = JSON["meshes"][meshIndex]["primitives"][0]["attributes"]["TEXCOORD_0"];
-	unsigned int indAccInd = JSON["meshes"][meshIndex]["primitives"][0]["indices"];
+	std::vector<glm::vec3> normals(positions.size(), glm::vec3(0.0f));
 
-	// Lê cada atributo e agrupa seus números em vetores por vértice.
-	std::vector<float> posVec = getFloats(JSON["accessors"][posAccInd]);
-	std::vector<glm::vec3> positions = groupFloatsVec3(posVec);
-	std::vector<float> normalVec = getFloats(JSON["accessors"][normalAccInd]);
-	std::vector<glm::vec3> normals = groupFloatsVec3(normalVec);
-	std::vector<float> texVec = getFloats(JSON["accessors"][texAccInd]);
-	std::vector<glm::vec2> texUVs = groupFloatsVec2(texVec);
+	for (std::size_t i = 0; i + 2 < indices.size(); i += 3)
+	{
+		const GLuint a = indices[i];
+		const GLuint b = indices[i + 1];
+		const GLuint c = indices[i + 2];
+		if (a >= positions.size() || b >= positions.size() || c >= positions.size())
+			continue;
 
-	// Reúne os atributos em vértices completos e carrega as imagens do modelo.
-	std::vector<Vertex> vertices = assembleVertices(positions, normals, texUVs);
-	std::vector<GLuint> indices = getIndices(JSON["accessors"][indAccInd]);
-	// Cada parte usa o material que o arquivo associa a ela.
-	std::vector<Texture> textures;
-	glm::vec4 baseColor(1.0f);
-	loadMaterial(JSON["meshes"][meshIndex]["primitives"][0], textures, baseColor);
-	Mesh &mesh = meshes.emplace_back();
-	if (!mesh.createIndexed(vertices, indices))
-		throw std::runtime_error("Failed to create model mesh.");
+		// Triângulos maiores pesam mais na normal de cada vértice.
+		const glm::vec3 faceNormal = glm::cross(positions[b] - positions[a], positions[c] - positions[a]);
+		normals[a] += faceNormal;
+		normals[b] += faceNormal;
+		normals[c] += faceNormal;
+	}
 
-	mesh.setBaseColor(baseColor);
+	for (glm::vec3 &normal : normals)
+		normal = glm::length(normal) > 0.0f ? glm::normalize(normal) : glm::vec3(0.0f, 1.0f, 0.0f);
 
-	for (Texture &texture : textures)
-		mesh.addTexture(std::move(texture));
+	return normals;
+}
+
+void Model::loadMesh(unsigned int meshIndex, const glm::mat4 &matrix)
+{
+	// Uma malha do arquivo pode ter várias primitivas (por exemplo, uma por material);
+	// cada uma vira uma Mesh própria, com a mesma matriz do nó.
+	for (const json &primitive : JSON["meshes"][meshIndex]["primitives"])
+	{
+		// Só triângulos (modo 4, o padrão do formato).
+		if (primitive.value("mode", 4) != 4)
+			continue;
+
+		const json &attributes = primitive["attributes"];
+		if (!attributes.contains("POSITION"))
+			continue;
+
+		// A posição é obrigatória; os outros atributos são opcionais.
+		std::vector<glm::vec3> positions =
+			groupFloatsVec3(getFloats(JSON["accessors"][attributes["POSITION"].get<unsigned int>()]));
+
+		// Sem índices no arquivo, os vértices já vêm em ordem: 0, 1, 2...
+		std::vector<GLuint> indices;
+		if (primitive.contains("indices"))
+		{
+			indices = getIndices(JSON["accessors"][primitive["indices"].get<unsigned int>()]);
+		}
+		else
+		{
+			indices.resize(positions.size());
+			for (GLuint i = 0; i < indices.size(); i++)
+				indices[i] = i;
+		}
+
+		// Sem UV, todos os vértices usam (0, 0).
+		std::vector<glm::vec2> texUVs;
+		if (attributes.contains("TEXCOORD_0"))
+			texUVs = groupFloatsVec2(getFloats(JSON["accessors"][attributes["TEXCOORD_0"].get<unsigned int>()]));
+		texUVs.resize(positions.size(), glm::vec2(0.0f));
+
+		// Sem normais, calcula a partir dos triângulos.
+		std::vector<glm::vec3> normals;
+		if (attributes.contains("NORMAL"))
+			normals = groupFloatsVec3(getFloats(JSON["accessors"][attributes["NORMAL"].get<unsigned int>()]));
+		if (normals.size() != positions.size())
+			normals = computeNormals(positions, indices);
+
+		// Reúne os atributos em vértices completos e lê o material da primitiva.
+		std::vector<Vertex> vertices = assembleVertices(positions, normals, texUVs);
+
+		std::vector<Texture> textures;
+		glm::vec4 baseColor(1.0f);
+		loadMaterial(primitive, textures, baseColor);
+
+		Mesh &mesh = meshes.emplace_back();
+		if (!mesh.createIndexed(vertices, indices))
+			throw std::runtime_error("Failed to create model mesh.");
+
+		mesh.setBaseColor(baseColor);
+
+		for (Texture &texture : textures)
+			mesh.addTexture(std::move(texture));
+
+		// meshes e matricesMeshes andam juntas: a posição i de uma corresponde à posição i da outra.
+		matricesMeshes.push_back(matrix);
+	}
 }
 
 void Model::traverseNode(unsigned int nodeIndex, glm::mat4 matrix)
@@ -214,12 +273,7 @@ void Model::traverseNode(unsigned int nodeIndex, glm::mat4 matrix)
 
 	if (node.find("mesh") != node.end())
 	{
-		translationsMeshes.push_back(translation);
-		rotationsMeshes.push_back(rotation);
-		scalesMeshes.push_back(scale);
-		matricesMeshes.push_back(matNextNode);
-
-		loadMesh(node["mesh"]);
+		loadMesh(node["mesh"], matNextNode);
 	}
 
 	// Os filhos recebem a transformação acumulada até este ponto.
@@ -257,7 +311,7 @@ std::vector<float> Model::getFloats(json accessor)
 
 	// A seção indicada informa onde os valores começam no bloco binário.
 	json bufferView = JSON["bufferViews"][buffViewInd];
-	unsigned int byteOffset = bufferView["byteOffset"];
+	unsigned int byteOffset = bufferView.value("byteOffset", 0u);
 
 	// O tipo define quantos valores formam cada elemento.
 	unsigned int numPerVert;
@@ -297,7 +351,7 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	unsigned int componentType = accessor["componentType"];
 
 	json bufferView = JSON["bufferViews"][buffViewInd];
-	unsigned int byteOffset = bufferView["byteOffset"];
+	unsigned int byteOffset = bufferView.value("byteOffset", 0u);
 
 	// O arquivo pode armazenar cada índice em 2 ou 4 bytes.
 	unsigned int beginningOfData = byteOffset + accByteOffset;

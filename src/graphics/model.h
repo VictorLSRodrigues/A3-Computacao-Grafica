@@ -29,13 +29,10 @@ private:
 
     // Geometria encontrada no arquivo e transformações de cada parte.
     std::deque<Mesh> meshes;
-    std::vector<glm::vec3> translationsMeshes;
-    std::vector<glm::quat> rotationsMeshes;
-    std::vector<glm::vec3> scalesMeshes;
     std::vector<glm::mat4> matricesMeshes;
 
     // Lê uma malha descrita no arquivo e prepara seus dados para desenho.
-    void loadMesh(unsigned int meshIndex);
+    void loadMesh(unsigned int meshIndex, const glm::mat4 &matrix);
 
     // Percorre a hierarquia de partes do modelo e acumula suas transformações.
     void traverseNode(unsigned int nodeIndex, glm::mat4 parentTransform = glm::mat4(1.0f));
