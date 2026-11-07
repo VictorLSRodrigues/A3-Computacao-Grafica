@@ -26,7 +26,7 @@ Scene::Object *Scene::addModel(const std::string &path, const Transform &transfo
         modelCache[path] = model;
     }
 
-    objects.push_back({path, model, nullptr, transform});
+    objects.push_back({path, model, nullptr, transform, {}});
     return &objects.back();
 }
 
@@ -36,8 +36,17 @@ Scene::Object *Scene::addMesh(std::shared_ptr<Mesh> mesh, const std::string &nam
     if (!mesh)
         return nullptr;
 
-    objects.push_back({name, nullptr, std::move(mesh), transform});
+    objects.push_back({name, nullptr, std::move(mesh), transform, {}});
     return &objects.back();
+}
+
+void Scene::update(float deltaTime)
+{
+    for (Object &object : objects)
+    {
+        if (object.update)
+            object.update(object.transform, deltaTime);
+    }
 }
 
 void Scene::draw(Shader &shader, Camera &camera, const Texture &fallbackTexture)

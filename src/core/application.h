@@ -27,8 +27,6 @@ public:
 
 private:
     bool loadShaders();
-    bool loadScene();
-
     void update(float deltaTime);
     void render();
     void renderUI();
@@ -44,12 +42,9 @@ private:
     Texture defaultTexture;
 
     Scene scene;
-    Scene::Object *pyramid = nullptr;
     Light light;
     Camera camera{1, 1, glm::vec3(0.0f, 0.0f, 2.0f)};
 
     UI ui;    Menu menu;
     HUD hud;
-
-    float pyramidRotation = 0.0f;
 };

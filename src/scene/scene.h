@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -22,18 +23,22 @@ public:
         std::shared_ptr<Model> model; // Modelo carregado de arquivo.
         std::shared_ptr<Mesh> mesh;   // Malha criada no código; apenas um dos dois é usado.
         Transform transform;
+        // Opcional: chamada a cada quadro para animar o objeto.
+        std::function<void(Transform &, float)> update;
     };
 
     // Adiciona o modelo à cena, reutilizando-o se o caminho já estiver no cache.
     // Retorna o objeto criado ou nullptr se o carregamento falhar.
-    Object* addModel(const std::string& path, const Transform& transform = Transform{});
+    Object *addModel(const std::string &path, const Transform &transform = Transform{});
 
     // Adiciona à cena uma malha já criada e configurada.
-    Object* addMesh(std::shared_ptr<Mesh> mesh, const std::string& name = "",
-                    const Transform& transform = Transform{});
+    Object *addMesh(std::shared_ptr<Mesh> mesh, const std::string &name = "",
+                    const Transform &transform = Transform{});
 
+    // Atualiza as animações dos objetos; deltaTime é o tempo do quadro, em segundos.
+    void update(float deltaTime);
     // Desenha os objetos com o shader ativo e a câmera configurada.
-    void draw(Shader& shader, Camera& camera, const Texture& fallbackTexture);
+    void draw(Shader &shader, Camera &camera, const Texture &fallbackTexture);
 
 private:
     std::map<std::string, std::shared_ptr<Model>> modelCache;
