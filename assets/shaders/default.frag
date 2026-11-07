@@ -16,6 +16,7 @@ uniform sampler2D specular0;
 uniform int lightType;
 uniform vec4 lightColor;
 uniform vec3 lightPos;
+uniform vec3 lightDir; // direção em que a luz viaja, com comprimento 1
 uniform vec3 camPos;
 
 
@@ -54,8 +55,8 @@ vec4 direcLight()
 	float ambient = 0.20f;
 
 	vec3 normal = normalize(Normal);
-	// Direção fixa da luz direcional no espaço do mundo.
-	vec3 lightDirection = normalize(vec3(1.0f, 1.0f, 0.0f));
+	// A luz vem do lado oposto ao da direção em que ela viaja.
+	vec3 lightDirection = normalize(-lightDir);
 	float diffuse = max(dot(normal, lightDirection), 0.0f);
 
 	float specularLight = 0.50f;
@@ -86,8 +87,8 @@ vec4 spotLight()
 	float specular = specAmount * specularLight;
 
 	// Suaviza a intensidade conforme a superfície se aproxima da borda do cone.
-	// O eixo do holofote aponta para baixo no espaço do mundo.
-	float angle = dot(vec3(0.0f, -1.0f, 0.0f), -lightDirection);
+	// O eixo do holofote é a direção da luz.
+	float angle = dot(lightDir, -lightDirection);
 	float inten = clamp((angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0f);
 
 	return (texture(tex0, texCoord) * (diffuse * inten + ambient) + texture(specular0, texCoord).r * specular * inten) * lightColor;

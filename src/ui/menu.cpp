@@ -1,11 +1,11 @@
 #include "menu.h"
 
-void Menu::update(const Window& window)
+void Menu::update(const Window &window)
 {
     if (!window.keyPressed(GLFW_KEY_ESCAPE))
         return;
 
-    if (open && page == Page::Options)
+    if (open && page != Page::Main)
     {
         page = Page::Main; // ESC nas opções retorna ao menu principal.
     }
@@ -16,19 +16,21 @@ void Menu::update(const Window& window)
     }
 }
 
-void Menu::draw(const Window& window, UI& ui, Settings& settings)
+void Menu::draw(const Window &window, UI &ui, Settings &settings)
 {
     if (!open)
         return;
 
     if (page == Page::Options)
         drawOptions(window, ui, settings);
+    else if (page == Page::Light)
+        drawLight(window, ui, settings);
     else
         drawMain(window, ui);
 }
 
-void Menu::drawPanel(const Window& window, UI& ui, const char* title,
-                     float panelW, float panelH, float& px, float& py)
+void Menu::drawPanel(const Window &window, UI &ui, const char *title,
+                     float panelW, float panelH, float &px, float &py)
 {
     const float screenW = (float)window.getWidth();
     const float screenH = (float)window.getHeight();
@@ -42,7 +44,7 @@ void Menu::drawPanel(const Window& window, UI& ui, const char* title,
     ui.drawTextCentered(title, px, py + 30.0f, panelW, 70.0f, 0.85f, 1.0f, 1.0f, 1.0f);
 }
 
-void Menu::drawMain(const Window& window, UI& ui)
+void Menu::drawMain(const Window &window, UI &ui)
 {
     const float panelW = 420.0f;
     const float margin = 30.0f;
@@ -50,8 +52,7 @@ void Menu::drawMain(const Window& window, UI& ui)
     const float buttonW = panelW - 2.0f * margin;
     const float buttonH = 60.0f;
     const float gap = 16.0f;
-    const int count = 3;
-
+    const int count = 4;
     const float panelH = margin + titleH + count * buttonH + (count - 1) * gap + margin;
 
     float px, py;
@@ -68,11 +69,15 @@ void Menu::drawMain(const Window& window, UI& ui)
         page = Page::Options;
     by += buttonH + gap;
 
+    if (ui.button("Luz", bx, by, buttonW, buttonH, 0.25f, 0.30f, 0.40f))
+        page = Page::Light;
+    by += buttonH + gap;
+
     if (ui.button("Sair", bx, by, buttonW, buttonH, 0.70f, 0.15f, 0.15f))
         window.close();
 }
 
-void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)
+void Menu::drawOptions(const Window &window, UI &ui, Settings &settings)
 {
     const float panelW = 560.0f;
     const float margin = 30.0f;
@@ -102,7 +107,7 @@ void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)
     ui.stepper("Sensibilidade do mouse", settings.mouseSensitivity, 10.0f, 10.0f, 300.0f, x, y, rowW, rowH, 0);
     y += rowH + gap;
 
-    const char* lightTypeLabel = "Tipo de luz: Pontual";
+    const char *lightTypeLabel = "Tipo de luz: Pontual";
     switch (settings.lightType)
     {
     case LightType::Directional:
@@ -136,6 +141,53 @@ void Menu::drawOptions(const Window& window, UI& ui, Settings& settings)
 
     if (ui.button("Restaurar padrões", x, y, rowW, rowH, 0.25f, 0.30f, 0.40f))
         settings = Settings{};
+    y += rowH + gap;
+
+    if (ui.button("Voltar", x, y, rowW, rowH, 0.20f, 0.45f, 0.85f))
+        page = Page::Main;
+}
+
+void Menu::drawLight(const Window &window, UI &ui, Settings &settings)
+{
+    const float panelW = 560.0f;
+    const float margin = 30.0f;
+    const float titleH = 70.0f;
+    const float rowW = panelW - 2.0f * margin;
+    const float rowH = 48.0f;
+    const float gap = 14.0f;
+    const int rows = 8; // Três da posição, três do alvo, restaurar e voltar.
+
+    const float panelH = margin + titleH + rows * rowH + (rows - 1) * gap + margin;
+
+    float px, py;
+    drawPanel(window, ui, "Luz", panelW, panelH, px, py);
+
+    const float x = px + margin;
+    float y = py + margin + titleH;
+
+    const float step = 0.25f;
+    const float limit = 10.0f;
+
+    ui.stepper("Posição X", settings.lightPosition.x, step, -limit, limit, x, y, rowW, rowH, 2);
+    y += rowH + gap;
+    ui.stepper("Posição Y", settings.lightPosition.y, step, -limit, limit, x, y, rowW, rowH, 2);
+    y += rowH + gap;
+    ui.stepper("Posição Z", settings.lightPosition.z, step, -limit, limit, x, y, rowW, rowH, 2);
+    y += rowH + gap;
+
+    ui.stepper("Alvo X", settings.lightTarget.x, step, -limit, limit, x, y, rowW, rowH, 2);
+    y += rowH + gap;
+    ui.stepper("Alvo Y", settings.lightTarget.y, step, -limit, limit, x, y, rowW, rowH, 2);
+    y += rowH + gap;
+    ui.stepper("Alvo Z", settings.lightTarget.z, step, -limit, limit, x, y, rowW, rowH, 2);
+    y += rowH + gap;
+
+    if (ui.button("Restaurar luz", x, y, rowW, rowH, 0.25f, 0.30f, 0.40f))
+    {
+        const Settings defaults;
+        settings.lightPosition = defaults.lightPosition;
+        settings.lightTarget = defaults.lightTarget;
+    }
     y += rowH + gap;
 
     if (ui.button("Voltar", x, y, rowW, rowH, 0.20f, 0.45f, 0.85f))

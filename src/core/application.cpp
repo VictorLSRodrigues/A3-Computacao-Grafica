@@ -134,6 +134,8 @@ void Application::update(float deltaTime)
     else
         camera.processInput(window, deltaTime);
 
+    light.position = settings.lightPosition;
+    light.target = settings.lightTarget;
     camera.walkSpeed = settings.walkSpeed;
     camera.sprintSpeed = settings.sprintSpeed;
     camera.sensitivity = settings.mouseSensitivity;
@@ -154,9 +156,7 @@ void Application::render()
     camera.setViewProjection(settings.fov, 0.1f, 100.0f, sceneShader, "camMatrix");
     scene.draw(sceneShader, camera, defaultTexture);
 
-    // Na luz direcional a posição não importa, então o marcador fica escondido.
-    if (settings.lightType != LightType::Directional)
-        light.drawMarker(lightShader, camera, settings.fov);
+    light.drawMarker(lightShader, camera, settings.fov);
 }
 
 void Application::renderUI()

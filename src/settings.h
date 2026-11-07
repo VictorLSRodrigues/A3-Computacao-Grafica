@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 
 enum class LightType
 {
@@ -15,4 +16,6 @@ struct Settings
     float sprintSpeed = 5.0f;        // velocidade da câmera com Shift
     float mouseSensitivity = 100.0f; // sensibilidade do mouse
     LightType lightType = LightType::Point;
+    glm::vec3 lightPosition{0.5f, 0.5f, 0.5f}; // onde a luz está
+    glm::vec3 lightTarget{0.0f, 0.0f, 0.0f};   // ponto para onde a luz aponta
 };

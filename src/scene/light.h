@@ -13,8 +13,12 @@ class Light
 public:
     glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};
     glm::vec3 position{0.5f, 0.5f, 0.5f};
+    glm::vec3 target{0.0f, 0.0f, 0.0f}; // ponto para onde a luz aponta
 
     bool create();
+
+    // Direção em que a luz viaja (da posição até o alvo), com comprimento 1.
+    glm::vec3 direction() const;
 
     // Envia ao shader da cena os dados da luz e da câmera usados na iluminação.
     void apply(Shader &shader, LightType type, const Camera &camera) const;
