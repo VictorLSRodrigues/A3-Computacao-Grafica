@@ -40,12 +40,17 @@ private:
     // Percorre a hierarquia de partes do modelo e acumula suas transformações.
     void traverseNode(unsigned int nodeIndex, glm::mat4 parentTransform = glm::mat4(1.0f));
 
+    // Lê o material da parte: cor base e texturas de cor e de brilho.
+    void loadMaterial(const json &primitive, std::vector<Texture> &textures, glm::vec4 &baseColor);
+    // Carrega a imagem apontada por uma textura do material; retorna false se ela não tiver imagem.
+    bool loadMaterialTexture(const json &textureInfo, Texture &texture);
+    // Carrega uma imagem do arquivo, seja ela externa ou embutida no GLB.
+    void loadImage(unsigned int imageIndex, Texture &texture);
     // Lê os dados binários associados à descrição do modelo.
     std::vector<unsigned char> getData();
     // Converte referências do arquivo em dados de vértices, índices e imagens.
     std::vector<float> getFloats(json accessor);
     std::vector<GLuint> getIndices(json accessor);
-    std::vector<Texture> getTextures();
 
     // Combina os atributos separados do arquivo em vértices completos.
     std::vector<Vertex> assembleVertices(

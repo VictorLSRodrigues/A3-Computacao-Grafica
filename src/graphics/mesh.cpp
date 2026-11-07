@@ -10,11 +10,12 @@
 // Calcula o número de valores por vértice, conforme o layout informado.
 int Mesh::computeStride(
     int componentCount,
-    const std::vector<int>& layout)
+    const std::vector<int> &layout)
 {
     if (layout.empty())
         return (componentCount >= 1 && componentCount <= 4)
-            ? componentCount : 0;
+                   ? componentCount
+                   : 0;
 
     int stride = 0;
 
@@ -32,12 +33,12 @@ int Mesh::computeStride(
 // Informa ao VAO como separar os atributos dentro de cada vértice.
 void Mesh::setupAttributes(
     int componentCount,
-    const std::vector<int>& layout)
+    const std::vector<int> &layout)
 {
     const std::vector<int> attributes =
         layout.empty()
-        ? std::vector<int>{componentCount}
-        : layout;
+            ? std::vector<int>{componentCount}
+            : layout;
 
     int stride = 0;
 
@@ -54,12 +55,10 @@ void Mesh::setupAttributes(
             GL_FLOAT,
             GL_FALSE,
             static_cast<GLsizei>(stride * sizeof(float)),
-            reinterpret_cast<void*>(offset * sizeof(float))
-        );
+            reinterpret_cast<void *>(offset * sizeof(float)));
 
         glEnableVertexAttribArray(
-            static_cast<GLuint>(i)
-        );
+            static_cast<GLuint>(i));
 
         offset += attributes[i];
     }
@@ -67,10 +66,10 @@ void Mesh::setupAttributes(
 
 // Cria uma malha sem índices.
 bool Mesh::create(
-    const std::vector<float>& vertices,
+    const std::vector<float> &vertices,
     int componentCount,
     GLenum drawMode,
-    const std::vector<int>& layout)
+    const std::vector<int> &layout)
 {
     const int stride = computeStride(componentCount, layout);
 
@@ -91,7 +90,7 @@ bool Mesh::create(
     const size_t totalVertices = vertices.size() / perVertex;
 
     if (totalVertices > static_cast<size_t>(
-            std::numeric_limits<GLsizei>::max()))
+                            std::numeric_limits<GLsizei>::max()))
     {
         std::cout << "Mesh: quantidade de vertices muito grande." << std::endl;
         return false;
@@ -123,15 +122,13 @@ bool Mesh::create(
     return true;
 }
 
-
-
 // Cria uma malha cujos triângulos referenciam vértices por índice.
 bool Mesh::createIndexed(
-    const std::vector<float>& vertices,
-    const std::vector<unsigned int>& indices,
+    const std::vector<float> &vertices,
+    const std::vector<unsigned int> &indices,
     int componentCount,
     GLenum drawMode,
-    const std::vector<int>& layout)
+    const std::vector<int> &layout)
 {
     const int stride = computeStride(componentCount, layout);
 
@@ -158,9 +155,9 @@ bool Mesh::createIndexed(
     const size_t totalVertices = vertices.size() / perVertex;
 
     if (totalVertices > static_cast<size_t>(
-            std::numeric_limits<GLsizei>::max()) ||
+                            std::numeric_limits<GLsizei>::max()) ||
         indices.size() > static_cast<size_t>(
-            std::numeric_limits<GLsizei>::max()))
+                             std::numeric_limits<GLsizei>::max()))
     {
         std::cout << "Mesh: quantidade de dados muito grande." << std::endl;
         return false;
@@ -203,7 +200,6 @@ bool Mesh::createIndexed(
     return true;
 }
 
-
 // Configura o layout fixo da estrutura Vertex.
 void Mesh::setupVertexAttributes()
 {
@@ -213,43 +209,39 @@ void Mesh::setupVertexAttributes()
     glVertexAttribPointer(
         0, 3, GL_FLOAT, GL_FALSE,
         stride,
-        reinterpret_cast<const void*>(offsetof(Vertex, position))
-    );
+        reinterpret_cast<const void *>(offsetof(Vertex, position)));
     glEnableVertexAttribArray(0);
 
     // Localização 1: cor.
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE,
         stride,
-        reinterpret_cast<const void*>(offsetof(Vertex, color))
-    );
+        reinterpret_cast<const void *>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
     // Localização 2: coordenadas da textura.
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE,
         stride,
-        reinterpret_cast<const void*>(offsetof(Vertex, texUV))
-    );
+        reinterpret_cast<const void *>(offsetof(Vertex, texUV)));
     glEnableVertexAttribArray(2);
 
     // Localização 3: normal.
     glVertexAttribPointer(
         3, 3, GL_FLOAT, GL_FALSE,
         stride,
-        reinterpret_cast<const void*>(offsetof(Vertex, normal))
-    );
+        reinterpret_cast<const void *>(offsetof(Vertex, normal)));
     glEnableVertexAttribArray(3);
 }
 
 // Cria uma malha de vértices estruturados sem índices.
 bool Mesh::create(
-    const std::vector<Vertex>& vertices,
+    const std::vector<Vertex> &vertices,
     GLenum drawMode)
 {
     if (vertices.empty() ||
         vertices.size() > static_cast<size_t>(
-            std::numeric_limits<GLsizei>::max()))
+                              std::numeric_limits<GLsizei>::max()))
     {
         std::cout << "Mesh: vertices inválidos." << std::endl;
         return false;
@@ -282,8 +274,8 @@ bool Mesh::create(
 
 // Cria uma malha de vértices estruturados com índices.
 bool Mesh::createIndexed(
-    const std::vector<Vertex>& vertices,
-    const std::vector<unsigned int>& indices,
+    const std::vector<Vertex> &vertices,
+    const std::vector<unsigned int> &indices,
     GLenum drawMode)
 {
     if (vertices.empty() || indices.empty())
@@ -293,9 +285,9 @@ bool Mesh::createIndexed(
     }
 
     if (vertices.size() > static_cast<size_t>(
-            std::numeric_limits<GLsizei>::max()) ||
+                              std::numeric_limits<GLsizei>::max()) ||
         indices.size() > static_cast<size_t>(
-            std::numeric_limits<GLsizei>::max()))
+                             std::numeric_limits<GLsizei>::max()))
     {
         std::cout << "Mesh: quantidade de dados muito grande." << std::endl;
         return false;
@@ -348,27 +340,25 @@ void Mesh::draw() const
             drawMode,
             ebo.GetCount(),
             GL_UNSIGNED_INT,
-            nullptr
-        );
+            nullptr);
     }
     else
     {
         glDrawArrays(
             drawMode,
             0,
-            vertexCount
-        );
+            vertexCount);
     }
 
     vao.Unbind();
 }
-void Mesh::draw(Shader& shader, const Texture* diffuseFallback) const
+void Mesh::draw(Shader &shader, const Texture *diffuseFallback) const
 {
     bool hasDiffuse = false;
     bool hasSpecular = false;
 
     // Associa cada textura à unidade usada pelo shader.
-    for (const Texture& texture : textures)
+    for (const Texture &texture : textures)
     {
         if (texture.getType() == "diffuse")
         {
@@ -396,7 +386,7 @@ void Mesh::draw(Shader& shader, const Texture* diffuseFallback) const
         glBindTexture(GL_TEXTURE_2D, 0);
         shader.setInt("specular0", 1);
     }
-
+    shader.setVec4("baseColor", baseColor.r, baseColor.g, baseColor.b, baseColor.a);
     draw();
 
     // Restaurar a unidade de textura padrão
@@ -418,27 +408,27 @@ void Mesh::destroy()
     usesIndices = false;
 }
 
-const std::vector<float>& Mesh::getVertexData() const
+const std::vector<float> &Mesh::getVertexData() const
 {
     return vertexData;
 }
 
-const std::vector<Vertex>& Mesh::getStructuredVertices() const
+const std::vector<Vertex> &Mesh::getStructuredVertices() const
 {
     return structuredVertices;
 }
 
-const std::vector<unsigned int>& Mesh::getIndexData() const
+const std::vector<unsigned int> &Mesh::getIndexData() const
 {
     return indexData;
 }
 
-void Mesh::addTexture(Texture&& texture)
+void Mesh::addTexture(Texture &&texture)
 {
     textures.push_back(std::move(texture));
 }
 
-const std::vector<Texture>& Mesh::getTextures() const
+const std::vector<Texture> &Mesh::getTextures() const
 {
     return textures;
 }

@@ -32,6 +32,9 @@ private:
     GLsizei vertexCount = 0;
     GLenum drawMode = GL_TRIANGLES;
     bool usesIndices = false;
+    
+    // Cor que multiplica a textura ao desenhar (vem do material do modelo).
+    glm::vec4 baseColor{1.0f};
 
     // Calcula quantos números compõem cada vértice.
     static int computeStride(
@@ -55,6 +58,7 @@ public:
     Mesh& operator=(const Mesh&) = delete;
 
     void addTexture(Texture&& texture);
+    void setBaseColor(const glm::vec4& color) { baseColor = color; }
 
     const std::vector<Texture>& getTextures() const;
 

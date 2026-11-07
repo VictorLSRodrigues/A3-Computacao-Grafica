@@ -144,11 +144,15 @@ void Model::loadMesh(unsigned int meshIndex)
 	// Reúne os atributos em vértices completos e carrega as imagens do modelo.
 	std::vector<Vertex> vertices = assembleVertices(positions, normals, texUVs);
 	std::vector<GLuint> indices = getIndices(JSON["accessors"][indAccInd]);
-	std::vector<Texture> textures = getTextures();
-
+	// Cada parte usa o material que o arquivo associa a ela.
+	std::vector<Texture> textures;
+	glm::vec4 baseColor(1.0f);
+	loadMaterial(JSON["meshes"][meshIndex]["primitives"][0], textures, baseColor);
 	Mesh &mesh = meshes.emplace_back();
 	if (!mesh.createIndexed(vertices, indices))
 		throw std::runtime_error("Failed to create model mesh.");
+
+	mesh.setBaseColor(baseColor);
 
 	for (Texture &texture : textures)
 		mesh.addTexture(std::move(texture));
@@ -331,47 +335,91 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	return indices;
 }
 
-std::vector<Texture> Model::getTextures()
+void Model::loadMaterial(const json &primitive, std::vector<Texture> &textures, glm::vec4 &baseColor)
 {
-	std::vector<Texture> textures;
+	// Sem material, a parte usa a textura padrão da aplicação e cor neutra.
+	if (!primitive.contains("material"))
+		return;
 
+	const json &material = JSON["materials"][primitive["material"].get<unsigned int>()];
+	const json pbr = material.value("pbrMetallicRoughness", json::object());
+
+	// A cor base multiplica a textura; sem textura, é a própria cor da parte.
+	if (pbr.contains("baseColorFactor"))
+	{
+		for (unsigned int i = 0; i < 4; i++)
+			baseColor[i] = pbr["baseColorFactor"][i].get<float>();
+	}
+
+	Texture colorTexture;
+	if (pbr.contains("baseColorTexture") && loadMaterialTexture(pbr["baseColorTexture"], colorTexture))
+	{
+		colorTexture.setType("diffuse");
+		textures.push_back(std::move(colorTexture));
+	}
+	else
+	{
+		// Sem imagem: usa um pixel branco para a cor do material aparecer pura,
+		// sem ser tingida pela textura padrão.
+		const unsigned char white[4] = {255, 255, 255, 255};
+		Texture solid;
+		if (solid.create(1, 1, 4, white))
+		{
+			solid.setType("diffuse");
+			textures.push_back(std::move(solid));
+		}
+	}
+
+	Texture shineTexture;
+	if (pbr.contains("metallicRoughnessTexture") && loadMaterialTexture(pbr["metallicRoughnessTexture"], shineTexture))
+	{
+		shineTexture.setType("specular");
+		textures.push_back(std::move(shineTexture));
+	}
+}
+
+bool Model::loadMaterialTexture(const json &textureInfo, Texture &texture)
+{
+	// O material aponta para uma textura, e a textura aponta para uma imagem.
+	const unsigned int textureIndex = textureInfo["index"].get<unsigned int>();
+	const json &textureDesc = JSON["textures"][textureIndex];
+
+	if (!textureDesc.contains("source"))
+		return false;
+
+	loadImage(textureDesc["source"].get<unsigned int>(), texture);
+	return true;
+}
+
+void Model::loadImage(unsigned int imageIndex, Texture &texture)
+{
 	std::string fileStr = std::string(file);
 	std::string fileDirectory = fileStr.substr(0, fileStr.find_last_of('/') + 1);
 
-	// As imagens podem estar em arquivos separados ou dentro do próprio GLB.
-	for (unsigned int i = 0; i < JSON["images"].size(); i++)
+	// A imagem pode estar em arquivo separado ou dentro do próprio GLB.
+	const json &image = JSON["images"][imageIndex];
+	const std::string texPath = image.value("uri", image.value("name", std::string()));
+
+	bool loaded = false;
+	if (image.contains("uri"))
 	{
-		const json &image = JSON["images"][i];
-		const std::string texPath = image.value("uri", image.value("name", std::string()));
-
-		Texture texture;
-		bool loaded = false;
-		if (image.contains("uri"))
-		{
-			if (texPath.rfind("data:", 0) == 0)
-				throw std::runtime_error("Data URI textures are not supported.");
-			loaded = texture.load(fileDirectory + texPath);
-		}
-		else if (image.contains("bufferView"))
-		{
-			const unsigned int viewIndex = image["bufferView"].get<unsigned int>();
-			const json &view = JSON["bufferViews"][viewIndex];
-			const std::size_t offset = view.value("byteOffset", std::size_t(0));
-			const std::size_t length = view["byteLength"].get<std::size_t>();
-			if (offset > data.size() || length > data.size() - offset)
-				throw std::runtime_error("GLB image data is outside the binary buffer.");
-			loaded = texture.loadFromMemory(data.data() + offset, length);
-		}
-
-		if (!loaded)
-			throw std::runtime_error("Failed to load model texture: " + texPath);
-		texture.setType(texPath.find("metallicRoughness") != std::string::npos
-							? "specular"
-							: "diffuse");
-		textures.push_back(std::move(texture));
+		if (texPath.rfind("data:", 0) == 0)
+			throw std::runtime_error("Data URI textures are not supported.");
+		loaded = texture.load(fileDirectory + texPath);
+	}
+	else if (image.contains("bufferView"))
+	{
+		const unsigned int viewIndex = image["bufferView"].get<unsigned int>();
+		const json &view = JSON["bufferViews"][viewIndex];
+		const std::size_t offset = view.value("byteOffset", std::size_t(0));
+		const std::size_t length = view["byteLength"].get<std::size_t>();
+		if (offset > data.size() || length > data.size() - offset)
+			throw std::runtime_error("GLB image data is outside the binary buffer.");
+		loaded = texture.loadFromMemory(data.data() + offset, length);
 	}
 
-	return textures;
+	if (!loaded)
+		throw std::runtime_error("Failed to load model texture: " + texPath);
 }
 
 std::vector<Vertex> Model::assembleVertices(
