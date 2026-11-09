@@ -18,10 +18,12 @@ private:
     bool mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {}; // true enquanto o botão estiver pressionado
     double mouseX = 0.0;
     double mouseY = 0.0;
+    double scrollY = 0.0;
 
     static void onKey(GLFWwindow *window, int key, int scancode, int action, int mods);
     static void onMouseMove(GLFWwindow *window, double x, double y);
     static void onMouseButton(GLFWwindow *window, int button, int action, int mods);
+    static void onScroll(GLFWwindow *window, double xOffset, double yOffset);
 
     // Atualiza o viewport e as dimensões ao redimensionar a janela.
     static void onFramebufferResize(GLFWwindow *window, int width, int height);
@@ -48,6 +50,7 @@ public:
     bool mouseClicked(int button) const { return button >= 0 && button <= GLFW_MOUSE_BUTTON_LAST && mouseClicksThisFrame[button]; }
     double getMouseX() const { return mouseX; }
     double getMouseY() const { return mouseY; }
+    double getScrollY() const { return scrollY; }
 
     void destroy();
 

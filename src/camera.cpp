@@ -1,5 +1,6 @@
 
 #include "camera.h"
+#include <algorithm>
 
 Camera::Camera(int width, int height, glm::vec3 position)
 {
@@ -32,7 +33,7 @@ void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane
         glm::value_ptr(projection * view));
 }
 
-void Camera::processInput(Window &window, float deltaTime)
+void Camera::processInput(Window &window, float deltaTime, float &fovDegrees)
 {
     // WASD move no plano horizontal; Espaço e Ctrl movem no eixo vertical.
     if (window.keyDown(GLFW_KEY_LEFT_SHIFT))
@@ -57,6 +58,14 @@ void Camera::processInput(Window &window, float deltaTime)
 
     if (window.keyDown(GLFW_KEY_LEFT_CONTROL))
         position += speed * deltaTime * -up;
+    
+       // Scroll aproxima ou afasta a câmera na direção em que ela está olhando.
+    const float scrollOffset = static_cast<float>(window.getScrollY());
+
+    if (scrollOffset != 0.0f)
+    {
+        position += glm::normalize(orientation) * scrollOffset * zoomSpeed;
+    }
 
     // Enquanto o botão esquerdo estiver pressionado, o mouse controla a orientação.
     if (window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))

@@ -43,6 +43,14 @@ void Window::onMouseMove(GLFWwindow *window, double x, double y)
     }
 }
 
+void Window::onScroll(GLFWwindow *window, double /*xOffset*/, double yOffset)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+
+    if (self)
+        self->scrollY += yOffset;
+}
+
 void Window::onMouseButton(GLFWwindow *window, int button, int action, int /*mods*/)
 {
     Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
@@ -116,6 +124,7 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
     glfwSetKeyCallback(windowHandle, onKey);
     glfwSetCursorPosCallback(windowHandle, onMouseMove);
     glfwSetMouseButtonCallback(windowHandle, onMouseButton);
+    glfwSetScrollCallback(windowHandle, onScroll);
     glfwGetCursorPos(windowHandle, &mouseX, &mouseY);
 
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << std::endl;
@@ -131,6 +140,9 @@ void Window::pollEvents()
     // Limpa os eventos de um quadro e registra os novos recebidos do GLFW.
     std::fill(std::begin(keysPressedThisFrame), std::end(keysPressedThisFrame), false);
     std::fill(std::begin(mouseClicksThisFrame), std::end(mouseClicksThisFrame), false);
+
+    scrollY = 0.0;
+
     glfwPollEvents();
 }
 

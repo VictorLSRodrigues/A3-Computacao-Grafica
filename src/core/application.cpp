@@ -58,7 +58,7 @@ void Application::update(float deltaTime)
     if (menu.isOpen())
         window.setCursorMode(Window::CursorMode::Normal);
     else
-        camera.processInput(window, deltaTime);
+        camera.processInput(window, deltaTime, settings.fov);
 
     // Copia para a luz e para a câmera os ajustes escolhidos no menu.
     light.position = settings.lightPosition;

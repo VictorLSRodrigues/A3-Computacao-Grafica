@@ -30,6 +30,7 @@ public:
     float walkSpeed = 1.5f;
     float sprintSpeed = 5.0f;
     float sensitivity = 100.0f;
+    float zoomSpeed = 0.5f;
 
     Camera(int width, int height, glm::vec3 position);
 
@@ -39,7 +40,7 @@ public:
                            bool ignoreTranslation = false);
 
     // Atualiza posição e orientação a partir do teclado e do mouse.
-    void processInput(Window &window, float deltaTime);
+    void processInput(Window &window, float deltaTime, float &fovDegrees);
 
     // Atualiza a área usada para calcular a projeção.
     void setViewportSize(int width, int height);
