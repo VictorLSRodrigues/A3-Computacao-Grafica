@@ -36,6 +36,9 @@ private:
     // Cor que multiplica a textura ao desenhar (vem do material do modelo).
     glm::vec4 baseColor{1.0f};
 
+    // Raio aproximado da malha, calculado a partir dos vértices.
+    float boundingRadius = 0.0f;
+
     // Calcula quantos números compõem cada vértice.
     static int computeStride(
         int componentCount,
@@ -106,4 +109,6 @@ public:
     const std::vector<Vertex>& getStructuredVertices() const;
 
     const std::vector<unsigned int>& getIndexData() const;
+
+    float getBoundingRadius() const { return boundingRadius; }
 };

@@ -21,6 +21,9 @@ public:
     void draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
               const glm::mat4 &objectMatrix = glm::mat4(1.0f));
 
+    // Retorna o raio aproximado utilizado na seleção do modelo.
+   float getBoundingRadius() const { return boundingRadius; }
+
 private:
     // Dados do arquivo e descrição de sua estrutura.
     const char *file;
@@ -30,6 +33,8 @@ private:
     // Geometria encontrada no arquivo e transformações de cada parte.
     std::deque<Mesh> meshes;
     std::vector<glm::mat4> matricesMeshes;
+    float boundingRadius = 0.0f;
+    
 
     // Lê uma malha descrita no arquivo e prepara seus dados para desenho.
     void loadMesh(unsigned int meshIndex, const glm::mat4 &matrix);
@@ -59,5 +64,6 @@ private:
     std::vector<glm::vec2> groupFloatsVec2(std::vector<float> values);
     std::vector<glm::vec3> groupFloatsVec3(std::vector<float> values);
     std::vector<glm::vec4> groupFloatsVec4(std::vector<float> values);
+    
 };
 #endif

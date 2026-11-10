@@ -12,6 +12,7 @@
 #include "ui/menu.h"
 #include "window.h"
 
+
 // Dona de tudo o que vive durante a execução: janela, cena, luz e interface.
 // O main só cria a aplicação, chama init() e depois run().
 class Application
@@ -60,5 +61,18 @@ private:
 
     TransformTool activeTransformTool = TransformTool::Move;
 
+    // Estado do arraste do gizmo de movimentação.
+    bool draggingGizmo = false;
+    int draggedAxis = -1;
+
+    glm::vec3 dragStartPosition{0.0f};
+    glm::vec3 draggedWorldAxis{0.0f};
+
+    glm::vec2 dragStartMouse{0.0f};
+    glm::vec2 dragScreenDirection{0.0f};
+
+    float dragWorldPerPixel = 0.0f;
+
     void drawTransformToolbar();
+    void drawMoveGizmo();
 };

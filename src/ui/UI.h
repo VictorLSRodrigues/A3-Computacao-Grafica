@@ -21,6 +21,14 @@ public:
     void drawRect(float x, float y, float width, float height,
                   float r, float g, float b, float a = 1.0f);
 
+    // Desenha uma linha entre dois pontos da tela.
+    void drawLine(
+        float x1, float y1,
+        float x2, float y2,
+        float thickness,
+        float r, float g, float b,
+        float a = 1.0f);
+
     // (x, y) indica o início da linha de base do texto.
     void drawText(const std::string &text, float x, float y, float scale,
                   float r, float g, float b, float a = 1.0f);

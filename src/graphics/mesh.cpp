@@ -5,7 +5,51 @@
 #include <limits>
 #include <cstddef>
 #include <utility>
+#include <algorithm>
 #include "shader.h"
+
+namespace
+{
+    // Calcula o maior afastamento dos vértices em relação à origem.
+    float calculateBoundingRadius(
+        const std::vector<float>& vertices,
+        int stride)
+    {
+        if (stride < 3)
+            return 0.0f;
+
+        float radius = 0.0f;
+
+        for (size_t i = 0; i < vertices.size(); i += stride)
+        {
+            glm::vec3 position(
+                vertices[i],
+                vertices[i + 1],
+                vertices[i + 2]
+            );
+
+            radius = std::max(radius, glm::length(position));
+        }
+
+        return radius;
+    }
+
+    float calculateBoundingRadius(
+        const std::vector<Vertex>& vertices)
+    {
+        float radius = 0.0f;
+
+        for (const Vertex& vertex : vertices)
+        {
+            radius = std::max(
+                radius,
+                glm::length(vertex.position)
+            );
+        }
+
+        return radius;
+    }
+}
 
 // Calcula o número de valores por vértice, conforme o layout informado.
 int Mesh::computeStride(
@@ -98,6 +142,7 @@ bool Mesh::create(
 
     // Mantém uma cópia dos dados para consulta e desenho.
     vertexData = vertices;
+    boundingRadius = calculateBoundingRadius(vertices, stride);
     structuredVertices.clear();
     indexData.clear();
 
@@ -174,6 +219,7 @@ bool Mesh::createIndexed(
 
     // Mantém cópias dos vértices e índices para consulta.
     vertexData = vertices;
+    boundingRadius = calculateBoundingRadius(vertices, stride);
     structuredVertices.clear();
     indexData = indices;
 
@@ -249,6 +295,7 @@ bool Mesh::create(
 
     // Mantém uma cópia dos vértices para consulta.
     structuredVertices = vertices;
+    boundingRadius = calculateBoundingRadius(vertices);
     vertexData.clear();
     indexData.clear();
 
@@ -304,6 +351,7 @@ bool Mesh::createIndexed(
 
     // Mantém cópias dos vértices e índices para consulta.
     structuredVertices = vertices;
+    boundingRadius = calculateBoundingRadius(vertices);
     vertexData.clear();
     indexData = indices;
 
@@ -405,6 +453,7 @@ void Mesh::destroy()
     textures.clear();
 
     vertexCount = 0;
+    boundingRadius = 0.0f;
     usesIndices = false;
 }
 

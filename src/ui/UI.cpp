@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cstdio>
+#include <cmath>
 
 #include "graphics/shapes.h"
 
@@ -80,6 +81,53 @@ void UI::drawRect(float x, float y, float width, float height,
     rectShader.setVec2("uPos", x, y);
     rectShader.setVec2("uTamanho", width, height);
     rectShader.setVec4("uCor", r, g, b, a);
+    quad.draw();
+}
+
+void UI::drawLine(
+    float x1, float y1,
+    float x2, float y2,
+    float thickness,
+    float r, float g, float b,
+    float a)
+{
+    if (!window)
+        return;
+
+    const float dx = x2 - x1;
+    const float dy = y2 - y1;
+    const float length = std::sqrt(dx * dx + dy * dy);
+
+    if (length <= 0.001f)
+        return;
+
+    const float angle = std::atan2(dy, dx);
+
+    const float centerX = (x1 + x2) * 0.5f;
+    const float centerY = (y1 + y2) * 0.5f;
+
+    rectShader.use();
+
+    rectShader.setVec2(
+        "uTela",
+        static_cast<float>(window->getWidth()),
+        static_cast<float>(window->getHeight())
+    );
+
+    rectShader.setVec2(
+        "uPos",
+        centerX - length * 0.5f,
+        centerY - thickness * 0.5f
+    );
+
+    rectShader.setVec2("uTamanho", length, thickness);
+    rectShader.setVec4("uCor", r, g, b, a);
+
+    glUniform1f(
+        glGetUniformLocation(rectShader.ID, "uAngle"),
+        angle
+    );
+
     quad.draw();
 }
 

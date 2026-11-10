@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <glm/glm.hpp>
 
 #include "camera.h"
 #include "graphics/mesh.h"
@@ -42,6 +43,14 @@ public:
     Object *addMesh(std::shared_ptr<Mesh> mesh, const std::string &name = "",
                     const Transform &transform = Transform{});
 
+    // Seleciona o objeto atingido pelo raio e retorna sua referência.
+    Object *pickObject(
+        const glm::vec3 &rayOrigin,
+        const glm::vec3 &rayDirection);
+
+    // Retorna o objeto atualmente selecionado.
+    Object *getSelectedObject() const { return selectedObject; }
+
     // Atualiza as animações dos objetos; deltaTime é o tempo do quadro, em segundos.
     void update(float deltaTime);
     // Desenha os objetos com o shader ativo e a câmera configurada.
@@ -50,4 +59,5 @@ public:
 private:
     std::map<std::string, std::shared_ptr<Model>> modelCache;
     std::deque<Object> objects; // Mantém válidos os ponteiros retornados ao adicionar objetos.
+    Object* selectedObject = nullptr;
 };

@@ -67,8 +67,8 @@ void Camera::processInput(Window &window, float deltaTime, int rotateButton)
         position += glm::normalize(orientation) * scrollOffset * zoomSpeed;
     }
 
-    // Enquanto o botão esquerdo estiver pressionado, o mouse controla a orientação.
-    if (window.mouseDown(GLFW_MOUSE_BUTTON_RIGHT))
+    // Enquanto o botão de rotação estiver pressionado, o mouse controla a orientação.
+    if (window.mouseDown(rotateButton))
     {
         window.setCursorMode(Window::CursorMode::Hidden);
 

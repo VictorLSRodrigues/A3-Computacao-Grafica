@@ -40,7 +40,7 @@ public:
                            bool ignoreTranslation = false);
 
     // Atualiza posição e orientação a partir do teclado e do mouse.
-    void processInput(Window &window, float deltaTime, int rotateButton = GLFW_MOUSE_BUTTON_LEFT);
+    void processInput(Window &window, float deltaTime, int rotateButton = GLFW_MOUSE_BUTTON_RIGHT);
 
     // Atualiza a área usada para calcular a projeção.
     void setViewportSize(int width, int height);

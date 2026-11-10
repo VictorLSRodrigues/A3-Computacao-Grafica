@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <algorithm>
 
 namespace
 {
@@ -169,6 +170,17 @@ void Model::loadMesh(unsigned int meshIndex, const glm::mat4 &matrix)
 		// A posição é obrigatória; os outros atributos são opcionais.
 		std::vector<glm::vec3> positions =
 			groupFloatsVec3(getFloats(JSON["accessors"][attributes["POSITION"].get<unsigned int>()]));
+
+		// Calcula o raio considerando a transformação interna do modelo.
+		for (const glm::vec3 &position : positions)
+		{
+			glm::vec3 transformedPosition =
+				glm::vec3(matrix * glm::vec4(position, 1.0f));
+
+			boundingRadius = std::max(
+				boundingRadius,
+				glm::length(transformedPosition));
+		}
 
 		// Sem índices no arquivo, os vértices já vêm em ordem: 0, 1, 2...
 		std::vector<GLuint> indices;
