@@ -1,17 +1,19 @@
 #include "texture.h"
 #include <utility>
 #include <iostream>
+#include <algorithm>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-bool Texture::load(const std::string& path)
+bool Texture::load(const std::string& path, bool flipVertically)
 {
     // Ajusta a origem vertical da imagem para a convenção de coordenadas do OpenGL.
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(flipVertically);
 
     int w = 0, h = 0, channels = 0;
     unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 0);
+
     if (!data)
     {
         std::cout << "Não consegui carregar a textura: " << path << "\n"
@@ -21,6 +23,7 @@ bool Texture::load(const std::string& path)
 
     bool ok = create(w, h, channels, data);
     stbi_image_free(data); // Os pixels já foram enviados para a textura OpenGL.
+
     return ok;
 }
 

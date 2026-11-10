@@ -33,7 +33,7 @@ void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane
         glm::value_ptr(projection * view));
 }
 
-void Camera::processInput(Window &window, float deltaTime, float &fovDegrees)
+void Camera::processInput(Window &window, float deltaTime, int rotateButton)
 {
     // WASD move no plano horizontal; Espaço e Ctrl movem no eixo vertical.
     if (window.keyDown(GLFW_KEY_LEFT_SHIFT))
@@ -68,7 +68,7 @@ void Camera::processInput(Window &window, float deltaTime, float &fovDegrees)
     }
 
     // Enquanto o botão esquerdo estiver pressionado, o mouse controla a orientação.
-    if (window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
+    if (window.mouseDown(GLFW_MOUSE_BUTTON_RIGHT))
     {
         window.setCursorMode(Window::CursorMode::Hidden);
 
@@ -107,6 +107,7 @@ void Camera::processInput(Window &window, float deltaTime, float &fovDegrees)
         window.setCursorMode(Window::CursorMode::Normal);
         firstMouseClick = true;
     }
+    
 }
 
 // Mantém as dimensões usadas na projeção; ignora valores inválidos durante a minimização.

@@ -6,6 +6,7 @@
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "window.h"
+#include "graphics/texture.h"
 
 // Desenha retângulos, texto e botões em coordenadas de pixel sobre a cena.
 class UI
@@ -36,10 +37,36 @@ public:
     bool stepper(const std::string &label, float &value, float step, float minValue, float maxValue,
                  float x, float y, float width, float height, int decimals = 1);
 
+    enum class Icon
+    {
+        Move,
+        Rotate,
+        Scale
+    };
+
+    bool iconButton(
+        Icon icon,
+        const std::string &tooltip,
+        float x, float y,
+        float width, float height,
+        bool selected = false);
+
 private:
     const Window *window = nullptr; // Válido apenas entre begin() e end().
     Shader rectShader;
     Shader textShader;
     Mesh quad;
     Font font;
+
+    Shader iconShader;
+
+    Texture moveIcon;
+    Texture rotateIcon;
+    Texture scaleIcon;
+
+    void drawIcon(
+        const Texture &texture,
+        float x, float y,
+        float size,
+        float r, float g, float b);
 };

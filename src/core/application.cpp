@@ -56,10 +56,24 @@ void Application::update(float deltaTime)
 
     // A câmera só recebe controles quando o menu está fechado.
     if (menu.isOpen())
+    {
         window.setCursorMode(Window::CursorMode::Normal);
+    }
     else
-        camera.processInput(window, deltaTime, settings.fov);
+    {
+        // Alterna entre o modo de navegação e o modo de edição.
+        if (window.keyPressed(GLFW_KEY_TAB))
+        {
+            editingMode = !editingMode;
 
+            if (editingMode)
+                std::cout << "Modo de edicao ativado!" << std::endl;
+            else
+                std::cout << "Modo de navegacao ativado!" << std::endl;
+        }
+
+        camera.processInput(window, deltaTime);
+    }
     // Copia para a luz e para a câmera os ajustes escolhidos no menu.
     light.position = settings.lightPosition;
     light.target = settings.lightTarget;
@@ -72,10 +86,61 @@ void Application::update(float deltaTime)
     scene.update(deltaTime);
 }
 
+// Desenha as ferramentas de transformação no canto superior direito.
+void Application::drawTransformToolbar()
+{
+    const float buttonSize = 46.0f;
+    const float gap = 7.0f;
+    const float margin = 20.0f;
+
+    const float totalWidth = buttonSize * 3.0f + gap * 2.0f;
+
+    const float x = static_cast<float>(window.getWidth()) - totalWidth - margin;
+    const float y = margin;
+
+    // Botão Mover.
+    if (ui.iconButton(
+            UI::Icon::Move,
+            "Mover",
+            x, y,
+            buttonSize, buttonSize,
+            activeTransformTool == TransformTool::Move))
+    {
+        activeTransformTool = TransformTool::Move;
+    }
+
+    // Botão Rotacionar.
+    if (ui.iconButton(
+            UI::Icon::Rotate,
+            "Rotacionar",
+            x + buttonSize + gap, y,
+            buttonSize, buttonSize,
+            activeTransformTool == TransformTool::Rotate))
+    {
+        activeTransformTool = TransformTool::Rotate;
+    }
+
+    // Botão Escalar.
+    if (ui.iconButton(
+            UI::Icon::Scale,
+            "Escalar",
+            x + (buttonSize + gap) * 2.0f, y,
+            buttonSize, buttonSize,
+            activeTransformTool == TransformTool::Scale))
+    {
+        activeTransformTool = TransformTool::Scale;
+    }
+}
+
 void Application::renderUI()
 {
     ui.begin(window);
     hud.draw(ui, camera.position);
     menu.draw(window, ui, settings);
+
+      // Mostra as ferramentas somente no modo de edição.
+      if (editingMode && !menu.isOpen())
+        drawTransformToolbar();
+
     ui.end();
 }

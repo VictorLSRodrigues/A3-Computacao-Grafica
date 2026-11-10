@@ -35,6 +35,7 @@ private:
     Window window;
 
     Settings settings;
+    bool editingMode = false;
 
     Renderer renderer;
     Scene scene;
@@ -46,4 +47,15 @@ private:
     UI ui;
     Menu menu;
     HUD hud;
+
+    enum class TransformTool
+    {
+        Move,
+        Rotate,
+        Scale
+    };
+
+    TransformTool activeTransformTool = TransformTool::Move;
+
+    void drawTransformToolbar();
 };

@@ -26,6 +26,22 @@ bool UI::create()
         return false;
     }
 
+    if (!iconShader.createFromFiles(
+            ASSETS_DIR "shaders/text.vert",
+            ASSETS_DIR "shaders/icon.frag"))
+    {
+        std::cout << "Falha ao criar o shader dos icones!" << std::endl;
+        return false;
+    }
+
+    if (!moveIcon.load(ASSETS_DIR "icons/move.png", false) ||
+    !rotateIcon.load(ASSETS_DIR "icons/rotate-3d.png", false) ||
+    !scaleIcon.load(ASSETS_DIR "icons/scaling.png", false))
+{
+    std::cout << "Falha ao carregar os icones da UI!" << std::endl;
+    return false;
+}
+
     return font.load(ASSETS_DIR "fonts/DejaVuSans.ttf");
 }
 
@@ -167,4 +183,119 @@ bool UI::stepper(const std::string &label, float &value, float step, float minVa
     drawTextCentered(text, controlsX + buttonSize, y, valueW, height, 0.5f, 1.0f, 1.0f, 1.0f);
 
     return value != old;
+}
+
+void UI::drawIcon(
+    const Texture& texture,
+    float x, float y,
+    float size,
+    float r, float g, float b)
+{
+    if (!window)
+        return;
+
+    iconShader.use();
+
+    iconShader.setVec2(
+        "uScreen",
+        static_cast<float>(window->getWidth()),
+        static_cast<float>(window->getHeight())
+    );
+
+    iconShader.setVec2("uPos", x, y);
+    iconShader.setVec2("uSize", size, size);
+    iconShader.setVec2("uUVPos", 0.0f, 0.0f);
+    iconShader.setVec2("uUVSize", 1.0f, 1.0f);
+
+    iconShader.setVec4("uColor", r, g, b, 1.0f);
+    iconShader.setInt("uIcon", 0);
+
+    texture.bind(0);
+    quad.draw();
+}
+
+bool UI::iconButton(
+    Icon icon,
+    const std::string& tooltip,
+    float x, float y,
+    float width, float height,
+    bool selected)
+{
+    if (!window)
+        return false;
+
+    const float mx = static_cast<float>(window->getMouseX());
+    const float my = static_cast<float>(window->getMouseY());
+
+    const bool hovered =
+        mx >= x && mx <= x + width &&
+        my >= y && my <= y + height;
+
+    const Texture* texture = nullptr;
+
+    switch (icon)
+    {
+        case Icon::Move:
+            texture = &moveIcon;
+            break;
+
+        case Icon::Rotate:
+            texture = &rotateIcon;
+            break;
+
+        case Icon::Scale:
+            texture = &scaleIcon;
+            break;
+    }
+
+    float r = selected ? 0.12f : 0.18f;
+    float g = selected ? 0.38f : 0.20f;
+    float b = selected ? 0.75f : 0.25f;
+
+    if (hovered)
+    {
+        r = std::min(r * 1.3f, 1.0f);
+        g = std::min(g * 1.3f, 1.0f);
+        b = std::min(b * 1.3f, 1.0f);
+    }
+
+    drawRect(x, y, width, height, r, g, b);
+
+    const float iconSize = 25.0f;
+
+    drawIcon(
+        *texture,
+        x + (width - iconSize) / 2.0f,
+        y + (height - iconSize) / 2.0f,
+        iconSize,
+        1.0f, 1.0f, 1.0f
+    );
+
+    // Mostra o nome da ferramenta ao passar o mouse.
+    if (hovered)
+    {
+        const float tooltipWidth = std::max(
+            54.0f,
+            font.measure(tooltip, 0.45f) + 14.0f
+        );
+
+        const float tooltipX = x + (width - tooltipWidth) / 2.0f;
+        const float tooltipY = y + height + 6.0f;
+
+        drawRect(
+            tooltipX, tooltipY,
+            tooltipWidth, 26.0f,
+            0.04f, 0.05f, 0.08f, 0.96f
+        );
+
+        drawTextCentered(
+            tooltip,
+            tooltipX, tooltipY,
+            tooltipWidth, 26.0f,
+            0.45f,
+            1.0f, 1.0f, 1.0f
+        );
+    }
+
+    return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
 }

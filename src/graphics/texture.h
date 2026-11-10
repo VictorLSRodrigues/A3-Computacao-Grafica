@@ -25,7 +25,7 @@ public:
     Texture(Texture&& other) noexcept;
     Texture& operator=(Texture&& other) noexcept;
 
-    bool load(const std::string &path);
+    bool load(const std::string &path, bool flipVertically = true);
     bool loadFromMemory(const unsigned char* bytes, std::size_t size);
     void bind(unsigned int unit = 0) const; // Ativa a unidade e associa a textura a ela.
     void destroy();
