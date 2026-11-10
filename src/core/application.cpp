@@ -345,13 +345,15 @@ void Application::update(float deltaTime)
                 else
                     std::cout << "Objeto pyramid nao encontrado na cena." << std::endl;
             }
-        }
-
-        if (window.keyPressed(GLFW_KEY_0))
-        {
+            
+            else if (window.keyPressed(GLFW_KEY_0))
+            {
             scene.showAll();
             selectedModelName = "Todos";
+            }
         }
+
+        
     }
     // Copia para a luz e para a câmera os ajustes escolhidos no menu.
     light.position = settings.lightPosition;
