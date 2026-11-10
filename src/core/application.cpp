@@ -511,43 +511,7 @@ void Application::update(float deltaTime)
         }
     }
 
-    if (editingMode &&
-        !menu.isOpen() &&
-        window.mouseClicked(GLFW_MOUSE_BUTTON_LEFT))
-    {
-        // Ignora cliques na barra de ferramentas.
-        const float buttonSize = 46.0f;
-        const float gap = 7.0f;
-        const float margin = 20.0f;
-
-        const float toolbarWidth = buttonSize * 3.0f + gap * 2.0f;
-        const float toolbarLeft =
-            static_cast<float>(window.getWidth()) - toolbarWidth - margin;
-
-        const float mouseX = static_cast<float>(window.getMouseX());
-        const float mouseY = static_cast<float>(window.getMouseY());
-
-        const bool clickedToolbar =
-            mouseX >= toolbarLeft &&
-            mouseX <= toolbarLeft + toolbarWidth &&
-            mouseY >= margin &&
-            mouseY <= margin + buttonSize;
-
-        if (!clickedToolbar)
-        {
-            const glm::vec3 rayDirection =
-                createMouseRay(window, camera, settings.fov);
-
-            Scene::Object *selected =
-                scene.pickObject(camera.position, rayDirection);
-
-            if (selected)
-                std::cout << "Objeto selecionado: "
-                          << selected->name << std::endl;
-            else
-                std::cout << "Nenhum objeto selecionado." << std::endl;
-        }
-    }
+    
 
     scene.update(deltaTime);
 }
