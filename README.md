@@ -139,13 +139,9 @@ O executável será gerado localmente durante a compilação. Ele não precisa e
 │   │
 │   ├── icons/
 │   │   ├── move.png
-│   │   ├── move.svg
 │   │   ├── rotate-3d.png
-│   │   ├── rotate-3d.svg
 │   │   ├── scaling.png
-│   │   ├── scaling.svg
-│   │   ├── LICENSE-LUCIDE.txt
-│   │   └── README.txt
+│   │   └── License-Lucide.txt
 │   │
 │   ├── models/
 │   │   ├── macaco.glb
