@@ -30,6 +30,21 @@ Scene::Object *Scene::addModel(const std::string &path, const Transform &transfo
     return &objects.back();
 }
 
+bool Scene::showOnly(const std::string &name)
+{
+    bool found = false;
+    for (const Object &object : objects)
+        found = found || object.name == name;
+
+    if (!found)
+        return false;
+
+    for (Object &object : objects)
+        object.visible = object.name == name;
+
+    return true;
+}
+
 Scene::Object *Scene::addMesh(std::shared_ptr<Mesh> mesh, const std::string &name,
                               const Transform &transform)
 {
@@ -49,10 +64,19 @@ void Scene::update(float deltaTime)
     }
 }
 
+void Scene::showAll()
+{
+    for (Object& object : objects)
+        object.visible = true;
+}
+
 void Scene::draw(Shader &shader, Camera &camera, const Texture &fallbackTexture)
 {
     for (Object &object : objects)
     {
+        if (!object.visible)
+            continue;
+
         const glm::mat4 matrix = object.transform.matrix();
 
         if (object.model)

@@ -39,3 +39,17 @@ void HUD::draw(UI& ui, const glm::vec3& cameraPosition)
     ui.drawText(line, x + 1.0f, y + 1.0f, scale, 0.0f, 0.0f, 0.0f, 0.8f);
     ui.drawText(line, x, y, scale, 1.0f, 1.0f, 1.0f);
 }
+
+void HUD::textmodel(UI& ui, const std::string& modelName)
+{
+    if (!visible)
+        return;
+
+    char line[128];
+    const float scale = 0.4f;
+    const float x = 16.0f;
+    const float y = 84.0f;
+    std::snprintf(line, sizeof(line), "Modelo: %s", modelName.c_str());
+    ui.drawText(line, x + 1.0f, y + 1.0f, scale, 0.0f, 0.0f, 0.0f, 0.8f);
+    ui.drawText(line, x, y, scale, 1.0f, 1.0f, 1.0f);
+}

@@ -73,6 +73,37 @@ void Application::update(float deltaTime)
         }
 
         camera.processInput(window, deltaTime);
+
+        if (!editingMode)
+        {
+            if (window.keyPressed(GLFW_KEY_1))
+            {
+                if (scene.showOnly("macaco"))
+                    selectedModelName = "macaco";
+                else
+                    std::cout << "Objeto macaco nao encontrado na cena." << std::endl;
+            }
+            else if (window.keyPressed(GLFW_KEY_2))
+            {
+                if (scene.showOnly("multi"))
+                    selectedModelName = "multi";
+                else
+                    std::cout << "Objeto multi nao encontrado na cena." << std::endl;
+            }
+            else if (window.keyPressed(GLFW_KEY_3))
+            {
+                if (scene.showOnly("pyramid"))
+                    selectedModelName = "pyramid";
+                else
+                    std::cout << "Objeto pyramid nao encontrado na cena." << std::endl;
+            }
+        }
+
+        if (window.keyPressed(GLFW_KEY_0))
+        {
+            scene.showAll();
+            selectedModelName = "Todos";
+        }
     }
     // Copia para a luz e para a câmera os ajustes escolhidos no menu.
     light.position = settings.lightPosition;
@@ -136,6 +167,7 @@ void Application::renderUI()
 {
     ui.begin(window);
     hud.draw(ui, camera.position);
+    hud.textmodel(ui, selectedModelName);
     menu.draw(window, ui, settings);
 
       // Mostra as ferramentas somente no modo de edição.

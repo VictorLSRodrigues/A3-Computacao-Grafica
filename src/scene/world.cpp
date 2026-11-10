@@ -40,6 +40,7 @@ bool buildWorld(Scene& scene)
     // Os modelos são opcionais: se algum falhar, a cena continua sem ele.
     if (Scene::Object* monkey = scene.addModel(ASSETS_DIR "models/macaco.glb"))
     {
+        monkey->name = "macaco";
         monkey->transform.position = glm::vec3(1.5f, 0.0f, 0.0f);
         monkey->transform.scale = glm::vec3(0.5f);
     }
@@ -47,6 +48,7 @@ bool buildWorld(Scene& scene)
     //
     if (Scene::Object* multi = scene.addModel(ASSETS_DIR "models/multi.glb"))
     {
+        multi->name = "multi";
         const float multiScale = 0.1f; // ajuste aqui: menor = modelo menor
         multi->transform.position = glm::vec3(-1.5f, 0.0f, 0.0f);
         multi->transform.scale = glm::vec3(multiScale);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <glm/glm.hpp>
 
 #include "UI.h"
@@ -11,6 +13,7 @@ class HUD
 public:
     void update(const Window& window, float deltaTime);
     void draw(UI& ui, const glm::vec3& cameraPosition);
+    void textmodel(UI& ui, const std::string& modelName);
 
 private:
     bool visible = true;

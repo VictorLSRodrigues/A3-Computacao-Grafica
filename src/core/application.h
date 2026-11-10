@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "camera.h"
 #include "renderer.h"
 #include "scene/light.h"
@@ -36,6 +38,7 @@ private:
 
     Settings settings;
     bool editingMode = false;
+    std::string selectedModelName = "Todos";
 
     Renderer renderer;
     Scene scene;
