@@ -130,18 +130,132 @@ O executável será gerado localmente durante a compilação. Ele não precisa e
 .
 ├── .vscode/
 │   ├── c_cpp_properties.json
-│   └── settings.json
+│   ├── settings.json
+│   └── tasks.json
+│
+├── assets/
+│   ├── fonts/
+│   │   └── DejaVuSans.ttf
+│   │
+│   ├── icons/
+│   │   ├── move.png
+│   │   ├── move.svg
+│   │   ├── rotate-3d.png
+│   │   ├── rotate-3d.svg
+│   │   ├── scaling.png
+│   │   ├── scaling.svg
+│   │   ├── LICENSE-LUCIDE.txt
+│   │   └── README.txt
+│   │
+│   ├── models/
+│   │   ├── macaco.glb
+│   │   └── multi.glb
+│   │
+│   ├── shaders/
+│   │   ├── default.vert
+│   │   ├── default.frag
+│   │   ├── light.vert
+│   │   ├── light.frag
+│   │   ├── sky.vert
+│   │   ├── sky.frag
+│   │   ├── text.vert
+│   │   ├── text.frag
+│   │   ├── ui.vert
+│   │   ├── ui.frag
+│   │   └── icon.frag
+│   │
+│   ├── skybox/
+│   │   ├── back.png
+│   │   ├── bottom.png
+│   │   ├── front.png
+│   │   ├── left.png
+│   │   ├── right.png
+│   │   └── top.png
+│   │
+│   └── textures/
+│       ├── default.png
+│       ├── terra.png
+│       ├── terraSpecular.png
+│       └── teste_uv.png
+│
 ├── Libraries/
 │   ├── glad/
 │   │   ├── include/
 │   │   └── src/
+│   │
+│   ├── glfw-3.5.1/
+│   │
 │   ├── include/
 │   │   ├── glad/
-│   │   └── KHR/
-│   └── glfw-3.5.1/
+│   │   ├── KHR/
+│   │   ├── glm/
+│   │   ├── json/
+│   │   ├── stb_image.h
+│   │   └── stb_truetype.h
+│   │
+│   └── lib/
+│
 ├── src/
-│   └── main.cpp
+│   ├── core/
+│   │   ├── application.cpp
+│   │   ├── application.h
+│   │   ├── renderer.cpp
+│   │   └── renderer.h
+│   │
+│   ├── graphics/
+│   │   ├── buffers/
+│   │   │   ├── VAO.cpp
+│   │   │   ├── VAO.h
+│   │   │   ├── VBO.cpp
+│   │   │   ├── VBO.h
+│   │   │   ├── EBO.cpp
+│   │   │   └── EBO.h
+│   │   │
+│   │   ├── cubemap.cpp
+│   │   ├── cubemap.h
+│   │   ├── mesh.cpp
+│   │   ├── mesh.h
+│   │   ├── model.cpp
+│   │   ├── model.h
+│   │   ├── shader.cpp
+│   │   ├── shader.h
+│   │   ├── shapes.cpp
+│   │   ├── shapes.h
+│   │   ├── skybox.cpp
+│   │   ├── skybox.h
+│   │   ├── texture.cpp
+│   │   ├── texture.h
+│   │   └── vertex.h
+│   │
+│   ├── scene/
+│   │   ├── light.cpp
+│   │   ├── light.h
+│   │   ├── scene.cpp
+│   │   ├── scene.h
+│   │   ├── transform.h
+│   │   ├── world.cpp
+│   │   └── world.h
+│   │
+│   ├── ui/
+│   │   ├── HUD.cpp
+│   │   ├── HUD.h
+│   │   ├── UI.cpp
+│   │   ├── UI.h
+│   │   ├── font.cpp
+│   │   ├── font.h
+│   │   ├── menu.cpp
+│   │   └── menu.h
+│   │
+│   ├── camera.cpp
+│   ├── camera.h
+│   ├── main.cpp
+│   ├── settings.h
+│   ├── window.cpp
+│   └── window.h
+│
 ├── CMakeLists.txt
+├── CMakePresets.json
+├── LICENSE
 ├── README.md
 └── .gitignore
 ```
