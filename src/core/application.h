@@ -11,7 +11,7 @@
 #include "ui/UI.h"
 #include "ui/menu.h"
 #include "window.h"
-
+#include <glm/glm.hpp>
 
 // Dona de tudo o que vive durante a execução: janela, cena, luz e interface.
 // O main só cria a aplicação, chama init() e depois run().
@@ -71,8 +71,24 @@ private:
     glm::vec2 dragStartMouse{0.0f};
     glm::vec2 dragScreenDirection{0.0f};
 
+    // Estado do arraste do gizmo de rotação.
+    bool draggingRotationGizmo = false;
+    int rotatingAxis = -1;
+
+    // Guarda a rotação original do objeto.
+    glm::vec3 rotationStart{0.0f};
+
+    // Guarda o vetor inicial do mouse no plano de rotação.
+    glm::vec3 rotationStartVector{0.0f};
+
+    // Guarda o eixo 3D escolhido.
+    glm::vec3 rotatingWorldAxis{0.0f};
+
+    float rotationAccumulatedAngle = 0.0f;
+
     float dragWorldPerPixel = 0.0f;
 
     void drawTransformToolbar();
     void drawMoveGizmo();
+    void drawRotateGizmo();
 };
