@@ -39,6 +39,7 @@ private:
 
     Settings settings;
     bool editingMode = false;
+    bool lightSelected = false;
     std::string selectedModelName = "Todos";
 
     Renderer renderer;

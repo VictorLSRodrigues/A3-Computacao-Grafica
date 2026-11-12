@@ -71,6 +71,23 @@ namespace
         return true;
     }
 
+    bool intersectRaySphere(
+        const glm::vec3 &rayOrigin,
+        const glm::vec3 &rayDirection,
+        const glm::vec3 &sphereCenter,
+        float sphereRadius)
+    {
+        const glm::vec3 offset = rayOrigin - sphereCenter;
+        const float b = glm::dot(offset, rayDirection);
+        const float c = glm::dot(offset, offset) - sphereRadius * sphereRadius;
+        const float discriminant = b * b - c;
+
+        if (discriminant < 0.0f)
+            return false;
+
+        return -b + std::sqrt(discriminant) >= 0.0f;
+    }
+
     struct GizmoAxisProjection
     {
         glm::vec3 worldDirection{0.0f};
@@ -266,7 +283,7 @@ namespace
         const Window &window,
         const Camera &camera,
         float fovDegrees,
-        const Scene::Object &object,
+        const glm::vec3 &position,
         MoveGizmoProjection &result)
     {
         const int width = window.getWidth();
@@ -278,7 +295,7 @@ namespace
         const glm::vec3 forward = glm::normalize(camera.orientation);
 
         const float depth = glm::dot(
-            object.transform.position - camera.position,
+            position - camera.position,
             forward);
 
         // Não desenha o gizmo atrás da câmera.
@@ -299,7 +316,7 @@ namespace
         const glm::mat4 viewProjection = projection * view;
 
         if (!projectWorldToScreen(
-                object.transform.position,
+                position,
                 viewProjection,
                 width,
                 height,
@@ -341,7 +358,7 @@ namespace
             axis.label = labels[i];
 
             const glm::vec3 worldEnd =
-                object.transform.position + directions[i] * worldLength;
+                position + directions[i] * worldLength;
 
             if (!projectWorldToScreen(
                     worldEnd,
@@ -808,14 +825,18 @@ void Application::update(float deltaTime)
         if (!clickedToolbar)
         {
             bool startedDragging = false;
-            Scene::Object *selected = scene.getSelectedObject();
+            Scene::Object *selected =
+                lightSelected ? nullptr : scene.getSelectedObject();
 
-            if (selected)
+            if (selected || lightSelected)
             {
                 switch (activeTransformTool)
                 {
                 case TransformTool::Move:
                 {
+                    const glm::vec3 &selectedPosition =
+                        lightSelected ? light.position : selected->transform.position;
+
                     // Primeiro verifica se o clique atingiu uma seta do gizmo.
                     MoveGizmoProjection gizmo;
 
@@ -823,7 +844,7 @@ void Application::update(float deltaTime)
                             window,
                             camera,
                             settings.fov,
-                            *selected,
+                            selectedPosition,
                             gizmo))
                     {
                         const int axis = findGizmoAxis(gizmo, mouse);
@@ -842,7 +863,7 @@ void Application::update(float deltaTime)
                             draggedAxis = axis;
 
                             dragStartPosition =
-                                selected->transform.position;
+                                selectedPosition;
 
                             draggedWorldAxis =
                                 selectedAxis.worldDirection;
@@ -869,6 +890,9 @@ void Application::update(float deltaTime)
 
                 case TransformTool::Rotate:
                 {
+                    if (lightSelected)
+                        break;
+
                     // Primeiro verifica se o clique atingiu um anel do gizmo.
                     RotateGizmoProjection gizmo;
 
@@ -933,6 +957,9 @@ void Application::update(float deltaTime)
 
                 case TransformTool::Scale:
                 {
+                    if (lightSelected)
+                        break;
+
                     // Primeiro verifica se o clique atingiu uma alça do gizmo.
                     ScaleGizmoProjection gizmo;
 
@@ -1024,7 +1051,15 @@ void Application::update(float deltaTime)
                     camera.position,
                     rayDirection);
 
-                if (selected)
+                lightSelected = intersectRaySphere(
+                    camera.position,
+                    rayDirection,
+                    light.position,
+                    0.12f);
+
+                if (lightSelected)
+                    std::cout << "Luz selecionada." << std::endl;
+                else if (selected)
                     std::cout << "Objeto selecionado: "
                               << selected->name << std::endl;
                 else
@@ -1043,9 +1078,10 @@ void Application::update(float deltaTime)
         if (editingAvailable &&
             window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
         {
-            Scene::Object *selected = scene.getSelectedObject();
+            Scene::Object *selected =
+                lightSelected ? nullptr : scene.getSelectedObject();
 
-            if (selected && draggedAxis >= 0)
+            if ((selected || lightSelected) && draggedAxis >= 0)
             {
                 const glm::vec2 currentMouse(
                     static_cast<float>(window.getMouseX()),
@@ -1059,9 +1095,18 @@ void Application::update(float deltaTime)
                 const float worldDelta =
                     pixelDelta * dragWorldPerPixel;
 
-                selected->transform.position =
-                    dragStartPosition +
-                    draggedWorldAxis * worldDelta;
+                const glm::vec3 newPosition =
+                    dragStartPosition + draggedWorldAxis * worldDelta;
+
+                if (lightSelected)
+                {
+                    settings.lightPosition = newPosition;
+                    light.position = newPosition;
+                }
+                else
+                {
+                    selected->transform.position = newPosition;
+                }
             }
             else
             {
@@ -1236,10 +1281,14 @@ void Application::drawTransformToolbar()
 
 void Application::drawMoveGizmo()
 {
-    Scene::Object *selected = scene.getSelectedObject();
+    Scene::Object *selected =
+        lightSelected ? nullptr : scene.getSelectedObject();
 
-    if (!selected)
+    if (!selected && !lightSelected)
         return;
+
+    const glm::vec3 &selectedPosition =
+        lightSelected ? light.position : selected->transform.position;
 
     MoveGizmoProjection gizmo;
 
@@ -1247,7 +1296,7 @@ void Application::drawMoveGizmo()
             window,
             camera,
             settings.fov,
-            *selected,
+            selectedPosition,
             gizmo))
     {
         return;
@@ -1321,6 +1370,9 @@ void Application::drawMoveGizmo()
 
 void Application::drawRotateGizmo()
 {
+    if (lightSelected)
+        return;
+
     Scene::Object *selected = scene.getSelectedObject();
 
     if (!selected)
@@ -1413,7 +1465,7 @@ void Application::renderUI()
         {
             Scene::Object *selected = scene.getSelectedObject();
 
-            if (selected)
+            if (selected && !lightSelected)
             {
                 ScaleGizmoProjection gizmo;
 
