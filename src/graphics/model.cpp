@@ -177,6 +177,9 @@ void Model::loadMesh(unsigned int meshIndex, const glm::mat4 &matrix)
 			glm::vec3 transformedPosition =
 				glm::vec3(matrix * glm::vec4(position, 1.0f));
 
+			//transforma cada malha contribui para os limites gerais do modelo
+			boundingBox.expand(transformedPosition); 	
+
 			boundingRadius = std::max(
 				boundingRadius,
 				glm::length(transformedPosition));

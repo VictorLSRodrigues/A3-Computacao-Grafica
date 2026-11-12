@@ -9,6 +9,7 @@
 #include "buffers/EBO.h"
 #include "vertex.h"
 #include "texture.h"
+#include "bounding_box.h"
 
 class Shader;
 
@@ -38,6 +39,8 @@ private:
 
     // Raio aproximado da malha, calculado a partir dos vértices.
     float boundingRadius = 0.0f;
+
+    BoundingBox boundingBox;
 
     // Calcula quantos números compõem cada vértice.
     static int computeStride(
@@ -111,4 +114,10 @@ public:
     const std::vector<unsigned int>& getIndexData() const;
 
     float getBoundingRadius() const { return boundingRadius; }
+
+    const BoundingBox& getBoundingBox() const
+    {
+        return boundingBox;
+    }
+
 };

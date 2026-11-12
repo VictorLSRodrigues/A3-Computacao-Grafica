@@ -75,6 +75,20 @@ private:
     bool draggingRotationGizmo = false;
     int rotatingAxis = -1;
 
+    // Estado do arraste do gizmo de Escala
+    bool draggingScaleGizmo = false;
+    int scalingAxis = -1;
+
+    glm::vec2 scaleStartMouse{0.0f};
+    glm::vec2 scaleScreenDirection{0.0f};
+
+    glm::vec3 scalePivotLocal{0.0f};
+    glm::vec3 scalePivotWorld{0.0f};
+
+    glm::vec3 scaleStart{1.0f};
+
+    float scaleFactorPerPixel = 0.0f;
+
     // Guarda a rotação original do objeto.
     glm::vec3 rotationStart{0.0f};
 

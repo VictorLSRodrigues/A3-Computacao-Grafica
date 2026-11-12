@@ -40,6 +40,7 @@ add_executable(OpenGLProjeto
     src/graphics/buffers/VAO.cpp
     src/graphics/buffers/VBO.cpp
     src/graphics/buffers/EBO.cpp
+    src/graphics/bounding_box.cpp
 
     src/ui/UI.cpp
     src/ui/HUD.cpp

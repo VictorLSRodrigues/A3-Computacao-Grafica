@@ -8,6 +8,7 @@
 #include "camera.h"
 #include "mesh.h"
 #include "texture.h"
+#include "bounding_box.h"
 
 using json = nlohmann::json;
 
@@ -22,7 +23,12 @@ public:
               const glm::mat4 &objectMatrix = glm::mat4(1.0f));
 
     // Retorna o raio aproximado utilizado na seleção do modelo.
-   float getBoundingRadius() const { return boundingRadius; }
+    float getBoundingRadius() const { return boundingRadius; }
+
+    const BoundingBox &getBoundingBox() const
+    {
+        return boundingBox;
+    }
 
 private:
     // Dados do arquivo e descrição de sua estrutura.
@@ -34,7 +40,8 @@ private:
     std::deque<Mesh> meshes;
     std::vector<glm::mat4> matricesMeshes;
     float boundingRadius = 0.0f;
-    
+
+    BoundingBox boundingBox;
 
     // Lê uma malha descrita no arquivo e prepara seus dados para desenho.
     void loadMesh(unsigned int meshIndex, const glm::mat4 &matrix);
@@ -64,6 +71,5 @@ private:
     std::vector<glm::vec2> groupFloatsVec2(std::vector<float> values);
     std::vector<glm::vec3> groupFloatsVec3(std::vector<float> values);
     std::vector<glm::vec4> groupFloatsVec4(std::vector<float> values);
-    
 };
 #endif

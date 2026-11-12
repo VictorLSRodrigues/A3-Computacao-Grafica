@@ -12,7 +12,7 @@ namespace
 {
     // Calcula o maior afastamento dos vértices em relação à origem.
     float calculateBoundingRadius(
-        const std::vector<float>& vertices,
+        const std::vector<float> &vertices,
         int stride)
     {
         if (stride < 3)
@@ -25,8 +25,7 @@ namespace
             glm::vec3 position(
                 vertices[i],
                 vertices[i + 1],
-                vertices[i + 2]
-            );
+                vertices[i + 2]);
 
             radius = std::max(radius, glm::length(position));
         }
@@ -34,17 +33,51 @@ namespace
         return radius;
     }
 
+    BoundingBox calculateBoundingBox(
+        const std::vector<Vertex> &vertices)
+    {
+        BoundingBox bounds;
+
+        for (const Vertex &vertex : vertices)
+        {
+            bounds.expand(vertex.position);
+        }
+
+        return bounds;
+    }
+
+    BoundingBox calculateBoundingBox(
+        const std::vector<float> &vertices,
+        int stride)
+    {
+        BoundingBox bounds;
+
+        if (stride < 3)
+            return bounds;
+
+        for (size_t i = 0; i + 2 < vertices.size(); i += stride)
+        {
+            glm::vec3 position(
+                vertices[i],
+                vertices[i + 1],
+                vertices[i + 2]);
+
+            bounds.expand(position);
+        }
+
+        return bounds;
+    }
+
     float calculateBoundingRadius(
-        const std::vector<Vertex>& vertices)
+        const std::vector<Vertex> &vertices)
     {
         float radius = 0.0f;
 
-        for (const Vertex& vertex : vertices)
+        for (const Vertex &vertex : vertices)
         {
             radius = std::max(
                 radius,
-                glm::length(vertex.position)
-            );
+                glm::length(vertex.position));
         }
 
         return radius;
@@ -143,6 +176,7 @@ bool Mesh::create(
     // Mantém uma cópia dos dados para consulta e desenho.
     vertexData = vertices;
     boundingRadius = calculateBoundingRadius(vertices, stride);
+    boundingBox = calculateBoundingBox(vertices, stride);
     structuredVertices.clear();
     indexData.clear();
 
@@ -220,6 +254,7 @@ bool Mesh::createIndexed(
     // Mantém cópias dos vértices e índices para consulta.
     vertexData = vertices;
     boundingRadius = calculateBoundingRadius(vertices, stride);
+    boundingBox = calculateBoundingBox(vertices, stride);
     structuredVertices.clear();
     indexData = indices;
 
@@ -296,6 +331,7 @@ bool Mesh::create(
     // Mantém uma cópia dos vértices para consulta.
     structuredVertices = vertices;
     boundingRadius = calculateBoundingRadius(vertices);
+    boundingBox = calculateBoundingBox(vertices);
     vertexData.clear();
     indexData.clear();
 
@@ -352,6 +388,7 @@ bool Mesh::createIndexed(
     // Mantém cópias dos vértices e índices para consulta.
     structuredVertices = vertices;
     boundingRadius = calculateBoundingRadius(vertices);
+    boundingBox = calculateBoundingBox(vertices);
     vertexData.clear();
     indexData = indices;
 
@@ -454,6 +491,7 @@ void Mesh::destroy()
 
     vertexCount = 0;
     boundingRadius = 0.0f;
+    boundingBox = BoundingBox{};
     usesIndices = false;
 }
 

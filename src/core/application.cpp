@@ -111,6 +111,38 @@ namespace
         std::array<GizmoAxisProjection, 3> axes;
     };
 
+    struct ScaleHandleProjection
+    {
+        glm::vec3 worldPosition{0.0f};
+        glm::vec2 screenPosition{0.0f};
+
+        glm::vec3 color{1.0f};
+
+        const char *label = "";
+
+        bool visible = false;
+    };
+
+    struct ScaleGizmoProjection
+    {
+        glm::vec2 center{0.0f};
+
+        std::array<ScaleHandleProjection, 3> handles;
+    };
+
+    // Retorna a Bounding Box do objeto selecionado.
+    const BoundingBox *getObjectBoundingBox(
+        const Scene::Object &object)
+    {
+        if (object.model)
+            return &object.model->getBoundingBox();
+
+        if (object.mesh)
+            return &object.mesh->getBoundingBox();
+
+        return nullptr;
+    }
+
     // Converte uma posição 3D em coordenadas de tela.
     bool projectWorldToScreen(
         const glm::vec3 &worldPosition,
@@ -130,6 +162,101 @@ namespace
 
         screenPosition.x = (ndc.x + 1.0f) * 0.5f * width;
         screenPosition.y = (1.0f - ndc.y) * 0.5f * height;
+
+        return true;
+    }
+
+    bool buildScaleGizmo(
+        const Window &window,
+        const Camera &camera,
+        float fovDegrees,
+        const Scene::Object &object,
+        ScaleGizmoProjection &result)
+    {
+        const BoundingBox *bounds = getObjectBoundingBox(object);
+
+        if (!bounds || !bounds->valid)
+            return false;
+
+        const int width = window.getWidth();
+        const int height = window.getHeight();
+
+        if (width <= 0 || height <= 0)
+            return false;
+
+        const glm::vec3 localCenter =
+            (bounds->min + bounds->max) * 0.5f;
+
+        const glm::mat4 objectMatrix = object.transform.matrix();
+
+        const glm::vec3 worldCenter = glm::vec3(
+            objectMatrix * glm::vec4(localCenter, 1.0f));
+
+        const glm::vec3 forward = glm::normalize(camera.orientation);
+
+        const float depth = glm::dot(
+            worldCenter - camera.position,
+            forward);
+
+        // Não desenha o gizmo atrás da câmera.
+        if (depth <= 0.05f)
+            return false;
+
+        const glm::mat4 view = glm::lookAt(
+            camera.position,
+            camera.position + camera.orientation,
+            camera.up);
+
+        const glm::mat4 projection = glm::perspective(
+            glm::radians(fovDegrees),
+            static_cast<float>(width) / height,
+            0.1f,
+            1000.0f);
+
+        const glm::mat4 viewProjection = projection * view;
+
+        if (!projectWorldToScreen(
+                worldCenter,
+                viewProjection,
+                width,
+                height,
+                result.center))
+        {
+            return false;
+        }
+
+        // Posições das três alças nas extremidades da Bounding Box.
+        const glm::vec3 localHandlePositions[3] =
+            {
+                glm::vec3(bounds->max.x, localCenter.y, localCenter.z),
+                glm::vec3(localCenter.x, bounds->max.y, localCenter.z),
+                glm::vec3(localCenter.x, localCenter.y, bounds->max.z)};
+
+        const glm::vec3 colors[3] =
+            {
+                glm::vec3(1.0f, 0.20f, 0.20f),
+                glm::vec3(0.20f, 1.0f, 0.20f),
+                glm::vec3(0.20f, 0.45f, 1.0f)};
+
+        const char *labels[3] = {"X", "Y", "Z"};
+
+        for (int i = 0; i < 3; ++i)
+        {
+            ScaleHandleProjection &handle = result.handles[i];
+
+            handle.worldPosition = glm::vec3(
+                objectMatrix * glm::vec4(localHandlePositions[i], 1.0f));
+
+            handle.color = colors[i];
+            handle.label = labels[i];
+
+            handle.visible = projectWorldToScreen(
+                handle.worldPosition,
+                viewProjection,
+                width,
+                height,
+                handle.screenPosition);
+        }
 
         return true;
     }
@@ -470,6 +597,36 @@ namespace
         return closestAxis;
     }
 
+    // Retorna a alça de escala mais próxima do cursor.
+    int findScaleHandle(
+        const ScaleGizmoProjection &gizmo,
+        const glm::vec2 &mouse)
+    {
+        constexpr float hitTolerance = 12.0f;
+
+        int closestHandle = -1;
+        float closestDistance = hitTolerance;
+
+        for (int i = 0; i < 3; ++i)
+        {
+            const ScaleHandleProjection &handle = gizmo.handles[i];
+
+            if (!handle.visible)
+                continue;
+
+            const float distance = glm::length(
+                mouse - handle.screenPosition);
+
+            if (distance <= closestDistance)
+            {
+                closestDistance = distance;
+                closestHandle = i;
+            }
+        }
+
+        return closestHandle;
+    }
+
     // Retorna o anel mais próximo do cursor, se estiver dentro da tolerância.
     int findGizmoRing(
         const RotateGizmoProjection &gizmo,
@@ -617,8 +774,12 @@ void Application::update(float deltaTime)
 
         draggingRotationGizmo = false;
         rotatingAxis = -1;
+
+        draggingScaleGizmo = false;
+        scalingAxis = -1;
     }
 
+    // Esta parte trata somente o instante do clique.
     if (editingAvailable &&
         window.mouseClicked(GLFW_MOUSE_BUTTON_LEFT))
     {
@@ -647,7 +808,6 @@ void Application::update(float deltaTime)
         if (!clickedToolbar)
         {
             bool startedDragging = false;
-
             Scene::Object *selected = scene.getSelectedObject();
 
             if (selected)
@@ -672,6 +832,11 @@ void Application::update(float deltaTime)
                         {
                             const GizmoAxisProjection &selectedAxis =
                                 gizmo.axes[axis];
+
+                            draggingRotationGizmo = false;
+                            rotatingAxis = -1;
+                            draggingScaleGizmo = false;
+                            scalingAxis = -1;
 
                             draggingGizmo = true;
                             draggedAxis = axis;
@@ -747,6 +912,11 @@ void Application::update(float deltaTime)
 
                                 rotationAccumulatedAngle = 0.0f;
 
+                                draggingGizmo = false;
+                                draggedAxis = -1;
+                                draggingScaleGizmo = false;
+                                scalingAxis = -1;
+
                                 draggingRotationGizmo = true;
                                 startedDragging = true;
 
@@ -763,7 +933,73 @@ void Application::update(float deltaTime)
 
                 case TransformTool::Scale:
                 {
-                    // Ferramenta de escala será implementada depois.
+                    // Primeiro verifica se o clique atingiu uma alça do gizmo.
+                    ScaleGizmoProjection gizmo;
+
+                    if (buildScaleGizmo(
+                            window,
+                            camera,
+                            settings.fov,
+                            *selected,
+                            gizmo))
+                    {
+                        const int handleIndex = findScaleHandle(gizmo, mouse);
+
+                        if (handleIndex >= 0)
+                        {
+                            const ScaleHandleProjection &selectedHandle =
+                                gizmo.handles[handleIndex];
+
+                            // Calcula a direção projetada da alça.
+                            const glm::vec2 handleOffset =
+                                selectedHandle.screenPosition - gizmo.center;
+
+                            const float screenLength = glm::length(handleOffset);
+
+                            if (screenLength > 6.0f)
+                            {
+                                // Guarda o eixo escolhido.
+                                scalingAxis = handleIndex;
+
+                                // Guarda a escala original.
+                                scaleStart = selected->transform.scale;
+
+                                const BoundingBox *bounds = getObjectBoundingBox(*selected);
+
+                                if (bounds && bounds->valid)
+                                {
+                                    scalePivotLocal = (bounds->min + bounds->max) * 0.5f;
+
+                                    scalePivotWorld = glm::vec3(
+                                        selected->transform.matrix() *
+                                        glm::vec4(scalePivotLocal, 1.0f));
+                                }
+
+                                // Guarda a posição inicial do mouse.
+                                scaleStartMouse = mouse;
+
+                                // Direção do movimento na tela.
+                                scaleScreenDirection = glm::normalize(handleOffset);
+
+                                // Sensibilidade da escala por pixel.
+                                scaleFactorPerPixel = 1.0f / screenLength;
+
+                                draggingGizmo = false;
+                                draggedAxis = -1;
+                                draggingRotationGizmo = false;
+                                rotatingAxis = -1;
+
+                                draggingScaleGizmo = true;
+                                startedDragging = true;
+
+                                std::cout
+                                    << "Escalando no eixo "
+                                    << selectedHandle.label
+                                    << std::endl;
+                            }
+                        }
+                    }
+
                     break;
                 }
                 }
@@ -777,6 +1013,9 @@ void Application::update(float deltaTime)
 
                 draggingRotationGizmo = false;
                 rotatingAxis = -1;
+
+                draggingScaleGizmo = false;
+                scalingAxis = -1;
 
                 const glm::vec3 rayDirection =
                     createMouseRay(window, camera, settings.fov);
@@ -793,7 +1032,10 @@ void Application::update(float deltaTime)
                               << std::endl;
             }
         }
-    }
+    } // Fim do tratamento do clique.
+
+    // A partir daqui, os três blocos de arraste são executados a cada quadro,
+    // e não somente no quadro em que o mouse foi clicado.
 
     // Atualiza a posição enquanto o botão esquerdo está pressionado.
     if (draggingGizmo)
@@ -835,66 +1077,112 @@ void Application::update(float deltaTime)
         }
     }
 
-if (draggingRotationGizmo)
-{
-    if (editingAvailable &&
-        window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
+    // Atualiza a rotação enquanto o botão esquerdo está pressionado.
+    if (draggingRotationGizmo)
     {
-        Scene::Object *selected = scene.getSelectedObject();
-
-        if (selected && rotatingAxis >= 0)
+        if (editingAvailable &&
+            window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
         {
-            const glm::vec3 rayDirection =
-                createMouseRay(window, camera, settings.fov);
+            Scene::Object *selected = scene.getSelectedObject();
 
-            glm::vec3 intersection;
-
-            if (intersectRayPlane(
-                    camera.position,
-                    rayDirection,
-                    selected->transform.position,
-                    rotatingWorldAxis,
-                    intersection))
+            if (selected && rotatingAxis >= 0)
             {
-                glm::vec3 currentVector =
-                    intersection - selected->transform.position;
+                const glm::vec3 rayDirection =
+                    createMouseRay(window, camera, settings.fov);
 
-                if (glm::length(currentVector) > 0.0001f)
+                glm::vec3 intersection;
+
+                if (intersectRayPlane(
+                        camera.position,
+                        rayDirection,
+                        selected->transform.position,
+                        rotatingWorldAxis,
+                        intersection))
                 {
-                    currentVector = glm::normalize(currentVector);
+                    glm::vec3 currentVector =
+                        intersection - selected->transform.position;
 
-                    // Calcula o ângulo entre a posição anterior e a atual.
-                    const float deltaAngle = std::atan2(
-                        glm::dot(
-                            rotatingWorldAxis,
-                            glm::cross(rotationStartVector, currentVector)),
-                        glm::dot(rotationStartVector, currentVector));
+                    if (glm::length(currentVector) > 0.0001f)
+                    {
+                        currentVector = glm::normalize(currentVector);
 
-                    rotationAccumulatedAngle +=
-                        glm::degrees(deltaAngle);
+                        // Calcula o ângulo entre a posição anterior e a atual.
+                        const float deltaAngle = std::atan2(
+                            glm::dot(
+                                rotatingWorldAxis,
+                                glm::cross(rotationStartVector, currentVector)),
+                            glm::dot(rotationStartVector, currentVector));
 
-                    // Aplica a rotação ao eixo selecionado.
-                    selected->transform.rotation[rotatingAxis] =
-                        rotationStart[rotatingAxis] +
-                        rotationAccumulatedAngle;
+                        rotationAccumulatedAngle +=
+                            glm::degrees(deltaAngle);
 
-                    // Atualiza o vetor para o próximo quadro.
-                    rotationStartVector = currentVector;
+                        // Aplica a rotação ao eixo selecionado.
+                        selected->transform.rotation[rotatingAxis] =
+                            rotationStart[rotatingAxis] +
+                            rotationAccumulatedAngle;
+
+                        // Atualiza o vetor para o próximo quadro.
+                        rotationStartVector = currentVector;
+                    }
                 }
+            }
+            else
+            {
+                draggingRotationGizmo = false;
+                rotatingAxis = -1;
             }
         }
         else
         {
+            // Soltar o botão encerra a rotação.
             draggingRotationGizmo = false;
             rotatingAxis = -1;
         }
     }
-    else
+
+    // Atualiza a escala enquanto o botão esquerdo está pressionado.
+    if (draggingScaleGizmo)
     {
-        // Soltar o botão encerra a rotação.
-        draggingRotationGizmo = false;
-        rotatingAxis = -1;
-    }
+        if (editingAvailable &&
+            window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
+        {
+            Scene::Object *selected = scene.getSelectedObject();
+
+            if (selected && scalingAxis >= 0 && scalingAxis < 3)
+            {
+                // Posição atual do mouse.
+                const glm::vec2 currentMouse(
+                    static_cast<float>(window.getMouseX()),
+                    static_cast<float>(window.getMouseY()));
+
+                const float pixelDelta = glm::dot(
+                    currentMouse - scaleStartMouse,
+                    scaleScreenDirection);
+
+                // Calcula a variação da escala.
+                const float scaleDelta =
+                    pixelDelta * scaleFactorPerPixel;
+
+                // Calcula o multiplicador, impedindo escala zero ou negativa.
+                const float scaleMultiplier =
+                    std::max(0.001f, 1.0f + scaleDelta);
+
+                // Aplica a escala somente no eixo selecionado.
+                selected->transform.scale[scalingAxis] =
+                    scaleStart[scalingAxis] * scaleMultiplier;
+            }
+            else
+            {
+                draggingScaleGizmo = false;
+                scalingAxis = -1;
+            }
+        }
+        else
+        {
+            // Soltar o botão encerra a escala.
+            draggingScaleGizmo = false;
+            scalingAxis = -1;
+        }
     }
 
     scene.update(deltaTime);
@@ -1122,8 +1410,63 @@ void Application::renderUI()
             break;
 
         case TransformTool::Scale:
-            // Ferramenta de escala será implementada depois.
+        {
+            Scene::Object *selected = scene.getSelectedObject();
+
+            if (selected)
+            {
+                ScaleGizmoProjection gizmo;
+
+                if (buildScaleGizmo(
+                        window,
+                        camera,
+                        settings.fov,
+                        *selected,
+                        gizmo))
+                {
+                    ui.drawRect(
+                        gizmo.center.x - 4.0f,
+                        gizmo.center.y - 4.0f,
+                        8.0f,
+                        8.0f,
+                        0.90f, 0.90f, 0.90f);
+
+                    for (const ScaleHandleProjection &handle : gizmo.handles)
+                    {
+                        if (!handle.visible)
+                            continue;
+
+                        const float r = handle.color.r;
+                        const float g = handle.color.g;
+                        const float b = handle.color.b;
+
+                        ui.drawLine(
+                            gizmo.center.x,
+                            gizmo.center.y,
+                            handle.screenPosition.x,
+                            handle.screenPosition.y,
+                            3.0f,
+                            r, g, b);
+
+                        ui.drawRect(
+                            handle.screenPosition.x - 6.0f,
+                            handle.screenPosition.y - 6.0f,
+                            12.0f,
+                            12.0f,
+                            r, g, b);
+
+                        ui.drawText(
+                            handle.label,
+                            handle.screenPosition.x + 9.0f,
+                            handle.screenPosition.y - 9.0f,
+                            0.55f,
+                            r, g, b);
+                    }
+                }
+            }
+
             break;
+        }
         }
 
         // Desenha a barra de ferramentas.
