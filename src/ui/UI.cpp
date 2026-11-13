@@ -37,7 +37,9 @@ bool UI::create()
 
     if (!moveIcon.load(ASSETS_DIR "icons/move.png", false) ||
     !rotateIcon.load(ASSETS_DIR "icons/rotate-3d.png", false) ||
-    !scaleIcon.load(ASSETS_DIR "icons/scaling.png", false))
+    !scaleIcon.load(ASSETS_DIR "icons/scaling.png", false)||
+    !extrudeIcon.load(ASSETS_DIR "icons/extrude.png", false))
+
 {
     std::cout << "Falha ao carregar os icones da UI!" << std::endl;
     return false;
@@ -293,6 +295,9 @@ bool UI::iconButton(
 
         case Icon::Scale:
             texture = &scaleIcon;
+            break;
+        case Icon::Extrude:
+            texture = &extrudeIcon;
             break;
     }
 

@@ -806,7 +806,7 @@ void Application::update(float deltaTime)
         const float margin = 20.0f;
 
         const float toolbarWidth =
-            buttonSize * 3.0f + gap * 2.0f;
+            buttonSize * 4.0f + gap * 3.0f;
 
         const float toolbarLeft =
             static_cast<float>(window.getWidth()) -
@@ -1240,7 +1240,7 @@ void Application::drawTransformToolbar()
     const float gap = 7.0f;
     const float margin = 20.0f;
 
-    const float totalWidth = buttonSize * 3.0f + gap * 2.0f;
+    const float totalWidth = buttonSize * 4.0f + gap * 3.0f;
 
     const float x = static_cast<float>(window.getWidth()) - totalWidth - margin;
     const float y = margin;
@@ -1276,6 +1276,17 @@ void Application::drawTransformToolbar()
             activeTransformTool == TransformTool::Scale))
     {
         activeTransformTool = TransformTool::Scale;
+    }
+
+    // Botão Extrudar.
+    if (ui.iconButton(
+            UI::Icon::Extrude,
+            "Extrudar",
+            x + (buttonSize + gap) * 3.0f, y,
+            buttonSize, buttonSize,
+            activeTransformTool == TransformTool::Extrude))
+    {
+        activeTransformTool = TransformTool::Extrude;
     }
 }
 

@@ -57,7 +57,8 @@ private:
     {
         Move,
         Rotate,
-        Scale
+        Scale,
+        Extrude
     };
 
     TransformTool activeTransformTool = TransformTool::Move;

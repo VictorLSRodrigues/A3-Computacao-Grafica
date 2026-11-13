@@ -49,7 +49,8 @@ public:
     {
         Move,
         Rotate,
-        Scale
+        Scale,
+        Extrude
     };
 
     bool iconButton(
@@ -71,6 +72,7 @@ private:
     Texture moveIcon;
     Texture rotateIcon;
     Texture scaleIcon;
+    Texture extrudeIcon;
 
     void drawIcon(
         const Texture &texture,
