@@ -1281,7 +1281,7 @@ void Application::drawTransformToolbar()
     // Botão Extrudar.
     if (ui.iconButton(
             UI::Icon::Extrude,
-            "Extrudar",
+            "Extrusão",
             x + (buttonSize + gap) * 3.0f, y,
             buttonSize, buttonSize,
             activeTransformTool == TransformTool::Extrude))
