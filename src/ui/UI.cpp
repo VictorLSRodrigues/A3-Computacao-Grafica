@@ -36,14 +36,14 @@ bool UI::create()
     }
 
     if (!moveIcon.load(ASSETS_DIR "icons/move.png", false) ||
-    !rotateIcon.load(ASSETS_DIR "icons/rotate-3d.png", false) ||
-    !scaleIcon.load(ASSETS_DIR "icons/scaling.png", false)||
-    !extrudeIcon.load(ASSETS_DIR "icons/extrude.png", false))
+        !rotateIcon.load(ASSETS_DIR "icons/rotate-3d.png", false) ||
+        !scaleIcon.load(ASSETS_DIR "icons/scaling.png", false) ||
+        !extrudeIcon.load(ASSETS_DIR "icons/extrude.png", false))
 
-{
-    std::cout << "Falha ao carregar os icones da UI!" << std::endl;
-    return false;
-}
+    {
+        std::cout << "Falha ao carregar os icones da UI!" << std::endl;
+        return false;
+    }
 
     return font.load(ASSETS_DIR "fonts/DejaVuSans.ttf");
 }
@@ -83,6 +83,10 @@ void UI::drawRect(float x, float y, float width, float height,
     rectShader.setVec2("uPos", x, y);
     rectShader.setVec2("uTamanho", width, height);
     rectShader.setVec4("uCor", r, g, b, a);
+
+    glUniform1f(
+        glGetUniformLocation(rectShader.ID, "uAngle"),
+        0.0f);
     quad.draw();
 }
 
@@ -113,22 +117,19 @@ void UI::drawLine(
     rectShader.setVec2(
         "uTela",
         static_cast<float>(window->getWidth()),
-        static_cast<float>(window->getHeight())
-    );
+        static_cast<float>(window->getHeight()));
 
     rectShader.setVec2(
         "uPos",
         centerX - length * 0.5f,
-        centerY - thickness * 0.5f
-    );
+        centerY - thickness * 0.5f);
 
     rectShader.setVec2("uTamanho", length, thickness);
     rectShader.setVec4("uCor", r, g, b, a);
 
     glUniform1f(
         glGetUniformLocation(rectShader.ID, "uAngle"),
-        angle
-    );
+        angle);
 
     quad.draw();
 }
@@ -236,7 +237,7 @@ bool UI::stepper(const std::string &label, float &value, float step, float minVa
 }
 
 void UI::drawIcon(
-    const Texture& texture,
+    const Texture &texture,
     float x, float y,
     float size,
     float r, float g, float b)
@@ -249,8 +250,7 @@ void UI::drawIcon(
     iconShader.setVec2(
         "uScreen",
         static_cast<float>(window->getWidth()),
-        static_cast<float>(window->getHeight())
-    );
+        static_cast<float>(window->getHeight()));
 
     iconShader.setVec2("uPos", x, y);
     iconShader.setVec2("uSize", size, size);
@@ -266,7 +266,7 @@ void UI::drawIcon(
 
 bool UI::iconButton(
     Icon icon,
-    const std::string& tooltip,
+    const std::string &tooltip,
     float x, float y,
     float width, float height,
     bool selected)
@@ -281,24 +281,24 @@ bool UI::iconButton(
         mx >= x && mx <= x + width &&
         my >= y && my <= y + height;
 
-    const Texture* texture = nullptr;
+    const Texture *texture = nullptr;
 
     switch (icon)
     {
-        case Icon::Move:
-            texture = &moveIcon;
-            break;
+    case Icon::Move:
+        texture = &moveIcon;
+        break;
 
-        case Icon::Rotate:
-            texture = &rotateIcon;
-            break;
+    case Icon::Rotate:
+        texture = &rotateIcon;
+        break;
 
-        case Icon::Scale:
-            texture = &scaleIcon;
-            break;
-        case Icon::Extrude:
-            texture = &extrudeIcon;
-            break;
+    case Icon::Scale:
+        texture = &scaleIcon;
+        break;
+    case Icon::Extrude:
+        texture = &extrudeIcon;
+        break;
     }
 
     float r = selected ? 0.12f : 0.18f;
@@ -321,16 +321,14 @@ bool UI::iconButton(
         x + (width - iconSize) / 2.0f,
         y + (height - iconSize) / 2.0f,
         iconSize,
-        1.0f, 1.0f, 1.0f
-    );
+        1.0f, 1.0f, 1.0f);
 
     // Mostra o nome da ferramenta ao passar o mouse.
     if (hovered)
     {
         const float tooltipWidth = std::max(
             54.0f,
-            font.measure(tooltip, 0.45f) + 14.0f
-        );
+            font.measure(tooltip, 0.45f) + 14.0f);
 
         const float tooltipX = x + (width - tooltipWidth) / 2.0f;
         const float tooltipY = y + height + 6.0f;
@@ -338,16 +336,14 @@ bool UI::iconButton(
         drawRect(
             tooltipX, tooltipY,
             tooltipWidth, 26.0f,
-            0.04f, 0.05f, 0.08f, 0.96f
-        );
+            0.04f, 0.05f, 0.08f, 0.96f);
 
         drawTextCentered(
             tooltip,
             tooltipX, tooltipY,
             tooltipWidth, 26.0f,
             0.45f,
-            1.0f, 1.0f, 1.0f
-        );
+            1.0f, 1.0f, 1.0f);
     }
 
     return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);

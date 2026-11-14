@@ -84,6 +84,17 @@ private:
     glm::vec2 scaleStartMouse{0.0f};
     glm::vec2 scaleScreenDirection{0.0f};
 
+    // Estado do arraste do gizmo de extrusão.
+    bool draggingExtrusionGizmo = false;
+
+    glm::vec2 extrusionStartMouse{0.0f};
+    glm::vec2 extrusionScreenDirection{0.0f};
+
+    float extrusionWorldPerPixel = 0.0f;
+    float extrusionDistance = 0.0f;
+
+    bool extrusionChanged = false;
+
     glm::vec3 scalePivotLocal{0.0f};
     glm::vec3 scalePivotWorld{0.0f};
 
@@ -107,4 +118,6 @@ private:
     void drawTransformToolbar();
     void drawMoveGizmo();
     void drawRotateGizmo();
+    void drawSelectedFaceOutline();
+    void drawExtrudeGizmo();
 };

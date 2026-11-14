@@ -1,18 +1,39 @@
+
 #version 330 core
+
 layout (location = 0) in vec2 aPos;
 
-uniform vec2 uPos;      // canto superior esquerdo do retângulo, em pixels
-uniform vec2 uTamanho;  // largura e altura do retângulo, em pixels
-uniform vec2 uTela;     // largura e altura da janela, em pixels
+uniform vec2 uPos;
+uniform vec2 uTamanho;
+uniform vec2 uTela;
+uniform float uAngle;
 
 void main()
 {
-    // aPos vai de 0 a 1: escala pelo tamanho e desloca pela posição
-    vec2 pixel = uPos + aPos * uTamanho;
+    // Calcula a posição do vértice dentro do retângulo.
+    vec2 local = aPos * uTamanho;
 
-    // pixels -> coordenadas da tela do OpenGL (-1 a +1, com y invertido)
-    vec2 ndc = vec2(pixel.x / uTela.x * 2.0 - 1.0,
-                    1.0 - pixel.y / uTela.y * 2.0);
+    // Move a origem para o centro do retângulo.
+    vec2 center = uTamanho * 0.5;
+    local -= center;
+
+    // Rotaciona o retângulo em torno do seu centro.
+    float c = cos(uAngle);
+    float s = sin(uAngle);
+
+    vec2 rotated;
+
+    rotated.x = local.x * c - local.y * s;
+    rotated.y = local.x * s + local.y * c;
+
+    // Reposiciona o retângulo na tela.
+    vec2 pixel = uPos + center + rotated;
+
+    // Converte pixels para coordenadas NDC.
+    vec2 ndc = vec2(
+        pixel.x / uTela.x * 2.0 - 1.0,
+        1.0 - pixel.y / uTela.y * 2.0
+    );
 
     gl_Position = vec4(ndc, 0.0, 1.0);
 }

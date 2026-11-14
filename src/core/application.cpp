@@ -147,6 +147,24 @@ namespace
         std::array<ScaleHandleProjection, 3> handles;
     };
 
+    struct ExtrudeGizmoProjection
+    {
+        glm::vec3 worldCenter{0.0f};
+        glm::vec3 worldNormal{0.0f};
+
+        glm::vec2 screenStart{0.0f};
+        glm::vec2 screenEnd{0.0f};
+        glm::vec2 screenDirection{0.0f};
+
+        glm::vec2 screenFaceB{0.0f};
+        glm::vec2 screenFaceC{0.0f};
+
+        float worldLength = 0.0f;
+        float worldPerPixel = 0.0f;
+
+        bool visible = false;
+    };
+
     // Retorna a Bounding Box do objeto selecionado.
     const BoundingBox *getObjectBoundingBox(
         const Scene::Object &object)
@@ -181,6 +199,203 @@ namespace
         screenPosition.y = (1.0f - ndc.y) * 0.5f * height;
 
         return true;
+    }
+
+    bool buildExtrudeGizmoProjection(
+        const Window &window,
+        const Camera &camera,
+        float fovDegrees,
+        const Scene &scene,
+        ExtrudeGizmoProjection &result)
+    {
+        if (!scene.getSelectedFace().valid)
+            return false;
+
+        glm::vec3 a, b, c;
+
+        if (!scene.getSelectedFacePositions(a, b, c))
+            return false;
+
+        // A seta começa no primeiro vértice da face.
+        result.worldCenter = a;
+
+        // Calcula a normal da face.
+        glm::vec3 normal = glm::cross(b - a, c - a);
+
+        if (glm::length(normal) < 0.00001f)
+            return false;
+
+        result.worldNormal = glm::normalize(normal);
+
+        // Dimensões da janela.
+        const int width = window.getWidth();
+        const int height = window.getHeight();
+
+        if (width <= 0 || height <= 0)
+            return false;
+
+        // Verifica a distância da face em relação à câmera.
+        const glm::vec3 forward =
+            glm::normalize(camera.orientation);
+
+        const float depth = glm::dot(
+            result.worldCenter - camera.position,
+            forward);
+
+        if (depth <= 0.05f)
+            return false;
+
+        // Matrizes da câmera.
+        const glm::mat4 view = glm::lookAt(
+            camera.position,
+            camera.position + camera.orientation,
+            camera.up);
+
+        const glm::mat4 projection = glm::perspective(
+            glm::radians(fovDegrees),
+            static_cast<float>(width) / height,
+            0.1f,
+            1000.0f);
+
+        const glm::mat4 viewProjection = projection * view;
+
+        // Projeta os três vértices da face para a tela.
+        if (!projectWorldToScreen(
+                a,
+                viewProjection,
+                width,
+                height,
+                result.screenStart))
+            return false;
+
+        if (!projectWorldToScreen(
+                b,
+                viewProjection,
+                width,
+                height,
+                result.screenFaceB))
+            return false;
+
+        if (!projectWorldToScreen(
+                c,
+                viewProjection,
+                width,
+                height,
+                result.screenFaceC))
+            return false;
+
+        // Mantém o tamanho visual da seta.
+        result.worldLength = std::clamp(
+            2.0f * depth *
+                std::tan(glm::radians(fovDegrees) * 0.5f) *
+                85.0f / static_cast<float>(height),
+            0.05f,
+            5.0f);
+
+        const glm::vec3 endPosition =
+            result.worldCenter +
+            result.worldNormal * result.worldLength;
+
+        if (!projectWorldToScreen(
+                endPosition,
+                viewProjection,
+                width,
+                height,
+                result.screenEnd))
+            return false;
+
+        // Calcula a direção da seta na tela.
+        const glm::vec2 screenDelta =
+            result.screenEnd - result.screenStart;
+
+        const float screenLength = glm::length(screenDelta);
+
+        if (screenLength < 5.0f)
+            return false;
+
+        result.screenDirection = screenDelta / screenLength;
+
+        result.worldPerPixel =
+            result.worldLength / screenLength;
+
+        result.visible = true;
+
+        return true;
+    }
+
+    float distanceToExtrudeGizmo(
+        const glm::vec2 &mouse,
+        const ExtrudeGizmoProjection &gizmo)
+    {
+        const glm::vec2 segment =
+            gizmo.screenEnd - gizmo.screenStart;
+
+        const float lengthSquared =
+            glm::dot(segment, segment);
+
+        if (lengthSquared <= 0.0001f)
+            return std::numeric_limits<float>::max();
+
+        const float t = std::clamp(
+            glm::dot(mouse - gizmo.screenStart, segment) /
+                lengthSquared,
+            0.0f,
+            1.0f);
+
+        const glm::vec2 closestPoint =
+            gizmo.screenStart + segment * t;
+
+        return glm::length(mouse - closestPoint);
+    }
+
+    bool isPointInsideTriangle(
+        const glm::vec2 &p,
+        const glm::vec2 &a,
+        const glm::vec2 &b,
+        const glm::vec2 &c)
+    {
+        auto cross2D = [](const glm::vec2 &v1,
+                          const glm::vec2 &v2)
+        {
+            return v1.x * v2.y - v1.y * v2.x;
+        };
+
+        const float d1 = cross2D(b - a, p - a);
+        const float d2 = cross2D(c - b, p - b);
+        const float d3 = cross2D(a - c, p - c);
+
+        constexpr float epsilon = 0.001f;
+
+        const bool hasNegative =
+            d1 < -epsilon || d2 < -epsilon || d3 < -epsilon;
+
+        const bool hasPositive =
+            d1 > epsilon || d2 > epsilon || d3 > epsilon;
+
+        return !(hasNegative && hasPositive);
+    }
+
+    bool isMouseOverExtrudeGizmo(
+        const glm::vec2 &mouse,
+        const ExtrudeGizmoProjection &gizmo)
+    {
+        if (!gizmo.visible)
+            return false;
+
+        // Aceita qualquer ponto dentro da face triangular.
+        if (isPointInsideTriangle(
+                mouse,
+                gizmo.screenStart,
+                gizmo.screenFaceB,
+                gizmo.screenFaceC))
+        {
+            return true;
+        }
+
+        // Também aceita a haste e a ponta da seta.
+        constexpr float hitTolerance = 12.0f;
+
+        return distanceToExtrudeGizmo(mouse, gizmo) <= hitTolerance;
     }
 
     bool buildScaleGizmo(
@@ -794,6 +1009,15 @@ void Application::update(float deltaTime)
 
         draggingScaleGizmo = false;
         scalingAxis = -1;
+
+        if (draggingExtrusionGizmo)
+        {
+            scene.cancelSelectedFaceExtrusion();
+
+            draggingExtrusionGizmo = false;
+            extrusionDistance = 0.0f;
+            extrusionChanged = false;
+        }
     }
 
     // Esta parte trata somente o instante do clique.
@@ -825,6 +1049,102 @@ void Application::update(float deltaTime)
         if (!clickedToolbar)
         {
             bool startedDragging = false;
+            bool handledFaceSelection = false;
+
+            // No modo Extrudar, tenta selecionar diretamente uma face.
+            if (activeTransformTool == TransformTool::Extrude)
+            {
+                bool startedOnGizmo = false;
+
+                // Primeiro verifica se já existe uma face selecionada
+                // e se o clique atingiu a seta de extrusão.
+                if (scene.getSelectedFace().valid)
+                {
+                    ExtrudeGizmoProjection gizmo;
+
+                    if (buildExtrudeGizmoProjection(
+                            window,
+                            camera,
+                            settings.fov,
+                            scene,
+                            gizmo) &&
+                        isMouseOverExtrudeGizmo(mouse, gizmo))
+                    {
+                        if (scene.beginSelectedFaceExtrusion())
+                        {
+                            draggingGizmo = false;
+                            draggedAxis = -1;
+
+                            draggingRotationGizmo = false;
+                            rotatingAxis = -1;
+
+                            draggingScaleGizmo = false;
+                            scalingAxis = -1;
+
+                            draggingExtrusionGizmo = true;
+
+                            // Guarda exatamente o ponto inicial do clique.
+                            extrusionStartMouse = mouse;
+
+                            // Guarda a direção projetada da seta.
+                            extrusionScreenDirection =
+                                gizmo.screenDirection;
+
+                            // Conversão de pixels para unidades do mundo.
+                            extrusionWorldPerPixel =
+                                gizmo.worldPerPixel;
+
+                            extrusionDistance = 0.0f;
+                            extrusionChanged = false;
+
+                            startedDragging = true;
+                            startedOnGizmo = true;
+                            handledFaceSelection = true;
+
+                            std::cout
+                                << "[EXTRUDE] Arraste iniciado!"
+                                << std::endl;
+                        }
+                    }
+                }
+
+                // Se não clicou na seta, tenta selecionar outra face.
+                if (!startedOnGizmo)
+                {
+                    const glm::vec3 rayDirection =
+                        createMouseRay(window, camera, settings.fov);
+
+                    const bool faceFound =
+                        scene.pickFace(camera.position, rayDirection);
+
+                    handledFaceSelection = true;
+
+                    if (faceFound)
+                    {
+                        lightSelected = false;
+
+                        const Scene::Object *faceObject =
+                            scene.getSelectedObject();
+
+                        const Scene::FaceSelection &face =
+                            scene.getSelectedFace();
+
+                        std::cout
+                            << "[EXTRUDE] Face selecionada!"
+                            << " | Objeto: " << faceObject->name
+                            << " | Malha: " << face.meshIndex
+                            << " | Face: " << face.faceIndex
+                            << std::endl;
+                    }
+                    else
+                    {
+                        std::cout
+                            << "[EXTRUDE] Nenhuma face encontrada!"
+                            << std::endl;
+                    }
+                }
+            }
+
             Scene::Object *selected =
                 lightSelected ? nullptr : scene.getSelectedObject();
 
@@ -1033,7 +1353,7 @@ void Application::update(float deltaTime)
             }
 
             // Se não clicou no gizmo, tenta selecionar outro objeto.
-            if (!startedDragging)
+            if (!startedDragging && !handledFaceSelection)
             {
                 draggingGizmo = false;
                 draggedAxis = -1;
@@ -1227,6 +1547,60 @@ void Application::update(float deltaTime)
             // Soltar o botão encerra a escala.
             draggingScaleGizmo = false;
             scalingAxis = -1;
+        }
+    }
+
+    // Atualiza a extrusão enquanto o botão esquerdo está pressionado.
+    if (draggingExtrusionGizmo)
+    {
+        if (editingAvailable &&
+            window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
+        {
+            const glm::vec2 currentMouse(
+                static_cast<float>(window.getMouseX()),
+                static_cast<float>(window.getMouseY()));
+
+            // Considera somente o movimento na direção da seta.
+            const float pixelDelta = glm::dot(
+                currentMouse - extrusionStartMouse,
+                extrusionScreenDirection);
+
+            // Converte o movimento da tela em distância 3D.
+            const float distance =
+                pixelDelta * extrusionWorldPerPixel;
+
+            extrusionDistance = distance;
+
+            if (std::abs(distance) > 0.00001f)
+            {
+                if (scene.updateSelectedFaceExtrusion(distance))
+                    extrusionChanged = true;
+            }
+        }
+        else
+        {
+            // Ao soltar o mouse, confirma ou cancela a operação.
+            if (extrusionChanged)
+            {
+                scene.finishSelectedFaceExtrusion();
+
+                std::cout
+                    << "[EXTRUDE] Extrusao confirmada: "
+                    << extrusionDistance
+                    << std::endl;
+            }
+            else
+            {
+                scene.cancelSelectedFaceExtrusion();
+
+                std::cout
+                    << "[EXTRUDE] Extrusao cancelada."
+                    << std::endl;
+            }
+
+            draggingExtrusionGizmo = false;
+            extrusionDistance = 0.0f;
+            extrusionChanged = false;
         }
     }
 
@@ -1445,6 +1819,130 @@ void Application::drawRotateGizmo()
     }
 }
 
+// Desenha o contorno da face selecionada.
+void Application::drawSelectedFaceOutline()
+{
+    const Scene::FaceSelection &selection =
+        scene.getSelectedFace();
+
+    if (!selection.valid)
+        return;
+
+    glm::vec3 a, b, c;
+
+    if (!scene.getSelectedFacePositions(a, b, c))
+        return;
+
+    const int width = window.getWidth();
+    const int height = window.getHeight();
+
+    if (width <= 0 || height <= 0)
+        return;
+
+    const glm::mat4 view = glm::lookAt(
+        camera.position,
+        camera.position + camera.orientation,
+        camera.up);
+
+    const glm::mat4 projection = glm::perspective(
+        glm::radians(settings.fov),
+        static_cast<float>(width) / height,
+        0.1f,
+        1000.0f);
+
+    const glm::mat4 viewProjection = projection * view;
+
+    glm::vec2 screenA;
+    glm::vec2 screenB;
+    glm::vec2 screenC;
+
+    if (!projectWorldToScreen(a, viewProjection, width, height, screenA) ||
+        !projectWorldToScreen(b, viewProjection, width, height, screenB) ||
+        !projectWorldToScreen(c, viewProjection, width, height, screenC))
+    {
+        return;
+    }
+
+    // Cor laranja da seleção.
+    constexpr float orangeR = 1.0f;
+    constexpr float orangeG = 0.40f;
+    constexpr float orangeB = 0.05f;
+
+    ui.drawLine(
+        screenA.x, screenA.y,
+        screenB.x, screenB.y,
+        4.0f, orangeR, orangeG, orangeB);
+
+    ui.drawLine(
+        screenB.x, screenB.y,
+        screenC.x, screenC.y,
+        4.0f, orangeR, orangeG, orangeB);
+
+    ui.drawLine(
+        screenC.x, screenC.y,
+        screenA.x, screenA.y,
+        4.0f, orangeR, orangeG, orangeB);
+}
+
+void Application::drawExtrudeGizmo()
+{
+    ExtrudeGizmoProjection gizmo;
+
+    if (!buildExtrudeGizmoProjection(
+            window,
+            camera,
+            settings.fov,
+            scene,
+            gizmo))
+    {
+        return;
+    }
+
+    const glm::vec2 &start = gizmo.screenStart;
+    const glm::vec2 &end = gizmo.screenEnd;
+    const glm::vec2 &direction = gizmo.screenDirection;
+
+    // Corpo da seta.
+    ui.drawLine(
+        start.x, start.y,
+        end.x, end.y,
+        4.0f,
+        1.0f, 0.65f, 0.10f);
+
+    // Ponta da seta.
+    const glm::vec2 perpendicular(
+        -direction.y,
+        direction.x);
+
+    const glm::vec2 arrowBack =
+        end - direction * 13.0f;
+
+    const glm::vec2 arrowLeft =
+        arrowBack + perpendicular * 6.0f;
+
+    const glm::vec2 arrowRight =
+        arrowBack - perpendicular * 6.0f;
+
+    ui.drawLine(
+        end.x, end.y,
+        arrowLeft.x, arrowLeft.y,
+        3.0f,
+        1.0f, 0.65f, 0.10f);
+
+    ui.drawLine(
+        end.x, end.y,
+        arrowRight.x, arrowRight.y,
+        3.0f,
+        1.0f, 0.65f, 0.10f);
+
+    ui.drawText(
+        "E",
+        end.x + 8.0f,
+        end.y - 8.0f,
+        0.6f,
+        1.0f, 0.65f, 0.10f);
+}
+
 void Application::renderUI()
 {
     // Inicia a interface gráfica.
@@ -1530,6 +2028,10 @@ void Application::renderUI()
 
             break;
         }
+        case TransformTool::Extrude:
+            drawSelectedFaceOutline();
+            drawExtrudeGizmo();
+            break;
         }
 
         // Desenha a barra de ferramentas.

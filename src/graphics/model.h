@@ -9,6 +9,7 @@
 #include "mesh.h"
 #include "texture.h"
 #include "bounding_box.h"
+#include <cstddef>
 
 using json = nlohmann::json;
 
@@ -21,6 +22,44 @@ public:
     // objectMatrix é a transformação do objeto na cena; ela é combinada com a de cada parte do modelo.
     void draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
               const glm::mat4 &objectMatrix = glm::mat4(1.0f));
+
+    // Detecta a face atingida pelo raio em qualquer malha do modelo.
+    bool intersectRay(
+        const glm::vec3 &rayOrigin,
+        const glm::vec3 &rayDirection,
+        const glm::mat4 &objectMatrix,
+        std::size_t &hitMeshIndex,
+        unsigned int &hitFaceIndex,
+        float &hitDistance) const;
+
+    // Recupera os vértices de uma face no espaço global.
+    bool getFacePositions(
+        std::size_t meshIndex,
+        unsigned int faceIndex,
+        const glm::mat4 &objectMatrix,
+        glm::vec3 &a,
+        glm::vec3 &b,
+        glm::vec3 &c) const;
+
+    // Inicia a extrusão de uma face.
+    bool beginExtrusion(
+        std::size_t meshIndex,
+        unsigned int faceIndex);
+
+    // Atualiza a distância da extrusão.
+    bool updateExtrusion(
+        std::size_t meshIndex,
+        float distance);
+
+    // Confirma a extrusão.
+    void finishExtrusion(std::size_t meshIndex);
+
+    // Cancela a extrusão.
+    void cancelExtrusion(std::size_t meshIndex);
+
+    // Retorna o índice da nova face extrudada.
+    unsigned int getExtrudedFaceIndex(
+        std::size_t meshIndex) const;
 
     // Retorna o raio aproximado utilizado na seleção do modelo.
     float getBoundingRadius() const { return boundingRadius; }
