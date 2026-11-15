@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
+
+#include <glm/glm.hpp>
 
 #include "font.h"
 #include "graphics/mesh.h"
@@ -45,6 +48,22 @@ public:
     bool stepper(const std::string &label, float &value, float step, float minValue, float maxValue,
                  float x, float y, float width, float height, int decimals = 1);
 
+    // Barra arrastável: "rótulo [====|----] valor". Retorna true se o valor mudar neste quadro.
+    // (r, g, b) tingem a parte preenchida; displayScale só afeta o número exibido
+    // (por exemplo 255 para mostrar uma cor de 0 a 1 como 0 a 255).
+    bool slider(const std::string &label, float &value, float minValue, float maxValue,
+                float x, float y, float width, float height,
+                float r = 0.25f, float g = 0.55f, float b = 0.95f,
+                int decimals = 2, float displayScale = 1.0f);
+
+    // Editor de cor RGB (0 a 1): amostra com o código hexadecimal e uma barra por canal.
+    // Não depende de onde é usado: quem chama informa a cor, a posição e a largura.
+    // Retorna true se a cor mudar neste quadro.
+    bool colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y, float width);
+
+    // Altura que o colorPicker ocupa, para quem precisa reservar espaço no layout.
+    static float colorPickerHeight();
+
     enum class Icon
     {
         Move,
@@ -66,6 +85,7 @@ private:
     Shader textShader;
     Mesh quad;
     Font font;
+    std::size_t activeSliderId = 0; // Slider sendo arrastado; 0 se nenhum.
 
     Shader iconShader;
 

@@ -990,6 +990,7 @@ void Application::update(float deltaTime)
     // Copia para a luz e para a câmera os ajustes escolhidos no menu.
     light.position = settings.lightPosition;
     light.target = settings.lightTarget;
+    light.color = glm::vec4(settings.lightColor, 1.0f);
 
     camera.walkSpeed = settings.walkSpeed;
     camera.sprintSpeed = settings.sprintSpeed;

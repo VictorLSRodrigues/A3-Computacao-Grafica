@@ -19,4 +19,5 @@ struct Settings
     bool showSkybox = true;                    // mostra o céu ao redor da cena
     glm::vec3 lightPosition{0.5f, 0.5f, 0.5f}; // onde a luz está
     glm::vec3 lightTarget{0.0f, 0.0f, 0.0f};   // ponto para onde a luz aponta
+    glm::vec3 lightColor{1.0f, 1.0f, 1.0f};    // cor da luz em RGB, de 0 a 1
 };

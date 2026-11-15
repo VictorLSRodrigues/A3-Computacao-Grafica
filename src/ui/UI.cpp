@@ -1,5 +1,6 @@
 #include "UI.h"
 
+#include <functional>
 #include <algorithm>
 #include <iostream>
 #include <cstdio>
@@ -347,4 +348,126 @@ bool UI::iconButton(
     }
 
     return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
+}
+
+namespace
+{
+    // Medidas do colorPicker, em pixels.
+    constexpr float kPickerPreviewH = 36.0f;
+    constexpr float kPickerSliderH = 28.0f;
+    constexpr float kPickerGap = 8.0f;
+}
+
+bool UI::slider(const std::string &label, float &value, float minValue, float maxValue,
+                float x, float y, float width, float height,
+                float r, float g, float b, int decimals, float displayScale)
+{
+    if (!window)
+        return false;
+
+    const float labelW = 40.0f;
+    const float valueW = 70.0f;
+    const float trackX = x + labelW;
+    const float trackW = std::max(width - labelW - valueW, 1.0f);
+    const float handleW = 10.0f;
+    const float old = value;
+
+    // Identifica o slider entre os quadros para mantê-lo ativo enquanto é arrastado.
+    std::size_t id = std::hash<std::string>{}(label) ^
+                     (static_cast<std::size_t>(static_cast<int>(x)) * 73856093u) ^
+                     (static_cast<std::size_t>(static_cast<int>(y)) * 19349663u);
+    if (id == 0)
+        id = 1;
+
+    const float mx = static_cast<float>(window->getMouseX());
+    const float my = static_cast<float>(window->getMouseY());
+    const bool hovered = mx >= trackX && mx <= trackX + trackW && my >= y && my <= y + height;
+
+    // O clique ativa o slider; ele continua ativo, mesmo com o mouse fora da barra, até soltar o botão.
+    const bool clicked = hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
+    if (clicked)
+        activeSliderId = id;
+    else if (activeSliderId == id && !window->mouseDown(GLFW_MOUSE_BUTTON_LEFT))
+        activeSliderId = 0;
+
+    const bool active = activeSliderId == id;
+    if (clicked || active)
+    {
+        const float t = std::clamp((mx - trackX) / trackW, 0.0f, 1.0f);
+        value = minValue + t * (maxValue - minValue);
+    }
+    value = std::clamp(value, minValue, maxValue);
+
+    const float range = maxValue - minValue;
+    const float t = range > 0.0f ? (value - minValue) / range : 0.0f;
+
+    // Nome do canal à esquerda.
+    const float labelScale = 0.5f;
+    const float capHeight = font.getPixelHeight() * labelScale * 0.62f;
+    drawText(label, x, y + (height + capHeight) / 2.0f, labelScale, 1.0f, 1.0f, 1.0f);
+
+    // Trilho, parte preenchida e marcador.
+    const float trackH = height * 0.35f;
+    const float trackY = y + (height - trackH) / 2.0f;
+    drawRect(trackX, trackY, trackW, trackH, 0.04f, 0.05f, 0.08f, 1.0f);
+    drawRect(trackX, trackY, trackW * t, trackH, r, g, b, 1.0f);
+
+    const float handleShade = (hovered || active) ? 1.0f : 0.80f;
+    drawRect(trackX + trackW * t - handleW / 2.0f, y, handleW, height,
+             handleShade, handleShade, handleShade, 1.0f);
+
+    // Valor à direita.
+    char text[32];
+    std::snprintf(text, sizeof(text), "%.*f", decimals, value * displayScale);
+    drawTextCentered(text, trackX + trackW, y, valueW, height, 0.5f, 1.0f, 1.0f, 1.0f);
+
+    return value != old;
+}
+
+float UI::colorPickerHeight()
+{
+    return kPickerPreviewH + kPickerGap + 3.0f * kPickerSliderH + 2.0f * kPickerGap;
+}
+
+bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y, float width)
+{
+    if (!window)
+        return false;
+
+    bool changed = false;
+    rgb = glm::clamp(rgb, glm::vec3(0.0f), glm::vec3(1.0f));
+
+    // Linha de cima: nome à esquerda e amostra com o código hexadecimal à direita.
+    const float labelScale = 0.5f;
+    const float capHeight = font.getPixelHeight() * labelScale * 0.62f;
+    drawText(label, x, y + (kPickerPreviewH + capHeight) / 2.0f, labelScale, 1.0f, 1.0f, 1.0f);
+
+    const float swatchW = width * 0.5f;
+    const float swatchX = x + width - swatchW;
+    drawRect(swatchX - 2.0f, y - 2.0f, swatchW + 4.0f, kPickerPreviewH + 4.0f, 0.85f, 0.85f, 0.90f, 1.0f);
+    drawRect(swatchX, y, swatchW, kPickerPreviewH, rgb.r, rgb.g, rgb.b, 1.0f);
+
+    char hex[16];
+    std::snprintf(hex, sizeof(hex), "#%02X%02X%02X",
+                  static_cast<int>(std::lround(rgb.r * 255.0f)),
+                  static_cast<int>(std::lround(rgb.g * 255.0f)),
+                  static_cast<int>(std::lround(rgb.b * 255.0f)));
+
+    // Texto escuro sobre cores claras e claro sobre cores escuras.
+    const float luminance = 0.299f * rgb.r + 0.587f * rgb.g + 0.114f * rgb.b;
+    const float textShade = luminance > 0.5f ? 0.05f : 1.0f;
+    drawTextCentered(hex, swatchX, y, swatchW, kPickerPreviewH, 0.5f, textShade, textShade, textShade);
+
+    // Uma barra por canal, exibida de 0 a 255.
+    float sliderY = y + kPickerPreviewH + kPickerGap;
+    if (slider("R", rgb.r, 0.0f, 1.0f, x, sliderY, width, kPickerSliderH, 0.90f, 0.25f, 0.25f, 0, 255.0f))
+        changed = true;
+    sliderY += kPickerSliderH + kPickerGap;
+    if (slider("G", rgb.g, 0.0f, 1.0f, x, sliderY, width, kPickerSliderH, 0.25f, 0.80f, 0.35f, 0, 255.0f))
+        changed = true;
+    sliderY += kPickerSliderH + kPickerGap;
+    if (slider("B", rgb.b, 0.0f, 1.0f, x, sliderY, width, kPickerSliderH, 0.30f, 0.45f, 0.95f, 0, 255.0f))
+        changed = true;
+
+    return changed;
 }

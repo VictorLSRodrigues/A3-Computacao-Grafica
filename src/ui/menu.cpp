@@ -157,11 +157,12 @@ void Menu::drawLight(const Window &window, UI &ui, Settings &settings)
     const float margin = 30.0f;
     const float titleH = 70.0f;
     const float rowW = panelW - 2.0f * margin;
-    const float rowH = 48.0f;
-    const float gap = 14.0f;
+    const float rowH = 40.0f;
+    const float gap = 10.0f;
     const int rows = 8; // Três da posição, três do alvo, restaurar e voltar.
+    const float colorH = UI::colorPickerHeight();
 
-    const float panelH = margin + titleH + rows * rowH + (rows - 1) * gap + margin;
+    const float panelH = margin + titleH + rows * rowH + rows * gap + colorH + margin;
 
     float px, py;
     drawPanel(window, ui, "Luz", panelW, panelH, px, py);
@@ -186,11 +187,15 @@ void Menu::drawLight(const Window &window, UI &ui, Settings &settings)
     ui.stepper("Alvo Z", settings.lightTarget.z, step, -limit, limit, x, y, rowW, rowH, 2);
     y += rowH + gap;
 
+    ui.colorPicker("Cor", settings.lightColor, x, y, rowW);
+    y += colorH + gap;
+
     if (ui.button("Restaurar luz", x, y, rowW, rowH, 0.25f, 0.30f, 0.40f))
     {
         const Settings defaults;
         settings.lightPosition = defaults.lightPosition;
         settings.lightTarget = defaults.lightTarget;
+        settings.lightColor = defaults.lightColor;
     }
     y += rowH + gap;
 
