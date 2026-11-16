@@ -1025,29 +1025,12 @@ void Application::update(float deltaTime)
     if (editingAvailable &&
         window.mouseClicked(GLFW_MOUSE_BUTTON_LEFT))
     {
-        // Ignora cliques na barra de ferramentas.
-        const float buttonSize = 46.0f;
-        const float gap = 7.0f;
-        const float margin = 20.0f;
-
-        const float toolbarWidth =
-            buttonSize * 4.0f + gap * 3.0f;
-
-        const float toolbarLeft =
-            static_cast<float>(window.getWidth()) -
-            toolbarWidth - margin;
-
         const glm::vec2 mouse(
             static_cast<float>(window.getMouseX()),
             static_cast<float>(window.getMouseY()));
 
-        const bool clickedToolbar =
-            mouse.x >= toolbarLeft &&
-            mouse.x <= toolbarLeft + toolbarWidth &&
-            mouse.y >= margin &&
-            mouse.y <= margin + buttonSize;
-
-        if (!clickedToolbar)
+        // Ignora cliques sobre a interface (barra de ferramentas, painéis, sliders).
+        if (!ui.wantsMouse(window))
         {
             bool startedDragging = false;
             bool handledFaceSelection = false;

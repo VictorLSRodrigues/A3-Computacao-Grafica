@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include <glm/glm.hpp>
 
@@ -82,7 +83,17 @@ public:
         float width, float height,
         bool selected = false);
 
+    // Registra uma região da tela ocupada pela interface neste quadro.
+    void addRegion(float x, float y, float width, float height);
+
+    // True se o mouse está sobre a interface ou arrastando um slider.
+    // Quem trata cliques na cena deve perguntar isso antes de selecionar objetos.
+    bool wantsMouse(const Window &window) const;
+
 private:
+    struct Region { float x, y, w, h; };
+    std::vector<Region> regions; // preenchida durante o quadro, zerada em begin()
+    
     const Window *window = nullptr; // Válido apenas entre begin() e end().
     Shader rectShader;
     Shader textShader;

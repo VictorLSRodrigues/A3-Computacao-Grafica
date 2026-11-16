@@ -52,6 +52,7 @@ bool UI::create()
 // Configura o OpenGL para desenhar a interface transparente sobre a cena.
 void UI::begin(const Window &w)
 {
+    regions.clear();
     window = &w;
 
     glDisable(GL_CULL_FACE);
@@ -470,4 +471,25 @@ bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y,
         changed = true;
 
     return changed;
+}
+
+void UI::addRegion(float x, float y, float width, float height)
+{
+    regions.push_back({x, y, width, height});
+}
+
+bool UI::wantsMouse(const Window &window) const
+{
+    if (activeSliderId != 0)
+        return true; // arrastando um slider: o mouse é da interface, mesmo fora dele
+
+    const float mx = (float)window.getMouseX();
+    const float my = (float)window.getMouseY();
+
+    for (const Region &r : regions)
+    {
+        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h)
+            return true;
+    }
+    return false;
 }
