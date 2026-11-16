@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "graphics/shapes.h"
+#include "theme.h"
 
 bool UI::create()
 {
@@ -53,6 +54,8 @@ bool UI::create()
 void UI::begin(const Window &w)
 {
     regions.clear();
+    if (activeSliderId != 0 && !w.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
+        activeSliderId = 0;
     window = &w;
 
     glDisable(GL_CULL_FACE);
@@ -180,6 +183,8 @@ bool UI::button(const std::string &label, float x, float y, float width, float h
     if (!window)
         return false;
 
+    addRegion(x, y, width, height);
+
     float mx = (float)window->getMouseX();
     float my = (float)window->getMouseY();
     bool hovered = enabled && mx >= x && mx <= x + width && my >= y && my <= y + height;
@@ -198,7 +203,8 @@ bool UI::button(const std::string &label, float x, float y, float width, float h
     }
 
     drawRect(x, y, width, height, r, g, b, 1.0f);
-    drawTextCentered(label, x, y, width, height, 0.6f, 1.0f, 1.0f, 1.0f, enabled ? 1.0f : 0.4f);
+    drawTextCentered(label, x, y, width, height, 0.6f,
+                     theme::text.r, theme::text.g, theme::text.b, enabled ? 1.0f : 0.4f);
 
     return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
 }
@@ -208,6 +214,8 @@ bool UI::stepper(const std::string &label, float &value, float step, float minVa
 {
     if (!window)
         return false;
+
+    addRegion(x, y, width, height);
 
     const float buttonSize = height;
     const float valueW = 90.0f;
@@ -276,6 +284,8 @@ bool UI::iconButton(
     if (!window)
         return false;
 
+    addRegion(x, y, width, height);
+
     const float mx = static_cast<float>(window->getMouseX());
     const float my = static_cast<float>(window->getMouseY());
 
@@ -303,20 +313,21 @@ bool UI::iconButton(
         break;
     }
 
-    float r = selected ? 0.12f : 0.18f;
-    float g = selected ? 0.38f : 0.20f;
-    float b = selected ? 0.75f : 0.25f;
+    glm::vec3 color = selected
+        ? theme::buttonPrimary
+        : glm::vec3(0.13f, 0.16f, 0.22f);
 
     if (hovered)
     {
-        r = std::min(r * 1.3f, 1.0f);
-        g = std::min(g * 1.3f, 1.0f);
-        b = std::min(b * 1.3f, 1.0f);
+        color = glm::min(color * 1.25f + glm::vec3(0.03f), glm::vec3(1.0f));
     }
 
-    drawRect(x, y, width, height, r, g, b);
+    drawRect(x, y, width, height, color.r, color.g, color.b);
+    if (selected)
+        drawRect(x, y + height - 3.0f, width, 3.0f,
+                 theme::accent.r, theme::accent.g, theme::accent.b);
 
-    const float iconSize = 25.0f;
+    const float iconSize = std::min(25.0f, std::min(width, height) * 0.58f);
 
     drawIcon(
         *texture,
@@ -365,6 +376,8 @@ bool UI::slider(const std::string &label, float &value, float minValue, float ma
 {
     if (!window)
         return false;
+
+    addRegion(x, y, width, height);
 
     const float labelW = 40.0f;
     const float valueW = 70.0f;
@@ -434,6 +447,8 @@ bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y,
 {
     if (!window)
         return false;
+
+    addRegion(x, y, width, colorPickerHeight());
 
     bool changed = false;
     rgb = glm::clamp(rgb, glm::vec3(0.0f), glm::vec3(1.0f));

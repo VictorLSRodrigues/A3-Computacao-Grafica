@@ -8,7 +8,7 @@ enum class LightType
     Spot = 2
 };
 
-// Opções de câmera e iluminação ajustáveis pelo menu.
+// Configurações de câmera e iluminação compartilhadas pelo app e pela interface.
 struct Settings
 {
     float fov = 45.0f;               // campo de visão, em graus

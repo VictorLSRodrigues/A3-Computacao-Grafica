@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <vector>
 
+#include "theme.h"
+
 namespace
 {
     constexpr float kTextScale = 0.4f;
@@ -167,8 +169,12 @@ void HUD::drawPanel(UI &ui, const EnvironmentInfo &info) const
         height += kLineHeight;
     }
 
-    ui.drawRect(kMargin, kMargin, width, height, 0.04f, 0.06f, 0.10f, 0.75f);
-    ui.drawRect(kMargin, kMargin, width, 3.0f, 0.25f, 0.55f, 0.95f, 1.0f);
+    ui.addRegion(kMargin, kMargin, width, height);
+    ui.drawRect(kMargin, kMargin, width, height,
+                theme::panelBackground.r, theme::panelBackground.g, theme::panelBackground.b,
+                theme::hudOpacity);
+    ui.drawRect(kMargin, kMargin, width, 3.0f,
+                theme::accent.r, theme::accent.g, theme::accent.b);
 
     // Segunda passada: desenha as linhas.
     float top = kMargin + kPadding;
@@ -183,9 +189,11 @@ void HUD::drawPanel(UI &ui, const EnvironmentInfo &info) const
         const float x = kMargin + kPadding + (row.heading ? 0.0f : kIndent);
 
         if (row.heading)
-            ui.drawText(row.text, x, baseline, kTextScale, 0.45f, 0.70f, 1.0f);
+            ui.drawText(row.text, x, baseline, kTextScale,
+                        theme::accent.r, theme::accent.g, theme::accent.b);
         else
-            ui.drawText(row.text, x, baseline, kTextScale, 1.0f, 1.0f, 1.0f);
+            ui.drawText(row.text, x, baseline, kTextScale,
+                        theme::textMuted.r, theme::textMuted.g, theme::textMuted.b);
 
         if (row.hasSwatch)
         {

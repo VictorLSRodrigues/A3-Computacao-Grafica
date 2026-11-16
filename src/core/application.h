@@ -9,6 +9,7 @@
 #include "settings.h"
 #include "ui/HUD.h"
 #include "ui/UI.h"
+#include "ui/light_panel.h"
 #include "ui/menu.h"
 #include "window.h"
 #include <glm/glm.hpp>
@@ -51,6 +52,7 @@ private:
 
     UI ui;
     Menu menu;
+    LightPanel lightPanel;
     HUD hud;
 
     enum class TransformTool

@@ -1594,13 +1594,16 @@ void Application::update(float deltaTime)
 // Desenha as ferramentas de transformação no canto superior direito.
 void Application::drawTransformToolbar()
 {
-    const float buttonSize = 46.0f;
-    const float gap = 7.0f;
-    const float margin = 20.0f;
+    const float screenWidth = static_cast<float>(window.getWidth());
+    const float margin = std::min(20.0f, screenWidth * 0.04f);
+    const float gap = std::min(7.0f, screenWidth * 0.015f);
+    const float buttonSize = std::min(
+        46.0f,
+        std::max(28.0f, (screenWidth - 2.0f * margin - 3.0f * gap) / 4.0f));
 
     const float totalWidth = buttonSize * 4.0f + gap * 3.0f;
 
-    const float x = static_cast<float>(window.getWidth()) - totalWidth - margin;
+    const float x = std::max(margin, screenWidth - totalWidth - margin);
     const float y = margin;
 
     // Botão Mover.
@@ -2081,6 +2084,9 @@ void Application::renderUI()
             drawExtrudeGizmo();
             break;
         }
+
+        if (lightSelected)
+            lightPanel.draw(window, ui, settings);
 
         // Desenha a barra de ferramentas.
         drawTransformToolbar();

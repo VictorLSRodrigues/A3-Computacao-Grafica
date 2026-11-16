@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string>
+#include <algorithm>
 
 #include <glm/glm.hpp>
 
@@ -107,39 +108,112 @@ struct PanelStyle
     bool dimBackground = true; // escurece a tela atrás (painel modal, como o menu)
 };
 
-// Desenha um painel com título no centro da tela. A altura dele se ajusta ao conteúdo.
+enum class PanelPlacement
+{
+    Center,
+    Right
+};
+
+// Desenha um painel com título. A altura dele se ajusta ao conteúdo.
 //
-// `content` monta as linhas usando o Layout e é chamado DUAS vezes por quadro:
-// a primeira só mede (nada é desenhado nem reage ao mouse) e a segunda desenha.
+// `content` pode ser medido mais de uma vez para ajustar o painel à janela;
+// as passagens de medição não desenham nem reagem ao mouse.
 // Por isso, não coloque dentro dele nada que deva acontecer uma vez só por quadro;
 // ações ligadas a botões, como trocar de página, funcionam normalmente.
-inline void drawCenteredPanel(const Window &window, UI &ui, const std::string &title,
-                              const PanelStyle &style,
-                              const std::function<void(Layout &)> &content)
+inline void drawPanel(const Window &window, UI &ui, const std::string &title,
+                      const PanelStyle &style, PanelPlacement placement,
+                      const std::function<void(Layout &)> &content)
 {
-    const float contentWidth = style.width - 2.0f * style.margin;
-
-    Layout measure(ui, 0.0f, 0.0f, contentWidth, style.rowHeight, style.gap, true);
-    content(measure);
-
-    const float panelHeight = style.margin + style.titleHeight + measure.height() + style.margin;
-
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
-    const float px = (screenW - style.width) / 2.0f;
-    const float py = (screenH - panelHeight) / 2.0f;
+    const float panelWidth = std::min(style.width, std::max(1.0f, screenW - 24.0f));
+    const float verticalReserve = placement == PanelPlacement::Right ? 96.0f : 24.0f;
+    const float maxPanelHeight = std::max(1.0f, screenH - verticalReserve);
+
+    float scale = 1.0f;
+    float panelHeight = 0.0f;
+    float panelMargin = style.margin;
+    float titleHeight = style.titleHeight;
+    float rowHeight = style.rowHeight;
+    float gap = style.gap;
+
+    const auto measurePanel = [&](float density)
+    {
+        const float margin = std::max(12.0f, style.margin * density);
+        const float title = std::max(44.0f, style.titleHeight * density);
+        const float row = std::max(28.0f, style.rowHeight * density);
+        const float rowGap = std::max(4.0f, style.gap * density);
+        const float contentWidth = panelWidth - 2.0f * margin;
+
+        Layout measure(ui, 0.0f, 0.0f, contentWidth, row, rowGap, true);
+        content(measure);
+
+        return margin * 2.0f + title + measure.height();
+    };
+
+    panelHeight = measurePanel(scale);
+    if (panelHeight > maxPanelHeight)
+    {
+        float low = 0.35f;
+        float high = 1.0f;
+        for (int i = 0; i < 12; ++i)
+        {
+            const float middle = (low + high) * 0.5f;
+            if (measurePanel(middle) <= maxPanelHeight)
+                low = middle;
+            else
+                high = middle;
+        }
+        scale = low;
+    }
+
+    panelMargin = std::max(12.0f, style.margin * scale);
+    titleHeight = std::max(44.0f, style.titleHeight * scale);
+    rowHeight = std::max(28.0f, style.rowHeight * scale);
+    gap = std::max(4.0f, style.gap * scale);
+    const float contentWidth = panelWidth - 2.0f * panelMargin;
+    Layout measure(ui, 0.0f, 0.0f, contentWidth, rowHeight, gap, true);
+    content(measure);
+    panelHeight = panelMargin * 2.0f + titleHeight + measure.height();
+
+    const float px = placement == PanelPlacement::Center
+        ? (screenW - panelWidth) / 2.0f
+        : screenW - panelWidth - 16.0f;
+    const float py = placement == PanelPlacement::Center
+        ? std::max(12.0f, (screenH - panelHeight) / 2.0f)
+        : std::min(80.0f, std::max(12.0f, screenH - panelHeight - 12.0f));
+    ui.addRegion(px, py, panelWidth, panelHeight);
 
     if (style.dimBackground)
         ui.drawRect(0.0f, 0.0f, screenW, screenH, 0.0f, 0.0f, 0.0f, theme::dimOpacity);
 
     const glm::vec3 &bg = theme::panelBackground;
     const glm::vec3 &accent = theme::accent;
-    ui.drawRect(px, py, style.width, panelHeight, bg.r, bg.g, bg.b, theme::panelOpacity);
-    ui.drawRect(px, py, style.width, theme::accentBarHeight, accent.r, accent.g, accent.b);
-    ui.drawTextCentered(title, px, py + style.margin, style.width, style.titleHeight,
+    ui.drawRect(px, py, panelWidth, panelHeight, bg.r, bg.g, bg.b, theme::panelOpacity);
+    ui.drawRect(px, py, 1.0f, panelHeight, theme::panelBorder.r, theme::panelBorder.g, theme::panelBorder.b);
+    ui.drawRect(px + panelWidth - 1.0f, py, 1.0f, panelHeight,
+                theme::panelBorder.r, theme::panelBorder.g, theme::panelBorder.b);
+    ui.drawRect(px, py + panelHeight - 1.0f, panelWidth, 1.0f,
+                theme::panelBorder.r, theme::panelBorder.g, theme::panelBorder.b);
+    ui.drawRect(px, py, panelWidth, theme::accentBarHeight, accent.r, accent.g, accent.b);
+    ui.drawTextCentered(title, px, py + panelMargin, panelWidth, titleHeight,
                         theme::titleScale, theme::text.r, theme::text.g, theme::text.b);
 
-    Layout layout(ui, px + style.margin, py + style.margin + style.titleHeight,
-                  contentWidth, style.rowHeight, style.gap, false);
+    Layout layout(ui, px + panelMargin, py + panelMargin + titleHeight,
+                  contentWidth, rowHeight, gap, false);
     content(layout);
+}
+
+inline void drawCenteredPanel(const Window &window, UI &ui, const std::string &title,
+                              const PanelStyle &style,
+                              const std::function<void(Layout &)> &content)
+{
+    drawPanel(window, ui, title, style, PanelPlacement::Center, content);
+}
+
+inline void drawRightPanel(const Window &window, UI &ui, const std::string &title,
+                           const PanelStyle &style,
+                           const std::function<void(Layout &)> &content)
+{
+    drawPanel(window, ui, title, style, PanelPlacement::Right, content);
 }

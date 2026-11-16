@@ -8,13 +8,12 @@
 class Menu
 {
 private:
-    enum class Page { Main, Options, Light };
+    enum class Page { Main, Options };
     bool open = false;
     Page page = Page::Main;
 
     void drawMain(const Window& window, UI& ui);
     void drawOptions(const Window& window, UI& ui, Settings& settings);
-    void drawLight(const Window& window, UI& ui, Settings& settings);
 
 public:
     void update(const Window& window); // ESC abre, fecha ou retorna à página anterior.

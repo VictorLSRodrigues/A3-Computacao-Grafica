@@ -44,6 +44,7 @@ add_executable(OpenGLProjeto
 
     src/ui/UI.cpp
     src/ui/HUD.cpp
+    src/ui/light_panel.cpp
     src/ui/menu.cpp
     src/ui/font.cpp
 
