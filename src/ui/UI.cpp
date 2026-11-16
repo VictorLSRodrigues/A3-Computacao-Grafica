@@ -1,10 +1,10 @@
 #include "UI.h"
 
-#include <functional>
 #include <algorithm>
 #include <iostream>
 #include <cstdio>
 #include <cmath>
+#include <functional>
 
 #include "graphics/shapes.h"
 

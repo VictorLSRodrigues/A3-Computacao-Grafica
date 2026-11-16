@@ -61,6 +61,15 @@ public:
     unsigned int getExtrudedFaceIndex(
         std::size_t meshIndex) const;
 
+    // Total de faces de todas as partes do modelo.
+    std::size_t getFaceCount() const
+    {
+        std::size_t total = 0;
+        for (const Mesh &mesh : meshes)
+            total += mesh.getFaces().size();
+        return total;
+    }
+
     // Retorna o raio aproximado utilizado na seleção do modelo.
     float getBoundingRadius() const { return boundingRadius; }
 

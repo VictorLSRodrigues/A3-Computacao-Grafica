@@ -16,10 +16,6 @@ private:
     void drawOptions(const Window& window, UI& ui, Settings& settings);
     void drawLight(const Window& window, UI& ui, Settings& settings);
 
-    // Desenha o fundo e o painel; px e py recebem a posição do canto superior esquerdo.
-    void drawPanel(const Window& window, UI& ui, const char* title,
-                   float panelW, float panelH, float& px, float& py);
-
 public:
     void update(const Window& window); // ESC abre, fecha ou retorna à página anterior.
     void draw(const Window& window, UI& ui, Settings& settings);

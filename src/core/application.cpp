@@ -1949,9 +1949,73 @@ void Application::renderUI()
     // Inicia a interface gráfica.
     ui.begin(window);
 
+    // Reúne os dados que o HUD exibe.
+    EnvironmentInfo info;
+    info.editing = editingMode;
+    switch (activeTransformTool)
+    {
+    case TransformTool::Move:
+        info.tool = "Mover";
+        break;
+    case TransformTool::Rotate:
+        info.tool = "Rotacionar";
+        break;
+    case TransformTool::Scale:
+        info.tool = "Escalar";
+        break;
+    case TransformTool::Extrude:
+        info.tool = "Extrusão";
+        break;
+    }
+    info.viewedModel = selectedModelName;
+    info.cameraPosition = camera.position;
+
+    switch (settings.lightType)
+    {
+    case LightType::Point:
+        info.lightType = "Ponto";
+        break;
+    case LightType::Directional:
+        info.lightType = "Direcional";
+        break;
+    case LightType::Spot:
+        info.lightType = "Holofote";
+        break;
+    }
+    info.lightPosition = light.position;
+    info.lightColor = glm::vec3(light.color);
+    info.lightSelected = lightSelected;
+
+    for (const Scene::Object &object : scene.getObjects())
+    {
+        ++info.objectCount;
+        if (!object.visible)
+            continue;
+
+        ++info.visibleObjectCount;
+        if (object.model)
+            info.faceCount += object.model->getFaceCount();
+        else if (object.mesh)
+            info.faceCount += object.mesh->getFaces().size();
+    }
+
+    const Scene::Object *selectedObject =
+        lightSelected ? nullptr : scene.getSelectedObject();
+    if (selectedObject)
+    {
+        info.hasSelection = true;
+        info.selectedName = selectedObject->name;
+        info.selectedPosition = selectedObject->transform.position;
+        info.selectedRotation = selectedObject->transform.rotation;
+        info.selectedScale = selectedObject->transform.scale;
+
+        const Scene::FaceSelection &face = scene.getSelectedFace();
+        info.hasFace = face.valid;
+        info.selectedFace = face.faceIndex;
+    }
+
     // Desenha o HUD e as informações da cena.
-    hud.draw(ui, camera.position);
-    hud.textmodel(ui, selectedModelName);
+    hud.draw(ui, info);
 
     // Desenha o menu.
     menu.draw(window, ui, settings);

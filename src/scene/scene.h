@@ -62,6 +62,9 @@ public:
         const glm::vec3 &rayOrigin,
         const glm::vec3 &rayDirection);
 
+    // Objetos da cena, somente para leitura.
+    const std::deque<Object> &getObjects() const { return objects; }
+
     // Retorna o objeto atualmente selecionado.
     Object *getSelectedObject() const { return selectedObject; }
 

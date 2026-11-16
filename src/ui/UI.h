@@ -32,6 +32,9 @@ public:
         float r, float g, float b,
         float a = 1.0f);
 
+    // Largura que o texto ocupa, em pixels, na escala informada.
+    float measureText(const std::string &text, float scale) const { return font.measure(text, scale); }
+
     // (x, y) indica o início da linha de base do texto.
     void drawText(const std::string &text, float x, float y, float scale,
                   float r, float g, float b, float a = 1.0f);
@@ -85,6 +88,7 @@ private:
     Shader textShader;
     Mesh quad;
     Font font;
+
     std::size_t activeSliderId = 0; // Slider sendo arrastado; 0 se nenhum.
 
     Shader iconShader;
