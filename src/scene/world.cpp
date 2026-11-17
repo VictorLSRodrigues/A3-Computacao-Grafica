@@ -38,12 +38,20 @@ bool buildWorld(Scene& scene)
     pyramidMesh->addTexture(std::move(specular));
 
     // Os modelos são opcionais: se algum falhar, a cena continua sem ele.
-    if (Scene::Object* monkey = scene.addModel(ASSETS_DIR "models/macaco.glb"))
+    if (Scene::Object* sacredMonkey = scene.addModel(ASSETS_DIR "models/Macaco sagrado.glb"))
     {
-        monkey->name = "macaco";
-        monkey->transform.position = glm::vec3(1.5f, 0.0f, 0.0f);
-        monkey->transform.scale = glm::vec3(0.5f);
+        sacredMonkey->name = "macaco_sagrado";
+        sacredMonkey->transform.position = glm::vec3(0.75f, 0.6f, -1.5f);
+        sacredMonkey->transform.scale = glm::vec3(0.5f);
     }
+
+    if (Scene::Object* lampada = scene.addModel(ASSETS_DIR "models/Lampada.glb"))
+    {
+        lampada->name = "lampada";
+        lampada->transform.position = glm::vec3(-0.75f, -1.48f, -1.5f);
+        lampada->transform.scale = glm::vec3(0.5f);
+    }
+
 
     //
     if (Scene::Object* multi = scene.addModel(ASSETS_DIR "models/Lampada.glb"))

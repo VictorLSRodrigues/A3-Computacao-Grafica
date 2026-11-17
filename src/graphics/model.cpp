@@ -354,8 +354,8 @@ void Model::loadMesh(unsigned int meshIndex, const glm::mat4 &matrix)
 			glm::vec3 transformedPosition =
 				glm::vec3(matrix * glm::vec4(position, 1.0f));
 
-			// transforma cada malha contribui para os limites gerais do modelo
-			boundingBox.expand(transformedPosition);
+			//transforma cada malha contribui para os limites gerais do modelo
+			boundingBox.expand(transformedPosition); 	
 
 			boundingRadius = std::max(
 				boundingRadius,
@@ -392,26 +392,17 @@ void Model::loadMesh(unsigned int meshIndex, const glm::mat4 &matrix)
 		std::vector<Vertex> vertices = assembleVertices(positions, normals, texUVs);
 
 		std::vector<Texture> textures;
-		glm::vec4 baseColor(1.0f);
-		loadMaterial(primitive, textures, baseColor);
+		Material material;
+		loadMaterial(primitive, textures, material);
 
 		Mesh &mesh = meshes.emplace_back();
 		if (!mesh.createIndexed(vertices, indices))
 			throw std::runtime_error("Failed to create model mesh.");
 
-		mesh.setBaseColor(baseColor);
+		mesh.setMaterial(material);
 
-		const std::string meshName =
-			JSON["meshes"][meshIndex].value(
-				"name",
-				std::string("Mesh ") + std::to_string(meshIndex));
-
-		std::cout
-			<< "[Topologia]"
-			<< " | Arquivo: " << file
-			<< " | Malha: " << meshName
-			<< " | Faces: " << mesh.getFaces().size()
-			<< std::endl;
+		for (Texture &texture : textures)
+			mesh.addTexture(std::move(texture));
 
 		// meshes e matricesMeshes andam juntas: a posição i de uma corresponde à posição i da outra.
 		matricesMeshes.push_back(matrix);
@@ -590,48 +581,63 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	return indices;
 }
 
-void Model::loadMaterial(const json &primitive, std::vector<Texture> &textures, glm::vec4 &baseColor)
+void Model::loadMaterial(const json &primitive,
+                         std::vector<Texture> &textures,
+                         Material &material)
 {
-	// Sem material, a parte usa a textura padrão da aplicação e cor neutra.
-	if (!primitive.contains("material"))
-		return;
+    // Sem material, mantém os valores padrão definidos em Material.
+    if (!primitive.contains("material"))
+        return;
 
-	const json &material = JSON["materials"][primitive["material"].get<unsigned int>()];
-	const json pbr = material.value("pbrMetallicRoughness", json::object());
+    const unsigned int materialIndex = primitive["material"].get<unsigned int>();
+    if (!JSON.contains("materials") || materialIndex >= JSON["materials"].size())
+        return;
 
-	// A cor base multiplica a textura; sem textura, é a própria cor da parte.
-	if (pbr.contains("baseColorFactor"))
-	{
-		for (unsigned int i = 0; i < 4; i++)
-			baseColor[i] = pbr["baseColorFactor"][i].get<float>();
-	}
+    const json &materialJson = JSON["materials"][materialIndex];
+    const json pbr = materialJson.value("pbrMetallicRoughness", json::object());
 
-	Texture colorTexture;
-	if (pbr.contains("baseColorTexture") && loadMaterialTexture(pbr["baseColorTexture"], colorTexture))
-	{
-		colorTexture.setType("diffuse");
-		textures.push_back(std::move(colorTexture));
-	}
-	else
-	{
-		// Sem imagem: usa um pixel branco para a cor do material aparecer pura,
-		// sem ser tingida pela textura padrão.
-		const unsigned char white[4] = {255, 255, 255, 255};
-		Texture solid;
-		if (solid.create(1, 1, 4, white))
-		{
-			solid.setType("diffuse");
-			textures.push_back(std::move(solid));
-		}
-	}
+    if (pbr.contains("baseColorFactor") && pbr["baseColorFactor"].is_array() &&
+        pbr["baseColorFactor"].size() == 4)
+    {
+        for (unsigned int i = 0; i < 4; ++i)
+            material.baseColorFactor[i] = pbr["baseColorFactor"][i].get<float>();
+    }
 
-	Texture shineTexture;
-	if (pbr.contains("metallicRoughnessTexture") && loadMaterialTexture(pbr["metallicRoughnessTexture"], shineTexture))
-	{
-		shineTexture.setType("specular");
-		textures.push_back(std::move(shineTexture));
-	}
+    material.metallicFactor = pbr.value("metallicFactor", 1.0f);
+    material.roughnessFactor = pbr.value("roughnessFactor", 1.0f);
+    material.metallicFactor = std::clamp(material.metallicFactor, 0.0f, 1.0f);
+    material.roughnessFactor = std::clamp(material.roughnessFactor, 0.04f, 1.0f);
+
+    Texture colorTexture;
+    if (pbr.contains("baseColorTexture") &&
+        loadMaterialTexture(pbr["baseColorTexture"], colorTexture))
+    {
+        colorTexture.setType("diffuse");
+        textures.push_back(std::move(colorTexture));
+    }
+    else
+    {
+        // Pixel branco: permite que baseColorFactor apareça sem ser tingido
+        // pela textura padrão usada pela aplicação.
+        const unsigned char white[4] = {255, 255, 255, 255};
+        Texture solid;
+        if (solid.create(1, 1, 4, white))
+        {
+            solid.setType("diffuse");
+            textures.push_back(std::move(solid));
+        }
+    }
+
+    // No glTF, G = roughness e B = metallic. Não é um mapa specular tradicional.
+    Texture metallicRoughnessTexture;
+    if (pbr.contains("metallicRoughnessTexture") &&
+        loadMaterialTexture(pbr["metallicRoughnessTexture"], metallicRoughnessTexture))
+    {
+        metallicRoughnessTexture.setType("metallicRoughness");
+        textures.push_back(std::move(metallicRoughnessTexture));
+    }
 }
+
 
 bool Model::loadMaterialTexture(const json &textureInfo, Texture &texture)
 {

@@ -136,6 +136,11 @@ void Shader::setInt(const char *name, int value) const
     glUniform1i(glGetUniformLocation(program, name), value);
 }
 
+void Shader::setFloat(const char *name, float value) const
+{
+    glUniform1f(glGetUniformLocation(program, name), value);
+}
+
 void Shader::Default()
 {
     createFromFiles(

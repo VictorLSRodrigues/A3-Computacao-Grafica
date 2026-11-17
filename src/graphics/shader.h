@@ -27,5 +27,6 @@ public:
     void setVec4(const char *name, float x, float y, float z, float w) const;
     void setMat4(const char *name, const glm::mat4 &matrix) const;
     void setInt(const char *name, int value) const;
+    void setFloat(const char *name, float value) const;
     void Default();
 };

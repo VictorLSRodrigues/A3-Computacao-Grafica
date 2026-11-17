@@ -11,6 +11,7 @@
 #include "texture.h"
 #include "bounding_box.h"
 #include "face.h"
+#include "material.h"
 
 class Shader;
 
@@ -49,6 +50,8 @@ private:
     // Cor que multiplica a textura ao desenhar (vem do material do modelo).
     glm::vec4 baseColor{1.0f};
 
+    Material material{};
+
     // Raio aproximado da malha, calculado a partir dos vértices.
     float boundingRadius = 0.0f;
 
@@ -75,10 +78,22 @@ public:
     Mesh(const Mesh &) = delete;
     Mesh &operator=(const Mesh &) = delete;
 
-    void addTexture(Texture &&texture);
-    void setBaseColor(const glm::vec4 &color) { baseColor = color; }
+    void addTexture(Texture&& texture);
+    void setTexture(Texture&& texture); // Substitui uma textura do mesmo tipo.
+    void setMaterial(const Material& material)
+    {
+        this->material = material;
+        baseColor = material.baseColorFactor;
+    }
+    void setBaseColor(const glm::vec4& color)
+    {
+        baseColor = color;
+        material.baseColorFactor = color;
+    }
 
-    const std::vector<Texture> &getTextures() const;
+    const Material& getMaterial() const { return material; }
+    
+    const std::vector<Texture>& getTextures() const;
 
     const std::vector<Face> &getFaces() const
     {

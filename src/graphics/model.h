@@ -10,6 +10,7 @@
 #include "texture.h"
 #include "bounding_box.h"
 #include <cstddef>
+#include "material.h"
 
 using json = nlohmann::json;
 
@@ -98,7 +99,7 @@ private:
     void traverseNode(unsigned int nodeIndex, glm::mat4 parentTransform = glm::mat4(1.0f));
 
     // Lê o material da parte: cor base e texturas de cor e de brilho.
-    void loadMaterial(const json &primitive, std::vector<Texture> &textures, glm::vec4 &baseColor);
+    void loadMaterial(const json &primitive, std::vector<Texture> &textures, Material &material);
     // Carrega a imagem apontada por uma textura do material; retorna false se ela não tiver imagem.
     bool loadMaterialTexture(const json &textureInfo, Texture &texture);
     // Carrega uma imagem do arquivo, seja ela externa ou embutida no GLB.

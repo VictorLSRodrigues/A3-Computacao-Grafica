@@ -832,7 +832,7 @@ void Mesh::draw(Shader &shader, const Texture *diffuseFallback) const
     // Associa cada textura à unidade usada pelo shader.
     for (const Texture &texture : textures)
     {
-        if (texture.getType() == "diffuse")
+        if (texture.getType() == "diffuse" || texture.getType() == "fallback")
         {
             hasDiffuse = true;
             texture.bind(0);
@@ -903,7 +903,31 @@ void Mesh::addTexture(Texture &&texture)
     textures.push_back(std::move(texture));
 }
 
+void Mesh::setTexture(Texture &&texture)
+{
+    for (Texture &current : textures)
+    {
+        const bool sameType = current.getType() == texture.getType();
+        const bool replacingNeutral =
+            texture.getType() == "diffuse" && current.getType() == "fallback";
+
+        if (sameType || replacingNeutral)
+        {
+            current = std::move(texture);
+            return;
+        }
+    }
+
+    textures.push_back(std::move(texture));
+}
+
 const std::vector<Texture> &Mesh::getTextures() const
 {
     return textures;
 }
+
+bool createIndexed(
+    const std::vector<Vertex>& vertices,
+    const std::vector<unsigned int>& indices,
+    GLenum drawMode = GL_TRIANGLES
+);
