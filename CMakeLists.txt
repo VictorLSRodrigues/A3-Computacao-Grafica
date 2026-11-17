@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.20)
 
 project(OpenGLProjeto
@@ -19,35 +20,47 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(Libraries/glfw-3.5.1)
 
 add_executable(OpenGLProjeto
-    src/main.cpp
-    src/window.cpp
-    src/camera.cpp
+    # Application: Sandbox
+    src/applications/sandbox/main.cpp
+    src/applications/sandbox/application.cpp
+    src/applications/sandbox/world.cpp
 
-    src/core/application.cpp
-    src/core/renderer.cpp
+    # Application: Sandbox UI
+    src/applications/sandbox/ui/HUD.cpp
+    src/applications/sandbox/ui/light_panel.cpp
+    src/applications/sandbox/ui/menu.cpp
 
-    src/scene/scene.cpp
-    src/scene/world.cpp
-    src/scene/light.cpp
+    # Engine: Platform
+    src/engine/platform/window.cpp
 
-    src/graphics/shader.cpp
-    src/graphics/texture.cpp
-    src/graphics/cubemap.cpp
-    src/graphics/skybox.cpp
-    src/graphics/mesh.cpp
-    src/graphics/model.cpp
-    src/graphics/shapes.cpp
-    src/graphics/buffers/VAO.cpp
-    src/graphics/buffers/VBO.cpp
-    src/graphics/buffers/EBO.cpp
-    src/graphics/bounding_box.cpp
+    # Engine: Graphics
+    src/engine/graphics/camera.cpp
+    src/engine/graphics/bounding_box.cpp
+    src/engine/graphics/cubemap.cpp
+    src/engine/graphics/mesh.cpp
+    src/engine/graphics/model.cpp
+    src/engine/graphics/shader.cpp
+    src/engine/graphics/shapes.cpp
+    src/engine/graphics/skybox.cpp
+    src/engine/graphics/texture.cpp
 
-    src/ui/UI.cpp
-    src/ui/HUD.cpp
-    src/ui/light_panel.cpp
-    src/ui/menu.cpp
-    src/ui/font.cpp
+    # Engine: Graphics Buffers
+    src/engine/graphics/buffers/EBO.cpp
+    src/engine/graphics/buffers/VAO.cpp
+    src/engine/graphics/buffers/VBO.cpp
 
+    # Engine: Renderer
+    src/engine/renderer/renderer.cpp
+
+    # Engine: Scene
+    src/engine/scene/light.cpp
+    src/engine/scene/scene.cpp
+
+    # Engine: UI
+    src/engine/ui/UI.cpp
+    src/engine/ui/font.cpp
+
+    # Dependencies
     Libraries/glad/src/glad.c
 )
 
