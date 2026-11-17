@@ -21,8 +21,8 @@ bool Skybox::load(const std::string& folder, const std::string& extension)
         return false;
 
     if (!shader.createFromFiles(
-            ASSETS_DIR "shaders/sky.vert",
-            ASSETS_DIR "shaders/sky.frag"))
+            ASSETS_DIR "engine/shaders/sky.vert",
+            ASSETS_DIR "engine/shaders/sky.frag"))
     {
         std::cout << "Falha ao criar o shader do ceu!" << std::endl;
         return false;

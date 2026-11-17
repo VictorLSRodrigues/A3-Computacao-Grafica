@@ -144,6 +144,6 @@ void Shader::setFloat(const char *name, float value) const
 void Shader::Default()
 {
     createFromFiles(
-        "shaders/default.vert",
-        "shaders/default.frag");
+        "engine/shaders/default.vert",
+        "engine/shaders/default.frag");
 }

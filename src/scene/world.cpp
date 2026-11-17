@@ -27,8 +27,8 @@ bool buildWorld(Scene& scene)
     Texture diffuse;
     Texture specular;
 
-    if (!diffuse.load(ASSETS_DIR "textures/terra.png") ||
-        !specular.load(ASSETS_DIR "textures/terraSpecular.png"))
+    if (!diffuse.load(ASSETS_DIR "sandbox/textures/terra.png") ||
+        !specular.load(ASSETS_DIR "sandbox/textures/terraSpecular.png"))
         return false;
 
     diffuse.setType("diffuse");
@@ -38,14 +38,14 @@ bool buildWorld(Scene& scene)
     pyramidMesh->addTexture(std::move(specular));
 
     // Os modelos são opcionais: se algum falhar, a cena continua sem ele.
-    if (Scene::Object* sacredMonkey = scene.addModel(ASSETS_DIR "models/macaco_sagrado.glb"))
+    if (Scene::Object* sacredMonkey = scene.addModel(ASSETS_DIR "sandbox/models/macaco_sagrado.glb"))
     {
         sacredMonkey->name = "macaco_sagrado";
         sacredMonkey->transform.position = glm::vec3(0.75f, 0.6f, -1.5f);
         sacredMonkey->transform.scale = glm::vec3(0.5f);
     }
 
-    if (Scene::Object* lampada = scene.addModel(ASSETS_DIR "models/Lampada.glb"))
+    if (Scene::Object* lampada = scene.addModel(ASSETS_DIR "sandbox/models/Lampada.glb"))
     {
         lampada->name = "lampada";
         lampada->transform.position = glm::vec3(-0.75f, -1.48f, -1.5f);
@@ -54,7 +54,7 @@ bool buildWorld(Scene& scene)
 
 
     //
-    if (Scene::Object* multi = scene.addModel(ASSETS_DIR "models/Lampada.glb"))
+    if (Scene::Object* multi = scene.addModel(ASSETS_DIR "sandbox/models/Lampada.glb"))
     {
         multi->name = "multi";
         const float multiScale = 0.1f; // ajuste aqui: menor = modelo menor

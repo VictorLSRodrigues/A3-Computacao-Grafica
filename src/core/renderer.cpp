@@ -4,7 +4,7 @@
 
 bool Renderer::init()
 {
-    if (!defaultTexture.load(ASSETS_DIR "textures/default.png"))
+    if (!defaultTexture.load(ASSETS_DIR "engine/textures/default.png"))
     {
         std::cout << "Falha ao carregar a textura padrao!" << std::endl;
         return false;
@@ -14,7 +14,7 @@ bool Renderer::init()
         return false;
 
     // O céu é opcional: sem ele, a cena usa a cor de fundo lisa.
-    if (!skybox.load(ASSETS_DIR "skybox/"))
+    if (!skybox.load(ASSETS_DIR "engine/skybox/"))
         std::cout << "Ceu desativado: nao consegui carregar a pasta assets/skybox." << std::endl;
 
     // Objetos próximos escondem os que estão atrás; faces voltadas para longe da câmera são descartadas.
@@ -27,8 +27,8 @@ bool Renderer::init()
 bool Renderer::loadShaders()
 {
     if (!sceneShader.createFromFiles(
-            ASSETS_DIR "shaders/default.vert",
-            ASSETS_DIR "shaders/default.frag"))
+            ASSETS_DIR "engine/shaders/default.vert",
+            ASSETS_DIR "engine/shaders/default.frag"))
     {
         std::cout << "Falha ao criar o shader da cena!" << std::endl;
         return false;
@@ -39,8 +39,8 @@ bool Renderer::loadShaders()
     sceneShader.setInt("specular0", 1);
 
     if (!lightShader.createFromFiles(
-            ASSETS_DIR "shaders/light.vert",
-            ASSETS_DIR "shaders/light.frag"))
+            ASSETS_DIR "engine/shaders/light.vert",
+            ASSETS_DIR "engine/shaders/light.frag"))
     {
         std::cout << "Falha ao criar o shader da luz!" << std::endl;
         return false;

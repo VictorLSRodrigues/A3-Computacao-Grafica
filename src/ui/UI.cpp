@@ -11,13 +11,13 @@
 
 bool UI::create()
 {
-    if (!rectShader.createFromFiles(ASSETS_DIR "shaders/ui.vert", ASSETS_DIR "shaders/ui.frag"))
+    if (!rectShader.createFromFiles(ASSETS_DIR "engine/shaders/ui.vert", ASSETS_DIR "engine/shaders/ui.frag"))
     {
         std::cout << "Falha ao criar o shader da UI!" << std::endl;
         return false;
     }
 
-    if (!textShader.createFromFiles(ASSETS_DIR "shaders/text.vert", ASSETS_DIR "shaders/text.frag"))
+    if (!textShader.createFromFiles(ASSETS_DIR "engine/shaders/text.vert", ASSETS_DIR "engine/shaders/text.frag"))
     {
         std::cout << "Falha ao criar o shader de texto!" << std::endl;
         return false;
@@ -30,24 +30,24 @@ bool UI::create()
     }
 
     if (!iconShader.createFromFiles(
-            ASSETS_DIR "shaders/text.vert",
-            ASSETS_DIR "shaders/icon.frag"))
+            ASSETS_DIR "engine/shaders/text.vert",
+            ASSETS_DIR "engine/shaders/icon.frag"))
     {
         std::cout << "Falha ao criar o shader dos icones!" << std::endl;
         return false;
     }
 
-    if (!moveIcon.load(ASSETS_DIR "icons/move.png", false) ||
-        !rotateIcon.load(ASSETS_DIR "icons/rotate-3d.png", false) ||
-        !scaleIcon.load(ASSETS_DIR "icons/scaling.png", false) ||
-        !extrudeIcon.load(ASSETS_DIR "icons/extrude.png", false))
+    if (!moveIcon.load(ASSETS_DIR "editor/icons/move.png", false) ||
+        !rotateIcon.load(ASSETS_DIR "editor/icons/rotate-3d.png", false) ||
+        !scaleIcon.load(ASSETS_DIR "editor/icons/scaling.png", false) ||
+        !extrudeIcon.load(ASSETS_DIR "editor/icons/extrude.png", false))
 
     {
         std::cout << "Falha ao carregar os icones da UI!" << std::endl;
         return false;
     }
 
-    return font.load(ASSETS_DIR "fonts/DejaVuSans.ttf");
+    return font.load(ASSETS_DIR "engine/fonts/DejaVuSans.ttf");
 }
 
 // Configura o OpenGL para desenhar a interface transparente sobre a cena.
