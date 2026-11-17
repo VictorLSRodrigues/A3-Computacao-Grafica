@@ -28,6 +28,18 @@ public:
         // Opcional: chamada a cada quadro para animar o objeto.
         std::function<void(Transform &, float)> update;
         bool visible = true;
+
+        // Caixa envolvente do modelo ou da malha; nullptr se o objeto não tiver nenhum dos dois.
+        const BoundingBox *boundingBox() const
+        {
+            if (model)
+                return &model->getBoundingBox();
+
+            if (mesh)
+                return &mesh->getBoundingBox();
+
+            return nullptr;
+        }
     };
 
     // Identifica uma face selecionada dentro de uma malha.

@@ -9,22 +9,34 @@ Camera::Camera(int width, int height, glm::vec3 position)
     this->position = position;
 }
 
-void Camera::setViewProjection(float fovDegrees, float nearPlane, float farPlane, Shader &shader, const char *uniformName, bool ignoreTranslation)
+glm::mat4 Camera::viewMatrix() const
 {
-    glm::mat4 view = glm::mat4(1.0f);
-    glm::mat4 projection = glm::mat4(1.0f);
+    return glm::lookAt(position, position + orientation, up);
+}
 
-    view = glm::lookAt(position, position + orientation, up);
-
-        // Sem a translação, só a rotação da câmera vale: o céu parece infinitamente distante.
-    if (ignoreTranslation)
-        view = glm::mat4(glm::mat3(view));
-
-    projection = glm::perspective(
+glm::mat4 Camera::projectionMatrix(float fovDegrees) const
+{
+    return glm::perspective(
         glm::radians(fovDegrees),
         static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight),
         nearPlane,
         farPlane);
+}
+
+glm::mat4 Camera::viewProjectionMatrix(float fovDegrees) const
+{
+    return projectionMatrix(fovDegrees) * viewMatrix();
+}
+
+void Camera::setViewProjection(float fovDegrees, Shader &shader, const char *uniformName, bool ignoreTranslation)
+{
+    glm::mat4 view = viewMatrix();
+
+    // Sem a translação, só a rotação da câmera vale: o céu parece infinitamente distante.
+    if (ignoreTranslation)
+        view = glm::mat4(glm::mat3(view));
+
+    const glm::mat4 projection = projectionMatrix(fovDegrees);
 
     glUniformMatrix4fv(
         glGetUniformLocation(shader.ID, uniformName),

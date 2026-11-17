@@ -25,6 +25,9 @@ add_executable(OpenGLProjeto
     src/applications/sandbox/application.cpp
     src/applications/sandbox/world.cpp
 
+    # Application: Sandbox Editor
+    src/applications/sandbox/editor/gizmo.cpp
+
     # Application: Sandbox UI
     src/applications/sandbox/ui/HUD.cpp
     src/applications/sandbox/ui/light_panel.cpp
@@ -54,6 +57,7 @@ add_executable(OpenGLProjeto
 
     # Engine: Scene
     src/engine/scene/light.cpp
+    src/engine/scene/picking.cpp
     src/engine/scene/scene.cpp
 
     # Engine: UI

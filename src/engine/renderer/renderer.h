@@ -22,10 +22,6 @@ public:
 private:
     bool loadShaders();
 
-    // Distâncias mínima e máxima visíveis pela câmera.
-    static constexpr float nearPlane = 0.1f;
-    static constexpr float farPlane = 100.0f;
-
     Shader sceneShader;
     Shader lightShader;
     Texture defaultTexture;

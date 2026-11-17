@@ -57,15 +57,15 @@ void Renderer::render(Scene &scene, const Light &light, Camera &camera, const Se
     // A cena, iluminada pela luz escolhida.
     sceneShader.use();
     light.apply(sceneShader, settings.lightType, camera);
-    camera.setViewProjection(settings.fov, nearPlane, farPlane, sceneShader, "camMatrix");
+    camera.setViewProjection(settings.fov, sceneShader, "camMatrix");
     scene.draw(sceneShader, camera, defaultTexture);
 
     // O cubo que marca onde a luz está.
     lightShader.use();
-    camera.setViewProjection(settings.fov, nearPlane, farPlane, lightShader, "camMatrix");
+    camera.setViewProjection(settings.fov, lightShader, "camMatrix");
     light.drawMarker(lightShader);
     
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (settings.showSkybox)
-        skybox.draw(camera, settings.fov, nearPlane, farPlane);
+        skybox.draw(camera, settings.fov);
 }
