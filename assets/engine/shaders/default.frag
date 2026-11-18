@@ -1,110 +1,224 @@
+
+
 #version 330 core
 
-// Cor final do fragmento, em RGBA.
 out vec4 FragColor;
 
-
-// Dados interpolados recebidos do shader de vértices.
+// Dados interpolados do vertex shader.
 in vec3 color;
 in vec2 texCoord;
 in vec3 Normal;
 in vec3 crntPos;
 
-// Texturas e parâmetros enviados pela aplicação.
+// Texturas.
 uniform sampler2D tex0;
 uniform sampler2D specular0;
-uniform vec4 baseColor; // cor do material, multiplica a textura
+uniform sampler2D metallicRoughnessMap;
+
+// Material.
+uniform vec4 baseColor;
+uniform float metallicFactor;
+uniform float roughnessFactor;
+uniform int hasMetallicRoughnessMap;
+
+// Iluminação.
 uniform int lightType;
 uniform vec4 lightColor;
 uniform vec3 lightPos;
-uniform vec3 lightDir; // direção em que a luz viaja, com comprimento 1
+uniform vec3 lightDir;
 uniform vec3 camPos;
 
+const float PI = 3.14159265359;
 
-vec4 pointLight()
+// Distribuição de microfacetas GGX.
+float distributionGGX(vec3 N, vec3 H, float roughness)
 {
-	// Combina as componentes ambiente, difusa e especular; a luz perde força com a distância.
-	// Vetor da superfície até a luz, reutilizado nos cálculos seguintes.
-	vec3 lightVec = lightPos - crntPos;
+    float a = roughness * roughness;
+    float a2 = a * a;
 
-	float dist = length(lightVec);
-	float a = 3.0;
-	float b = 0.7;
-	float inten = 1.0f / (a * dist * dist + b * dist + 1.0f);
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
 
-	// A iluminação ambiente mantém uma contribuição mínima.
-	float ambient = 0.20f;
+    float denominator =
+        NdotH2 * (a2 - 1.0) + 1.0;
 
-	// A difusa depende do ângulo entre a normal e a luz.
-	vec3 normal = normalize(Normal);
-	vec3 lightDirection = normalize(lightVec);
-	float diffuse = max(dot(normal, lightDirection), 0.0f);
-
-	// A especular destaca superfícies cujo reflexo aponta para a câmera.
-	float specularLight = 0.50f;
-	vec3 viewDirection = normalize(camPos - crntPos);
-	vec3 reflectionDirection = reflect(-lightDirection, normal);
-	float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
-	float specular = specAmount * specularLight;
-
-	return (texture(tex0, texCoord) * baseColor * (diffuse * inten + ambient) + texture(specular0, texCoord).r * specular * inten) * lightColor;
+    return a2 /
+        max(PI * denominator * denominator, 0.000001);
 }
 
-vec4 direcLight()
+// Geometria Schlick-GGX.
+float geometrySchlickGGX(float NdotV, float roughness)
 {
-	// A direção da luz é constante em toda a cena.
-	float ambient = 0.20f;
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
 
-	vec3 normal = normalize(Normal);
-	// A luz vem do lado oposto ao da direção em que ela viaja.
-	vec3 lightDirection = normalize(-lightDir);
-	float diffuse = max(dot(normal, lightDirection), 0.0f);
-
-	float specularLight = 0.50f;
-	vec3 viewDirection = normalize(camPos - crntPos);
-	vec3 reflectionDirection = reflect(-lightDirection, normal);
-	float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
-	float specular = specAmount * specularLight;
-
-	return (texture(tex0, texCoord) * baseColor * (diffuse + ambient) + texture(specular0, texCoord).r * specular) * lightColor;
+    return NdotV /
+        max(NdotV * (1.0 - k) + k, 0.000001);
 }
 
-vec4 spotLight()
+// Geometria Smith.
+float geometrySmith(
+    vec3 N,
+    vec3 V,
+    vec3 L,
+    float roughness)
 {
-	// O cone interno é totalmente iluminado; a borda entre os cones é suavizada.
-	float outerCone = 0.90f;
-	float innerCone = 0.95f;
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
 
-	float ambient = 0.20f;
+    float ggxV = geometrySchlickGGX(NdotV, roughness);
+    float ggxL = geometrySchlickGGX(NdotL, roughness);
 
-	vec3 normal = normalize(Normal);
-	vec3 lightDirection = normalize(lightPos - crntPos);
-	float diffuse = max(dot(normal, lightDirection), 0.0f);
-
-	float specularLight = 0.50f;
-	vec3 viewDirection = normalize(camPos - crntPos);
-	vec3 reflectionDirection = reflect(-lightDirection, normal);
-	float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
-	float specular = specAmount * specularLight;
-
-	// Suaviza a intensidade conforme a superfície se aproxima da borda do cone.
-	// O eixo do holofote é a direção da luz.
-	float angle = dot(lightDir, -lightDirection);
-	float inten = clamp((angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0f);
-
-	return (texture(tex0, texCoord) * baseColor * (diffuse * inten + ambient) + texture(specular0, texCoord).r * specular * inten) * lightColor;
+    return ggxV * ggxL;
 }
 
+// Fresnel Schlick.
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) *
+        pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+// Iluminação PBR.
+vec3 calculatePBR(
+    vec3 N,
+    vec3 V,
+    vec3 L,
+    vec3 radiance,
+    vec3 albedo,
+    float metallic,
+    float roughness)
+{
+    vec3 H = normalize(V + L);
+
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotV = max(dot(N, V), 0.0);
+
+    if (NdotL <= 0.0 || NdotV <= 0.0)
+        return vec3(0.0);
+
+    // Reflexão na superfície.
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+    vec3 F = fresnelSchlick(
+        max(dot(H, V), 0.0),
+        F0
+    );
+
+    float D = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+
+    vec3 numerator = D * G * F;
+
+    float denominator =
+        4.0 * NdotV * NdotL + 0.0001;
+
+    vec3 specular = numerator / denominator;
+
+    // Conservação de energia.
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+
+    vec3 diffuse = kD * albedo / PI;
+
+    return (diffuse + specular) * radiance * NdotL;
+}
 
 void main()
 {
-	vec4 resultado;
-	if (lightType == 0)
-		resultado = pointLight();
-	else if (lightType == 1)
-		resultado = direcLight();
-	else
-		resultado = spotLight();
+    // Cor-base e transparência.
+    vec4 albedoSample = texture(tex0, texCoord) * baseColor;
+    vec3 albedo = max(albedoSample.rgb, vec3(0.0));
 
-    FragColor = vec4(resultado.rgb, 1.0);
+    // Fatores do material.
+    float metallic = clamp(metallicFactor, 0.0, 1.0);
+    float roughness = clamp(roughnessFactor, 0.04, 1.0);
+
+    // No glTF: G = roughness e B = metallic.
+    if (hasMetallicRoughnessMap == 1)
+    {
+        vec4 mr = texture(metallicRoughnessMap, texCoord);
+
+        roughness *= mr.g;
+        metallic *= mr.b;
+
+        roughness = clamp(roughness, 0.04, 1.0);
+        metallic = clamp(metallic, 0.0, 1.0);
+    }
+
+	
+
+    vec3 N = normalize(Normal);
+    vec3 V = normalize(camPos - crntPos);
+
+    vec3 L;
+    vec3 radiance = lightColor.rgb;
+    float attenuation = 1.0;
+
+    // Luz pontual.
+    if (lightType == 0)
+    {
+        vec3 lightVector = lightPos - crntPos;
+        float distanceToLight = length(lightVector);
+
+        L = normalize(lightVector);
+
+        float a = 3.0;
+        float b = 0.7;
+
+        attenuation = 1.0 /
+            (a * distanceToLight * distanceToLight +
+             b * distanceToLight + 1.0);
+    }
+    // Luz direcional.
+    else if (lightType == 1)
+    {
+        L = normalize(-lightDir);
+    }
+    // Holofote.
+    else
+    {
+        vec3 lightVector = lightPos - crntPos;
+        float distanceToLight = length(lightVector);
+
+        L = normalize(lightVector);
+
+        float outerCone = 0.90;
+        float innerCone = 0.95;
+
+        float angle = dot(normalize(lightDir), -L);
+
+        float coneIntensity = clamp(
+            (angle - outerCone) /
+            (innerCone - outerCone),
+            0.0,
+            1.0
+        );
+
+        float a = 3.0;
+        float b = 0.7;
+
+        attenuation =
+            coneIntensity /
+            (a * distanceToLight * distanceToLight +
+             b * distanceToLight + 1.0);
+    }
+
+    // Contribuição direta da luz.
+    vec3 directLighting = calculatePBR(
+        N,
+        V,
+        L,
+        radiance * attenuation,
+        albedo,
+        metallic,
+        roughness
+    );
+
+// Ambiente simplificado: não substitui iluminação por imagem (IBL).
+vec3 ambient = 0.12 * albedo;
+
+vec3 finalColor = ambient + directLighting;
+
+    FragColor = vec4(finalColor, albedoSample.a);
 }

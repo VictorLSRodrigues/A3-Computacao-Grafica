@@ -828,6 +828,7 @@ void Mesh::draw(Shader &shader, const Texture *diffuseFallback) const
 {
     bool hasDiffuse = false;
     bool hasSpecular = false;
+    bool hasMetallicRoughness = false;
 
     // Associa cada textura à unidade usada pelo shader.
     for (const Texture &texture : textures)
@@ -844,6 +845,12 @@ void Mesh::draw(Shader &shader, const Texture *diffuseFallback) const
             texture.bind(1);
             shader.setInt("specular0", 1);
         }
+        else if (texture.getType() == "metallicRoughness")
+        {
+            hasMetallicRoughness = true;
+            texture.bind(2);
+            shader.setInt("metallicRoughnessMap", 2);
+        }
     }
 
     if (!hasDiffuse && diffuseFallback)
@@ -858,7 +865,23 @@ void Mesh::draw(Shader &shader, const Texture *diffuseFallback) const
         glBindTexture(GL_TEXTURE_2D, 0);
         shader.setInt("specular0", 1);
     }
+
+    if (!hasMetallicRoughness)
+    {
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        shader.setInt("metallicRoughnessMap", 2);
+    }
+
     shader.setVec4("baseColor", baseColor.r, baseColor.g, baseColor.b, baseColor.a);
+    shader.setFloat("metallicFactor", material.metallicFactor);
+    shader.setFloat("roughnessFactor", material.roughnessFactor);
+    shader.setFloat("shininess", material.shininess);
+
+    shader.setInt(
+        "hasMetallicRoughnessMap",
+        hasMetallicRoughness ? 1 : 0);
+
     draw();
 
     // Restaurar a unidade de textura padrão
@@ -927,7 +950,6 @@ const std::vector<Texture> &Mesh::getTextures() const
 }
 
 bool createIndexed(
-    const std::vector<Vertex>& vertices,
-    const std::vector<unsigned int>& indices,
-    GLenum drawMode = GL_TRIANGLES
-);
+    const std::vector<Vertex> &vertices,
+    const std::vector<unsigned int> &indices,
+    GLenum drawMode = GL_TRIANGLES);

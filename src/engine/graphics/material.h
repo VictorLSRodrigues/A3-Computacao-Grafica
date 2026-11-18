@@ -7,7 +7,7 @@
 struct Material
 {
     glm::vec4 baseColorFactor{1.0f};
-    float metallicFactor = 1.0f;
+    float metallicFactor = 0.0f;
     float roughnessFactor = 1.0f;
     float shininess = 32.0f;
 };
