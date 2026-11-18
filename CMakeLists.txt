@@ -25,13 +25,15 @@ add_executable(OpenGLProjeto
     src/applications/sandbox/application.cpp
     src/applications/sandbox/world.cpp
 
-    # Application: Sandbox Editor
-    src/applications/sandbox/editor/gizmo.cpp
-
     # Application: Sandbox UI
     src/applications/sandbox/ui/HUD.cpp
+    src/applications/sandbox/ui/environment_info.cpp
     src/applications/sandbox/ui/light_panel.cpp
     src/applications/sandbox/ui/menu.cpp
+
+    # Engine: Editor
+    src/engine/editor/editor.cpp
+    src/engine/editor/gizmo.cpp
 
     # Engine: Platform
     src/engine/platform/window.cpp

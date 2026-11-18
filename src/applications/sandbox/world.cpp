@@ -74,3 +74,33 @@ bool buildWorld(Scene& scene)
 
     return true;
 }
+
+void handleModelShortcuts(const Window& window, Scene& scene, std::string& viewedModel)
+{
+    if (window.keyPressed(GLFW_KEY_1))
+    {
+        if (scene.showOnly("macaco"))
+            viewedModel = "macaco";
+        else
+            std::cout << "Objeto macaco nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_2))
+    {
+        if (scene.showOnly("multi"))
+            viewedModel = "multi";
+        else
+            std::cout << "Objeto multi nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_3))
+    {
+        if (scene.showOnly("pyramid"))
+            viewedModel = "pyramid";
+        else
+            std::cout << "Objeto pyramid nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_0))
+    {
+        scene.showAll();
+        viewedModel = "Todos";
+    }
+}

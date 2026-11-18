@@ -11,6 +11,7 @@
 #include "engine/ui/UI.h"
 #include "applications/sandbox/ui/light_panel.h"
 #include "applications/sandbox/ui/menu.h"
+#include "engine/editor/editor.h"
 #include "engine/platform/window.h"
 #include <glm/glm.hpp>
 
@@ -39,8 +40,6 @@ private:
     Window window;
 
     Settings settings;
-    bool editingMode = false;
-    bool lightSelected = false;
     std::string selectedModelName = "Todos";
 
     Renderer renderer;
@@ -51,75 +50,12 @@ private:
     Camera camera{1, 1, glm::vec3(0.0f, 0.0f, 2.0f)};
 
     UI ui;
+
+    // Usa a janela, a câmera, a cena, a luz, os ajustes e a UI acima;
+    // por isso é declarado depois deles.
+    Editor editor{window, camera, scene, light, settings, ui};
+
     Menu menu;
     LightPanel lightPanel;
     HUD hud;
-
-    enum class TransformTool
-    {
-        Move,
-        Rotate,
-        Scale,
-        Extrude
-    };
-
-    TransformTool activeTransformTool = TransformTool::Move;
-
-    // Estado do arraste do gizmo de movimentação.
-    bool draggingGizmo = false;
-    int draggedAxis = -1;
-
-    glm::vec3 dragStartPosition{0.0f};
-    glm::vec3 draggedWorldAxis{0.0f};
-
-    glm::vec2 dragStartMouse{0.0f};
-    glm::vec2 dragScreenDirection{0.0f};
-
-    // Estado do arraste do gizmo de rotação.
-    bool draggingRotationGizmo = false;
-    int rotatingAxis = -1;
-
-    // Estado do arraste do gizmo de Escala
-    bool draggingScaleGizmo = false;
-    int scalingAxis = -1;
-
-    glm::vec2 scaleStartMouse{0.0f};
-    glm::vec2 scaleScreenDirection{0.0f};
-
-    // Estado do arraste do gizmo de extrusão.
-    bool draggingExtrusionGizmo = false;
-
-    glm::vec2 extrusionStartMouse{0.0f};
-    glm::vec2 extrusionScreenDirection{0.0f};
-
-    float extrusionWorldPerPixel = 0.0f;
-    float extrusionDistance = 0.0f;
-
-    bool extrusionChanged = false;
-
-    glm::vec3 scalePivotLocal{0.0f};
-    glm::vec3 scalePivotWorld{0.0f};
-
-    glm::vec3 scaleStart{1.0f};
-
-    float scaleFactorPerPixel = 0.0f;
-
-    // Guarda a rotação original do objeto.
-    glm::vec3 rotationStart{0.0f};
-
-    // Guarda o vetor inicial do mouse no plano de rotação.
-    glm::vec3 rotationStartVector{0.0f};
-
-    // Guarda o eixo 3D escolhido.
-    glm::vec3 rotatingWorldAxis{0.0f};
-
-    float rotationAccumulatedAngle = 0.0f;
-
-    float dragWorldPerPixel = 0.0f;
-
-    void drawTransformToolbar();
-    void drawMoveGizmo();
-    void drawRotateGizmo();
-    void drawSelectedFaceOutline();
-    void drawExtrudeGizmo();
 };
