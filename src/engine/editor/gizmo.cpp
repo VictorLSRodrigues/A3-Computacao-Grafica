@@ -11,14 +11,16 @@ bool buildExtrudeGizmoProjection(
     const Camera &camera,
     float fovDegrees,
     const Scene &scene,
+    const Scene::Object *selectedObject,
+    const Scene::FaceSelection &selectedFace,
     ExtrudeGizmoProjection &result)
 {
-    if (!scene.getSelectedFace().valid)
+    if (!selectedFace.valid)
         return false;
 
     glm::vec3 a, b, c;
 
-    if (!scene.getSelectedFacePositions(a, b, c))
+    if (!scene.getFacePositions(selectedObject, selectedFace, a, b, c))
         return false;
 
     // A seta começa no primeiro vértice da face.

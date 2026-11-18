@@ -49,7 +49,7 @@ bool Renderer::loadShaders()
     return true;
 }
 
-void Renderer::render(Scene &scene, const Light &light, Camera &camera, const Settings &settings)
+void Renderer::render(const Scene &scene, const Light &light, Camera &camera, const Settings &settings)
 {
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -58,7 +58,7 @@ void Renderer::render(Scene &scene, const Light &light, Camera &camera, const Se
     sceneShader.use();
     light.apply(sceneShader, settings.lightType, camera);
     camera.setViewProjection(settings.fov, sceneShader, "camMatrix");
-    scene.draw(sceneShader, camera, defaultTexture);
+    drawScene(scene);
 
     // O cubo que marca onde a luz está.
     lightShader.use();
@@ -68,4 +68,28 @@ void Renderer::render(Scene &scene, const Light &light, Camera &camera, const Se
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (settings.showSkybox)
         skybox.draw(camera, settings.fov);
+}
+
+void Renderer::drawScene(const Scene &scene)
+{
+    for (const Scene::Object &object : scene.getObjects())
+    {
+        // Não desenha objetos ocultos.
+        if (!object.visible)
+            continue;
+
+        const glm::mat4 matrix = object.transform.matrix();
+
+        if (object.model)
+        {
+            // O modelo envia a matriz de cada parte dele,
+            // já combinada com a transformação do objeto.
+            object.model->draw(sceneShader, defaultTexture, matrix);
+        }
+        else if (object.mesh)
+        {
+            sceneShader.setMat4("model", matrix);
+            object.mesh->draw(sceneShader, &defaultTexture);
+        }
+    }
 }

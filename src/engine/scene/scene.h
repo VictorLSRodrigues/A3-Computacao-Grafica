@@ -7,15 +7,14 @@
 #include <string>
 #include <glm/glm.hpp>
 
-#include "engine/graphics/camera.h"
 #include "engine/graphics/mesh.h"
 #include "engine/graphics/model.h"
-#include "engine/graphics/shader.h"
-#include "engine/graphics/texture.h"
 #include "transform.h"
 #include <cstddef>
 
-// Mantém os objetos da cena e coordena o carregamento e o desenho deles.
+// Mantém os objetos da cena, responde às consultas de picking e executa operações
+// sobre os objetos. Não guarda o que está selecionado (isso é do Editor) nem desenha
+// (isso é do Renderer, que consulta os objetos por getObjects()).
 class Scene
 {
 public:
@@ -42,7 +41,7 @@ public:
         }
     };
 
-    // Identifica uma face selecionada dentro de uma malha.
+    // Identifica uma face dentro de uma malha de um objeto (resultado de pickFace).
     struct FaceSelection
     {
         std::size_t meshIndex = 0;
@@ -64,54 +63,46 @@ public:
     Object *addMesh(std::shared_ptr<Mesh> mesh, const std::string &name = "",
                     const Transform &transform = Transform{});
 
-    // Seleciona o objeto atingido pelo raio e retorna sua referência.
+    // Retorna o objeto mais próximo atingido pelo raio, ou nullptr se nenhum for atingido.
     Object *pickObject(
         const glm::vec3 &rayOrigin,
         const glm::vec3 &rayDirection);
 
-    // Seleciona a face atingida pelo raio do mouse.
+    // Procura a face atingida pelo raio do mouse. Retorna false se nenhuma for atingida.
+    // hitObject e hitFace recebem o resultado; sem acerto, ficam nullptr e inválida.
     bool pickFace(
         const glm::vec3 &rayOrigin,
-        const glm::vec3 &rayDirection);
+        const glm::vec3 &rayDirection,
+        Object *&hitObject,
+        FaceSelection &hitFace);
 
     // Objetos da cena, somente para leitura.
     const std::deque<Object> &getObjects() const { return objects; }
 
-    // Retorna o objeto atualmente selecionado.
-    Object *getSelectedObject() const { return selectedObject; }
-
-    // Retorna a face atualmente selecionada.
-    const FaceSelection &getSelectedFace() const
-    {
-        return selectedFace;
-    }
-
-    // Recupera as posições globais da face selecionada.
-    bool getSelectedFacePositions(
+    // Recupera as posições globais dos vértices de uma face do objeto.
+    bool getFacePositions(
+        const Object *object,
+        const FaceSelection &face,
         glm::vec3 &a,
         glm::vec3 &b,
         glm::vec3 &c) const;
 
-    // Inicia a extrusão da face selecionada.
-    bool beginSelectedFaceExtrusion();
+    // Inicia a extrusão de uma face do objeto.
+    bool beginFaceExtrusion(Object *object, const FaceSelection &face);
 
     // Atualiza a distância da extrusão.
-    bool updateSelectedFaceExtrusion(float distance);
+    bool updateFaceExtrusion(Object *object, const FaceSelection &face, float distance);
 
-    // Confirma a extrusão.
-    void finishSelectedFaceExtrusion();
+    // Confirma a extrusão; face passa a apontar para a nova face criada.
+    void finishFaceExtrusion(Object *object, FaceSelection &face);
 
     // Cancela a extrusão.
-    void cancelSelectedFaceExtrusion();
+    void cancelFaceExtrusion(Object *object, const FaceSelection &face);
 
     // Atualiza as animações dos objetos; deltaTime é o tempo do quadro, em segundos.
     void update(float deltaTime);
-    // Desenha os objetos com o shader ativo e a câmera configurada.
-    void draw(Shader &shader, Camera &camera, const Texture &fallbackTexture);
 
 private:
     std::map<std::string, std::shared_ptr<Model>> modelCache;
     std::deque<Object> objects; // Mantém válidos os ponteiros retornados ao adicionar objetos.
-    Object *selectedObject = nullptr;
-    FaceSelection selectedFace;
 };

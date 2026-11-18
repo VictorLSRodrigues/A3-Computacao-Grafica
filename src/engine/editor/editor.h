@@ -46,6 +46,11 @@ public:
 
     bool isEditing() const { return editingMode; }
     bool isLightSelected() const { return lightSelected; }
+
+    // Objeto e face selecionados (nullptr / face inválida se não há seleção).
+    // Quem precisa saber o que está selecionado (HUD, gizmos) consulta o Editor.
+    Scene::Object *getSelectedObject() const { return selectedObject; }
+    const Scene::FaceSelection &getSelectedFace() const { return selectedFace; }
     TransformTool activeTool() const { return activeTransformTool; }
 
 private:
@@ -57,6 +62,10 @@ private:
     UI &ui;
 
     bool editingMode = false;
+
+    // Estado da seleção. A Scene só responde às consultas de picking.
+    Scene::Object *selectedObject = nullptr;
+    Scene::FaceSelection selectedFace;
     bool lightSelected = false;
 
     TransformTool activeTransformTool = TransformTool::Move;

@@ -49,13 +49,6 @@ bool Scene::showOnly(const std::string &name)
 
     for (Object &object : objects)
         object.visible = object.name == name;
-
-    // Limpa a seleção caso o objeto selecionado fique oculto.
-    if (selectedObject && !selectedObject->visible)
-    {
-        selectedObject = nullptr;
-        selectedFace.valid = false;
-    }
     return true;
 }
 
@@ -91,8 +84,7 @@ Scene::Object *Scene::pickObject(
     const glm::vec3 &rayOrigin,
     const glm::vec3 &rayDirection)
 {
-    selectedObject = nullptr;
-    selectedFace.valid = false;
+    Object *nearestObject = nullptr;
 
     if (glm::length2(rayDirection) < 0.000001f)
         return nullptr;
@@ -151,21 +143,23 @@ Scene::Object *Scene::pickObject(
         if (distance >= 0.0f && distance < nearestDistance)
         {
             nearestDistance = distance;
-            selectedObject = &object;
+            nearestObject = &object;
         }
     }
 
-    return selectedObject;
+    return nearestObject;
 }
 
-// Seleciona a face atingida pelo raio do mouse.
+// Procura a face atingida pelo raio do mouse.
 bool Scene::pickFace(
     const glm::vec3 &rayOrigin,
-    const glm::vec3 &rayDirection)
+    const glm::vec3 &rayDirection,
+    Object *&hitObject,
+    FaceSelection &hitFace)
 {
-    // Limpa a seleção anterior.
-    selectedObject = nullptr;
-    selectedFace.valid = false;
+    // Sem acerto, o resultado é "nenhum objeto, face inválida".
+    hitObject = nullptr;
+    hitFace.valid = false;
 
     const float directionLength = glm::length(rayDirection);
 
@@ -288,44 +282,45 @@ bool Scene::pickFace(
     if (!nearestObject)
         return false;
 
-    // Guarda o objeto e a face selecionados.
-    selectedObject = nearestObject;
-    selectedFace = nearestSelection;
+    hitObject = nearestObject;
+    hitFace = nearestSelection;
 
     return true;
 }
 
-// Recupera os vértices globais da face selecionada.
-bool Scene::getSelectedFacePositions(
+// Recupera os vértices globais de uma face do objeto.
+bool Scene::getFacePositions(
+    const Object *object,
+    const FaceSelection &face,
     glm::vec3& a,
     glm::vec3& b,
     glm::vec3& c) const
 {
-    if (!selectedObject || !selectedFace.valid)
+    if (!object || !face.valid)
         return false;
 
     const glm::mat4 objectMatrix =
-        selectedObject->transform.matrix();
+        object->transform.matrix();
 
     // Modelo importado.
-    if (selectedObject->model)
+    if (object->model)
     {
-        return selectedObject->model->getFacePositions(
-            selectedFace.meshIndex,
-            selectedFace.faceIndex,
+        return object->model->getFacePositions(
+            face.meshIndex,
+            face.faceIndex,
             objectMatrix,
             a, b, c
         );
     }
 
     // Malha criada diretamente na cena.
-    if (selectedObject->mesh)
+    if (object->mesh)
     {
-        if (selectedFace.meshIndex != 0)
+        if (face.meshIndex != 0)
             return false;
 
-        if (!selectedObject->mesh->getFacePositions(
-                selectedFace.faceIndex,
+        if (!object->mesh->getFacePositions(
+                face.faceIndex,
                 a, b, c))
             return false;
 
@@ -340,132 +335,100 @@ bool Scene::getSelectedFacePositions(
 }
 
 
-bool Scene::beginSelectedFaceExtrusion()
+bool Scene::beginFaceExtrusion(Object *object, const FaceSelection &face)
 {
-    if (!selectedObject || !selectedFace.valid)
+    if (!object || !face.valid)
         return false;
 
     // Modelo importado.
-    if (selectedObject->model)
+    if (object->model)
     {
-        return selectedObject->model->beginExtrusion(
-            selectedFace.meshIndex,
-            selectedFace.faceIndex
+        return object->model->beginExtrusion(
+            face.meshIndex,
+            face.faceIndex
         );
     }
 
     // Malha criada diretamente na cena.
-    if (selectedObject->mesh)
+    if (object->mesh)
     {
-        if (selectedFace.meshIndex != 0)
+        if (face.meshIndex != 0)
             return false;
 
-        return selectedObject->mesh->beginExtrusion(
-            selectedFace.faceIndex
+        return object->mesh->beginExtrusion(
+            face.faceIndex
         );
     }
 
     return false;
 }
 
-bool Scene::updateSelectedFaceExtrusion(float distance)
+bool Scene::updateFaceExtrusion(Object *object, const FaceSelection &face, float distance)
 {
-    if (!selectedObject || !selectedFace.valid)
+    if (!object || !face.valid)
         return false;
 
-    if (selectedObject->model)
+    if (object->model)
     {
-        return selectedObject->model->updateExtrusion(
-            selectedFace.meshIndex,
+        return object->model->updateExtrusion(
+            face.meshIndex,
             distance
         );
     }
 
-    if (selectedObject->mesh)
+    if (object->mesh)
     {
-        return selectedObject->mesh->updateExtrusion(distance);
+        return object->mesh->updateExtrusion(distance);
     }
 
     return false;
 }
 
-void Scene::finishSelectedFaceExtrusion()
+void Scene::finishFaceExtrusion(Object *object, FaceSelection &face)
 {
-    if (!selectedObject || !selectedFace.valid)
+    if (!object || !face.valid)
         return;
 
     // Obtém o índice da nova tampa antes de finalizar.
-    if (selectedObject->model)
+    if (object->model)
     {
         const unsigned int newFace =
-            selectedObject->model->getExtrudedFaceIndex(
-                selectedFace.meshIndex
+            object->model->getExtrudedFaceIndex(
+                face.meshIndex
             );
 
-        selectedObject->model->finishExtrusion(
-            selectedFace.meshIndex
+        object->model->finishExtrusion(
+            face.meshIndex
         );
 
-        selectedFace.faceIndex = newFace;
+        face.faceIndex = newFace;
     }
-    else if (selectedObject->mesh)
+    else if (object->mesh)
     {
         const unsigned int newFace =
-            selectedObject->mesh->getExtrudedFaceIndex();
+            object->mesh->getExtrudedFaceIndex();
 
-        selectedObject->mesh->finishExtrusion();
+        object->mesh->finishExtrusion();
 
-        selectedFace.faceIndex = newFace;
+        face.faceIndex = newFace;
     }
 
-    selectedFace.valid = true;
+    face.valid = true;
 }
 
-void Scene::cancelSelectedFaceExtrusion()
+void Scene::cancelFaceExtrusion(Object *object, const FaceSelection &face)
 {
-    if (!selectedObject || !selectedFace.valid)
+    if (!object || !face.valid)
         return;
 
-    if (selectedObject->model)
+    if (object->model)
     {
-        selectedObject->model->cancelExtrusion(
-            selectedFace.meshIndex
+        object->model->cancelExtrusion(
+            face.meshIndex
         );
     }
-    else if (selectedObject->mesh)
+    else if (object->mesh)
     {
-        selectedObject->mesh->cancelExtrusion();
-    }
-}
-
-
-void Scene::draw(
-    Shader &shader,
-    Camera &camera,
-    const Texture &fallbackTexture)
-{
-    for (Object &object : objects)
-    {
-        // Não desenha objetos ocultos.
-        if (!object.visible)
-            continue;
-
-        const glm::mat4 matrix = object.transform.matrix();
-
-        if (object.model)
-        {
-            // O modelo envia a matriz de cada parte dele,
-            // já combinada com a transformação do objeto.
-            object.model->draw(
-                shader,
-                camera,
-                fallbackTexture,
-                matrix);
-        }
-        else if (object.mesh)
-        {
-            shader.setMat4("model", matrix);
-            object.mesh->draw(shader, &fallbackTexture);
-        }
+        object->mesh->cancelExtrusion();
     }
 }

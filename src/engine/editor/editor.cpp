@@ -30,6 +30,13 @@ void Editor::handleModeToggle()
 
 void Editor::update(bool inputEnabled)
 {
+    // Um objeto que ficou oculto (por exemplo, pelos atalhos da aplicação) deixa de ser selecionado.
+    if (selectedObject && !selectedObject->visible)
+    {
+        selectedObject = nullptr;
+        selectedFace.valid = false;
+    }
+
     // Seleção e movimentação de objetos no modo de edição.
     const bool editingAvailable = editingMode && inputEnabled;
 
@@ -46,7 +53,7 @@ void Editor::update(bool inputEnabled)
 
         if (draggingExtrusionGizmo)
         {
-            scene.cancelSelectedFaceExtrusion();
+            scene.cancelFaceExtrusion(selectedObject, selectedFace);
 
             draggingExtrusionGizmo = false;
             extrusionDistance = 0.0f;
@@ -75,7 +82,7 @@ void Editor::update(bool inputEnabled)
 
                 // Primeiro verifica se já existe uma face selecionada
                 // e se o clique atingiu a seta de extrusão.
-                if (scene.getSelectedFace().valid)
+                if (selectedFace.valid)
                 {
                     ExtrudeGizmoProjection gizmo;
 
@@ -84,10 +91,12 @@ void Editor::update(bool inputEnabled)
                             camera,
                             settings.fov,
                             scene,
+                            selectedObject,
+                            selectedFace,
                             gizmo) &&
                         isMouseOverExtrudeGizmo(mouse, gizmo))
                     {
-                        if (scene.beginSelectedFaceExtrusion())
+                        if (scene.beginFaceExtrusion(selectedObject, selectedFace))
                         {
                             draggingGizmo = false;
                             draggedAxis = -1;
@@ -132,7 +141,7 @@ void Editor::update(bool inputEnabled)
                         createMouseRay(window, camera, settings.fov);
 
                     const bool faceFound =
-                        scene.pickFace(camera.position, rayDirection);
+                        scene.pickFace(camera.position, rayDirection, selectedObject, selectedFace);
 
                     handledFaceSelection = true;
 
@@ -141,10 +150,10 @@ void Editor::update(bool inputEnabled)
                         lightSelected = false;
 
                         const Scene::Object *faceObject =
-                            scene.getSelectedObject();
+                            selectedObject;
 
                         const Scene::FaceSelection &face =
-                            scene.getSelectedFace();
+                            selectedFace;
 
                         std::cout
                             << "[EXTRUDE] Face selecionada!"
@@ -163,7 +172,7 @@ void Editor::update(bool inputEnabled)
             }
 
             Scene::Object *selected =
-                lightSelected ? nullptr : scene.getSelectedObject();
+                lightSelected ? nullptr : selectedObject;
 
             if (selected || lightSelected)
             {
@@ -388,6 +397,10 @@ void Editor::update(bool inputEnabled)
                     camera.position,
                     rayDirection);
 
+                // Selecionar um objeto descarta a face selecionada.
+                selectedObject = selected;
+                selectedFace.valid = false;
+
                 lightSelected = intersectRaySphere(
                     camera.position,
                     rayDirection,
@@ -416,7 +429,7 @@ void Editor::update(bool inputEnabled)
             window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
         {
             Scene::Object *selected =
-                lightSelected ? nullptr : scene.getSelectedObject();
+                lightSelected ? nullptr : selectedObject;
 
             if ((selected || lightSelected) && draggedAxis >= 0)
             {
@@ -465,7 +478,7 @@ void Editor::update(bool inputEnabled)
         if (editingAvailable &&
             window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
         {
-            Scene::Object *selected = scene.getSelectedObject();
+            Scene::Object *selected = selectedObject;
 
             if (selected && rotatingAxis >= 0)
             {
@@ -528,7 +541,7 @@ void Editor::update(bool inputEnabled)
         if (editingAvailable &&
             window.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
         {
-            Scene::Object *selected = scene.getSelectedObject();
+            Scene::Object *selected = selectedObject;
 
             if (selected && scalingAxis >= 0 && scalingAxis < 3)
             {
@@ -590,7 +603,7 @@ void Editor::update(bool inputEnabled)
 
             if (std::abs(distance) > 0.00001f)
             {
-                if (scene.updateSelectedFaceExtrusion(distance))
+                if (scene.updateFaceExtrusion(selectedObject, selectedFace, distance))
                     extrusionChanged = true;
             }
         }
@@ -599,7 +612,7 @@ void Editor::update(bool inputEnabled)
             // Ao soltar o mouse, confirma ou cancela a operação.
             if (extrusionChanged)
             {
-                scene.finishSelectedFaceExtrusion();
+                scene.finishFaceExtrusion(selectedObject, selectedFace);
 
                 std::cout
                     << "[EXTRUDE] Extrusao confirmada: "
@@ -608,7 +621,7 @@ void Editor::update(bool inputEnabled)
             }
             else
             {
-                scene.cancelSelectedFaceExtrusion();
+                scene.cancelFaceExtrusion(selectedObject, selectedFace);
 
                 std::cout
                     << "[EXTRUDE] Extrusao cancelada."
@@ -709,7 +722,7 @@ void Editor::drawToolbar()
 void Editor::drawMoveGizmo()
 {
     Scene::Object *selected =
-        lightSelected ? nullptr : scene.getSelectedObject();
+        lightSelected ? nullptr : selectedObject;
 
     if (!selected && !lightSelected)
         return;
@@ -800,7 +813,7 @@ void Editor::drawRotateGizmo()
     if (lightSelected)
         return;
 
-    Scene::Object *selected = scene.getSelectedObject();
+    Scene::Object *selected = selectedObject;
 
     if (!selected)
         return;
@@ -865,14 +878,14 @@ void Editor::drawRotateGizmo()
 void Editor::drawSelectedFaceOutline()
 {
     const Scene::FaceSelection &selection =
-        scene.getSelectedFace();
+        selectedFace;
 
     if (!selection.valid)
         return;
 
     glm::vec3 a, b, c;
 
-    if (!scene.getSelectedFacePositions(a, b, c))
+    if (!scene.getFacePositions(selectedObject, selectedFace, a, b, c))
         return;
 
     const int width = window.getWidth();
@@ -924,6 +937,8 @@ void Editor::drawExtrudeGizmo()
             camera,
             settings.fov,
             scene,
+            selectedObject,
+            selectedFace,
             gizmo))
     {
         return;
@@ -976,7 +991,7 @@ void Editor::drawExtrudeGizmo()
 
 void Editor::drawScaleGizmo()
 {
-    Scene::Object *selected = scene.getSelectedObject();
+    Scene::Object *selected = selectedObject;
 
     if (selected && !lightSelected)
     {

@@ -1,7 +1,7 @@
 #include "model.h"
 #include <json/json.h>
 #include "mesh.h"
-#include "camera.h"
+#include "shader.h"
 #include "texture.h"
 #include "engine/graphics/buffers/VAO.h"
 #include <fstream>
@@ -15,6 +15,9 @@
 #include <algorithm>
 #include <iostream>
 #include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace
 {
@@ -115,11 +118,9 @@ Model::Model(const char *path)
 	}
 }
 
-void Model::draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
+void Model::draw(Shader &shader, const Texture &diffuseFallback,
 				 const glm::mat4 &objectMatrix)
 {
-	(void)camera;
-
 	// Um modelo pode conter várias partes; cada uma é desenhada na posição que o arquivo define para ela.
 	for (unsigned int i = 0; i < meshes.size(); i++)
 	{

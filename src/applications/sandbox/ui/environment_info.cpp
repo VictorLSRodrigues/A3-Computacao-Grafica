@@ -58,7 +58,7 @@ EnvironmentInfo makeEnvironmentInfo(
     }
 
     const Scene::Object *selectedObject =
-        editor.isLightSelected() ? nullptr : scene.getSelectedObject();
+        editor.isLightSelected() ? nullptr : editor.getSelectedObject();
     if (selectedObject)
     {
         info.hasSelection = true;
@@ -67,7 +67,7 @@ EnvironmentInfo makeEnvironmentInfo(
         info.selectedRotation = selectedObject->transform.rotation;
         info.selectedScale = selectedObject->transform.scale;
 
-        const Scene::FaceSelection &face = scene.getSelectedFace();
+        const Scene::FaceSelection &face = editor.getSelectedFace();
         info.hasFace = face.valid;
         info.selectedFace = face.faceIndex;
     }

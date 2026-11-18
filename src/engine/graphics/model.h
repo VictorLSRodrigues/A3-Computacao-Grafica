@@ -5,7 +5,6 @@
 #include <json/json.h>
 
 #include "engine/graphics/buffers/VAO.h"
-#include "camera.h"
 #include "mesh.h"
 #include "texture.h"
 #include "bounding_box.h"
@@ -21,7 +20,7 @@ public:
     Model(const char *path);
 
     // objectMatrix é a transformação do objeto na cena; ela é combinada com a de cada parte do modelo.
-    void draw(Shader &shader, Camera &camera, const Texture &diffuseFallback,
+    void draw(Shader &shader, const Texture &diffuseFallback,
               const glm::mat4 &objectMatrix = glm::mat4(1.0f));
 
     // Detecta a face atingida pelo raio em qualquer malha do modelo.

@@ -94,6 +94,8 @@ bool buildExtrudeGizmoProjection(
     const Camera &camera,
     float fovDegrees,
     const Scene &scene,
+    const Scene::Object *selectedObject,
+    const Scene::FaceSelection &selectedFace,
     ExtrudeGizmoProjection &result);
 
 bool isMouseOverExtrudeGizmo(
