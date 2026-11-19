@@ -66,7 +66,7 @@ public:
     {
         std::size_t total = 0;
         for (const Mesh &mesh : meshes)
-            total += mesh.getFaces().size();
+            total += mesh.getGeometry().getFaces().size();
         return total;
     }
 

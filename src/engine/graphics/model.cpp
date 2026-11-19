@@ -186,7 +186,7 @@ bool Model::intersectRay(
         float localDistance = 0.0f;
 
         // Verifica a interseção com a malha atual.
-        if (!meshes[i].intersectRay(
+        if (!meshes[i].getGeometry().intersectRay(
                 localOrigin,
                 localDirection,
                 faceIndex,
@@ -241,7 +241,7 @@ bool Model::getFacePositions(
         return false;
 
     // Recupera as posições locais da face.
-    if (!meshes[meshIndex].getFacePositions(
+    if (!meshes[meshIndex].getGeometry().getFacePositions(
             faceIndex, a, b, c))
         return false;
 
@@ -300,7 +300,7 @@ unsigned int Model::getExtrudedFaceIndex(
     if (meshIndex >= meshes.size())
         return std::numeric_limits<unsigned int>::max();
 
-    return meshes[meshIndex].getExtrudedFaceIndex();
+    return meshes[meshIndex].getGeometry().getExtrudedFaceIndex();
 }
 
 

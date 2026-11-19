@@ -35,7 +35,7 @@ public:
                 return &model->getBoundingBox();
 
             if (mesh)
-                return &mesh->getBoundingBox();
+                return &mesh->getGeometry().getBoundingBox();
 
             return nullptr;
         }

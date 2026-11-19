@@ -42,6 +42,7 @@ add_executable(OpenGLProjeto
     src/engine/graphics/camera.cpp
     src/engine/graphics/bounding_box.cpp
     src/engine/graphics/cubemap.cpp
+    src/engine/graphics/geometry.cpp
     src/engine/graphics/mesh.cpp
     src/engine/graphics/model.cpp
     src/engine/graphics/shader.cpp

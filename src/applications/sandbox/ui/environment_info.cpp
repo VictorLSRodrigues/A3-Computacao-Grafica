@@ -54,7 +54,7 @@ EnvironmentInfo makeEnvironmentInfo(
         if (object.model)
             info.faceCount += object.model->getFaceCount();
         else if (object.mesh)
-            info.faceCount += object.mesh->getFaces().size();
+            info.faceCount += object.mesh->getGeometry().getFaces().size();
     }
 
     const Scene::Object *selectedObject =

@@ -104,7 +104,7 @@ Scene::Object *Scene::pickObject(
         if (object.model)
             localRadius = object.model->getBoundingRadius();
         else if (object.mesh)
-            localRadius = object.mesh->getBoundingRadius();
+            localRadius = object.mesh->getGeometry().getBoundingRadius();
 
         if (localRadius <= 0.0f)
             continue;
@@ -243,7 +243,7 @@ bool Scene::pickFace(
             unsigned int faceIndex = 0;
             float localDistance = 0.0f;
 
-            if (!object.mesh->intersectRay(
+            if (!object.mesh->getGeometry().intersectRay(
                     localOrigin,
                     localDirection,
                     faceIndex,
@@ -319,7 +319,7 @@ bool Scene::getFacePositions(
         if (face.meshIndex != 0)
             return false;
 
-        if (!object->mesh->getFacePositions(
+        if (!object->mesh->getGeometry().getFacePositions(
                 face.faceIndex,
                 a, b, c))
             return false;
@@ -406,7 +406,7 @@ void Scene::finishFaceExtrusion(Object *object, FaceSelection &face)
     else if (object->mesh)
     {
         const unsigned int newFace =
-            object->mesh->getExtrudedFaceIndex();
+            object->mesh->getGeometry().getExtrudedFaceIndex();
 
         object->mesh->finishExtrusion();
 
