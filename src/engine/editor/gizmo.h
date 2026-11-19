@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "engine/graphics/camera.h"
+#include "engine/graphics/camera/camera.h"
 #include "engine/platform/window.h"
 #include "engine/scene/scene.h"
 

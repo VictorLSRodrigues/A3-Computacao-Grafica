@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 #include <vector>
 
-#include "engine/graphics/vertex.h"
+#include "engine/graphics/geometry/vertex.h"
 
 // Armazena na placa de vídeo os dados dos vértices usados para desenhar uma malha.
 // O buffer OpenGL só é criado no primeiro uso, então a classe pode ser construída antes da janela.

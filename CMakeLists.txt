@@ -38,22 +38,32 @@ add_executable(OpenGLProjeto
     # Engine: Platform
     src/engine/platform/window.cpp
 
-    # Engine: Graphics
-    src/engine/graphics/camera.cpp
-    src/engine/graphics/bounding_box.cpp
-    src/engine/graphics/cubemap.cpp
-    src/engine/graphics/geometry.cpp
-    src/engine/graphics/mesh.cpp
-    src/engine/graphics/model.cpp
-    src/engine/graphics/shader.cpp
-    src/engine/graphics/shapes.cpp
-    src/engine/graphics/skybox.cpp
-    src/engine/graphics/texture.cpp
-
     # Engine: Graphics Buffers
     src/engine/graphics/buffers/EBO.cpp
     src/engine/graphics/buffers/VAO.cpp
     src/engine/graphics/buffers/VBO.cpp
+
+    # Engine: Graphics Camera
+    src/engine/graphics/camera/camera.cpp
+
+    # Engine: Graphics Geometry
+    src/engine/graphics/geometry/bounding_box.cpp
+    src/engine/graphics/geometry/geometry.cpp
+    src/engine/graphics/geometry/shapes.cpp
+
+    # Engine: Graphics Mesh
+    src/engine/graphics/mesh/mesh.cpp
+
+    # Engine: Graphics Model
+    src/engine/graphics/model/model.cpp
+
+    # Engine: Graphics Resources
+    src/engine/graphics/resources/cubemap.cpp
+    src/engine/graphics/resources/shader.cpp
+    src/engine/graphics/resources/texture.cpp
+
+    # Engine: Graphics Environment
+    src/engine/graphics/environment/skybox.cpp
 
     # Engine: Renderer
     src/engine/renderer/renderer.cpp

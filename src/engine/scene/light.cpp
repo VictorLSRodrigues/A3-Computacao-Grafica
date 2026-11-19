@@ -2,7 +2,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "engine/graphics/shapes.h"
+#include "engine/graphics/geometry/shapes.h"
 
 bool Light::create()
 {

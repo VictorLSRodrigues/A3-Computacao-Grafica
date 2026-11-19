@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "shapes.h"
+#include "engine/graphics/geometry/shapes.h"
 
 bool Skybox::load(const std::string& folder, const std::string& extension)
 {

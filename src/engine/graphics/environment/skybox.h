@@ -2,10 +2,10 @@
 
 #include <string>
 
-#include "camera.h"
-#include "cubemap.h"
-#include "mesh.h"
-#include "shader.h"
+#include "engine/graphics/camera/camera.h"
+#include "engine/graphics/resources/cubemap.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/resources/shader.h"
 
 // Céu desenhado ao redor da cena: um cubo que acompanha a câmera e mostra um cubemap.
 class Skybox

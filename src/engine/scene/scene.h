@@ -7,8 +7,8 @@
 #include <string>
 #include <glm/glm.hpp>
 
-#include "engine/graphics/mesh.h"
-#include "engine/graphics/model.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/model/model.h"
 #include "transform.h"
 #include <cstddef>
 

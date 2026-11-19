@@ -6,7 +6,7 @@
 #include <cmath>
 #include <functional>
 
-#include "engine/graphics/shapes.h"
+#include "engine/graphics/geometry/shapes.h"
 #include "theme.h"
 
 bool UI::create()

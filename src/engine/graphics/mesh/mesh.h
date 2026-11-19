@@ -6,8 +6,8 @@
 #include "engine/graphics/buffers/VAO.h"
 #include "engine/graphics/buffers/VBO.h"
 #include "engine/graphics/buffers/EBO.h"
-#include "geometry.h"
-#include "texture.h"
+#include "engine/graphics/geometry/geometry.h"
+#include "engine/graphics/resources/texture.h"
 #include "material.h"
 
 class Shader;

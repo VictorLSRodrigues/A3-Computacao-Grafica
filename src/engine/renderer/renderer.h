@@ -1,9 +1,9 @@
 #pragma once
 
-#include "engine/graphics/camera.h"
-#include "engine/graphics/shader.h"
-#include "engine/graphics/skybox.h"
-#include "engine/graphics/texture.h"
+#include "engine/graphics/camera/camera.h"
+#include "engine/graphics/resources/shader.h"
+#include "engine/graphics/environment/skybox.h"
+#include "engine/graphics/resources/texture.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
 #include "engine/core/settings.h"

@@ -5,11 +5,11 @@
 #include <json/json.h>
 
 #include "engine/graphics/buffers/VAO.h"
-#include "mesh.h"
-#include "texture.h"
-#include "bounding_box.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/resources/texture.h"
+#include "engine/graphics/geometry/bounding_box.h"
 #include <cstddef>
-#include "material.h"
+#include "engine/graphics/mesh/material.h"
 
 using json = nlohmann::json;
 

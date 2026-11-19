@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include "engine/graphics/camera.h"
+#include "engine/graphics/camera/camera.h"
 #include "engine/platform/window.h"
 
 // Geometria para apontar com o mouse para objetos 3D: raios, interseções e projeção na tela.

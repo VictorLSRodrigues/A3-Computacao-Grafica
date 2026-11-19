@@ -5,7 +5,7 @@
 #include "applications/sandbox/ui/HUD.h"
 #include "engine/core/settings.h"
 #include "engine/editor/editor.h"
-#include "engine/graphics/camera.h"
+#include "engine/graphics/camera/camera.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
 

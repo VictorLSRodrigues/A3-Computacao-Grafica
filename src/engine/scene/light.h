@@ -2,9 +2,9 @@
 
 #include <glm/glm.hpp>
 
-#include "engine/graphics/camera.h"
-#include "engine/graphics/mesh.h"
-#include "engine/graphics/shader.h"
+#include "engine/graphics/camera/camera.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/resources/shader.h"
 #include "engine/core/settings.h"
 
 // Fonte de luz da cena: guarda cor e posição e desenha um cubo que marca onde ela está.

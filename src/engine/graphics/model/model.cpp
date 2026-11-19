@@ -1,8 +1,8 @@
 #include "model.h"
 #include <json/json.h>
-#include "mesh.h"
-#include "shader.h"
-#include "texture.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/resources/shader.h"
+#include "engine/graphics/resources/texture.h"
 #include "engine/graphics/buffers/VAO.h"
 #include <fstream>
 #include <iterator>

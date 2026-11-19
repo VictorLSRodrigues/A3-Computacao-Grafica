@@ -5,9 +5,9 @@
 #include <memory>
 #include <utility>
 
-#include "engine/graphics/mesh.h"
-#include "engine/graphics/shapes.h"
-#include "engine/graphics/texture.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/geometry/shapes.h"
+#include "engine/graphics/resources/texture.h"
 
 bool buildWorld(Scene& scene)
 {

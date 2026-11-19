@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "engine/graphics/texture.h"
+#include "engine/graphics/resources/texture.h"
 
 // Converte uma fonte TrueType em uma imagem com os caracteres prontos para desenhar.
 class Font

@@ -7,10 +7,10 @@
 #include <glm/glm.hpp>
 
 #include "font.h"
-#include "engine/graphics/mesh.h"
-#include "engine/graphics/shader.h"
+#include "engine/graphics/mesh/mesh.h"
+#include "engine/graphics/resources/shader.h"
 #include "engine/platform/window.h"
-#include "engine/graphics/texture.h"
+#include "engine/graphics/resources/texture.h"
 
 // Desenha retângulos, texto e botões em coordenadas de pixel sobre a cena.
 class UI

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstddef>
 #include <utility>
-#include "shader.h"
+#include "engine/graphics/resources/shader.h"
 
 namespace
 {
