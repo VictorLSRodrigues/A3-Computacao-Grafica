@@ -63,8 +63,11 @@ bool Cubemap::load(const std::array<std::string, 6>& facePaths)
         stbi_image_free(data); // Os pixels já foram enviados para a textura OpenGL.
     }
 
-    // Sem repetição nas bordas, para não aparecerem emendas entre as faces.
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // Gera os níveis menores usados pelo shader para borrar reflexos conforme o roughness.
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    // Usa interpolação entre os níveis de mipmap e evita emendas nas bordas das faces.
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

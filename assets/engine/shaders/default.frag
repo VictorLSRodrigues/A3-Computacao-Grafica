@@ -172,7 +172,11 @@ vec3 calculateEnvironmentReflection(
 
     vec3 R = reflect(-V, N);
 
-    vec3 environmentColor = texture(environmentMap, R).rgb;
+    // Mipmaps mais altos representam versões progressivamente mais borradas do ambiente.
+    float maxLod = floor(log2(float(textureSize(environmentMap, 0).x)));
+    float lod = clamp(roughness, 0.0, 1.0) * maxLod;
+
+    vec3 environmentColor = textureLod(environmentMap, R, lod).rgb;
 
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
