@@ -49,7 +49,12 @@ bool Renderer::loadShaders()
     return true;
 }
 
-void Renderer::render(const Scene &scene, const Light &light, Camera &camera, const Settings &settings)
+void Renderer::resetSettings()
+{
+    showSkybox = kDefaultShowSkybox;
+}
+
+void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 {
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -66,7 +71,7 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera, co
     light.drawMarker(lightShader);
     
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
-    if (settings.showSkybox)
+    if (showSkybox)
         skybox.draw(camera);
 }
 

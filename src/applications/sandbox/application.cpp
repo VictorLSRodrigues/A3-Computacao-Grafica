@@ -42,7 +42,7 @@ void Application::run()
         lastFrame = currentFrame;
 
         update(deltaTime);
-        renderer.render(scene, light, camera, settings);
+        renderer.render(scene, light, camera);
         renderUI();
 
         window.swapBuffers();
@@ -88,7 +88,7 @@ void Application::renderUI()
     hud.draw(ui, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
 
     // Desenha o menu.
-    menu.draw(window, ui, settings, camera, light);
+    menu.draw(window, ui, renderer, camera, light);
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.

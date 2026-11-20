@@ -18,13 +18,13 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(const Window &window, UI &ui, Settings &settings, Camera &camera, Light &light)
+void Menu::draw(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light)
 {
     if (!open)
         return;
 
     if (page == Page::Options)
-        drawOptions(window, ui, settings, camera, light);
+        drawOptions(window, ui, renderer, camera, light);
     else
         drawMain(window, ui);
 }
@@ -48,7 +48,7 @@ void Menu::drawMain(const Window &window, UI &ui)
             window.close(); });
 }
 
-void Menu::drawOptions(const Window &window, UI &ui, Settings &settings, Camera &camera, Light &light)
+void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light)
 {
     PanelStyle style; // largura 560, linhas de 48 px e espaço de 14 px
 
@@ -59,12 +59,12 @@ void Menu::drawOptions(const Window &window, UI &ui, Settings &settings, Camera 
         layout.stepper("Velocidade (Shift)", camera.sprintSpeed, 0.5f, 1.0f, 20.0f, 1);
         layout.stepper("Sensibilidade do mouse", camera.sensitivity, 10.0f, 10.0f, 300.0f, 0);
 
-        if (layout.button(settings.showSkybox ? "Céu: ligado" : "Céu: desligado"))
-            settings.showSkybox = !settings.showSkybox;
+        if (layout.button(renderer.showSkybox ? "Céu: ligado" : "Céu: desligado"))
+            renderer.showSkybox = !renderer.showSkybox;
 
         if (layout.button("Restaurar padrões"))
         {
-            settings = Settings{};
+            renderer.resetSettings();
             camera.resetSettings();
             light.resetProperties();
         }

@@ -6,7 +6,6 @@
 #include "engine/renderer/renderer.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
-#include "engine/core/settings.h"
 #include "applications/sandbox/ui/HUD.h"
 #include "engine/ui/UI.h"
 #include "applications/sandbox/ui/light_panel.h"
@@ -39,7 +38,6 @@ private:
     // depois dos recursos OpenGL que dependem do contexto dela.
     Window window;
 
-    Settings settings;
     std::string selectedModelName = "Todos";
 
     Renderer renderer;
