@@ -63,6 +63,7 @@ void LightPanel::draw(const Window &window, UI &ui, Light &light)
         layout.stepper("Alvo Z", light.target.z, step, -limit, limit, 2);
 
         layout.colorPicker("Cor", light.color);
+        layout.stepper("Intensidade", light.intensity, 0.25f, 0.0f, 10.0f, 2);
 
         if (layout.button("Restaurar luz"))
         {

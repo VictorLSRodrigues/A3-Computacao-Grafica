@@ -20,6 +20,7 @@ class Light
 public:
     LightType type = kDefaultType;
     glm::vec3 color = kDefaultColor; // RGB, de 0 a 1
+    float intensity = 1.0f;
     glm::vec3 position = kDefaultPosition;
     glm::vec3 target = kDefaultTarget; // ponto para onde a luz aponta
 
@@ -42,6 +43,6 @@ private:
     static inline const glm::vec3 kDefaultColor{1.0f, 1.0f, 1.0f};
     static inline const glm::vec3 kDefaultPosition{0.5f, 0.5f, 0.5f};
     static inline const glm::vec3 kDefaultTarget{0.0f, 0.0f, 0.0f};
-
+    static constexpr float kDefaultIntensity = 1.0f;
     Mesh marker;
 };

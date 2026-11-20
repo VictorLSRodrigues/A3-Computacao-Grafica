@@ -20,6 +20,7 @@ void Light::resetProperties()
     color = kDefaultColor;
     position = kDefaultPosition;
     target = kDefaultTarget;
+    intensity = kDefaultIntensity;
 }
 
 glm::vec3 Light::direction() const
@@ -36,6 +37,7 @@ glm::vec3 Light::direction() const
 void Light::apply(Shader &shader, const Camera &camera) const
 {
     shader.setVec4("lightColor", color.x, color.y, color.z, 1.0f);
+    shader.setFloat("lightIntensity", intensity);
     shader.setVec3("lightPos", position.x, position.y, position.z);
     shader.setVec3("camPos", camera.position.x, camera.position.y, camera.position.z);
     const glm::vec3 dir = direction();
