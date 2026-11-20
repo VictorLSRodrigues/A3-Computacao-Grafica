@@ -18,13 +18,13 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(const Window &window, UI &ui, Settings &settings, Light &light)
+void Menu::draw(const Window &window, UI &ui, Settings &settings, Camera &camera, Light &light)
 {
     if (!open)
         return;
 
     if (page == Page::Options)
-        drawOptions(window, ui, settings, light);
+        drawOptions(window, ui, settings, camera, light);
     else
         drawMain(window, ui);
 }
@@ -48,16 +48,16 @@ void Menu::drawMain(const Window &window, UI &ui)
             window.close(); });
 }
 
-void Menu::drawOptions(const Window &window, UI &ui, Settings &settings, Light &light)
+void Menu::drawOptions(const Window &window, UI &ui, Settings &settings, Camera &camera, Light &light)
 {
     PanelStyle style; // largura 560, linhas de 48 px e espaço de 14 px
 
     drawCenteredPanel(window, ui, "Opções", style, [&](Layout &layout)
                       {
-        layout.stepper("Campo de visão", settings.fov, 5.0f, 30.0f, 110.0f, 0);
-        layout.stepper("Velocidade", settings.walkSpeed, 0.5f, 0.5f, 10.0f, 1);
-        layout.stepper("Velocidade (Shift)", settings.sprintSpeed, 0.5f, 1.0f, 20.0f, 1);
-        layout.stepper("Sensibilidade do mouse", settings.mouseSensitivity, 10.0f, 10.0f, 300.0f, 0);
+        layout.stepper("Campo de visão", camera.fov, 5.0f, 30.0f, 110.0f, 0);
+        layout.stepper("Velocidade", camera.walkSpeed, 0.5f, 0.5f, 10.0f, 1);
+        layout.stepper("Velocidade (Shift)", camera.sprintSpeed, 0.5f, 1.0f, 20.0f, 1);
+        layout.stepper("Sensibilidade do mouse", camera.sensitivity, 10.0f, 10.0f, 300.0f, 0);
 
         if (layout.button(settings.showSkybox ? "Céu: ligado" : "Céu: desligado"))
             settings.showSkybox = !settings.showSkybox;
@@ -65,6 +65,7 @@ void Menu::drawOptions(const Window &window, UI &ui, Settings &settings, Light &
         if (layout.button("Restaurar padrões"))
         {
             settings = Settings{};
+            camera.resetSettings();
             light.resetProperties();
         }
 

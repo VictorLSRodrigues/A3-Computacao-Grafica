@@ -92,7 +92,6 @@ struct ExtrudeGizmoProjection
 bool buildExtrudeGizmoProjection(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const Scene &scene,
     const Scene::Object *selectedObject,
     const Scene::FaceSelection &selectedFace,
@@ -105,7 +104,6 @@ bool isMouseOverExtrudeGizmo(
 bool buildScaleGizmo(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const Scene::Object &object,
     ScaleGizmoProjection &result);
 
@@ -113,7 +111,6 @@ bool buildScaleGizmo(
 bool buildMoveGizmo(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const glm::vec3 &position,
     MoveGizmoProjection &result);
 
@@ -121,7 +118,6 @@ bool buildMoveGizmo(
 bool buildRotateGizmo(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const Scene::Object &object,
     RotateGizmoProjection &result);
 

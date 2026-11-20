@@ -10,8 +10,7 @@
 // Converte a posição do cursor em um raio que parte da câmera.
 glm::vec3 createMouseRay(
     const Window &window,
-    const Camera &camera,
-    float fovDegrees);
+    const Camera &camera);
 
 // Calcula a interseção de um raio com um plano; retorna false se forem paralelos ou se o plano estiver atrás do raio.
 bool intersectRayPlane(

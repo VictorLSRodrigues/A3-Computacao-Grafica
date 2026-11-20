@@ -41,7 +41,7 @@ bool Skybox::load(const std::string& folder, const std::string& extension)
     return true;
 }
 
-void Skybox::draw(Camera& camera, float fovDegrees)
+void Skybox::draw(Camera& camera)
 {
     if (!loaded)
         return;
@@ -53,7 +53,7 @@ void Skybox::draw(Camera& camera, float fovDegrees)
     glDisable(GL_CULL_FACE);
 
     shader.use();
-    camera.setViewProjection(fovDegrees, shader, "camMatrix", true);
+    camera.setViewProjection(shader, "camMatrix", true);
     cubemap.bind(0);
     cube.draw();
 

@@ -9,7 +9,6 @@
 bool buildExtrudeGizmoProjection(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const Scene &scene,
     const Scene::Object *selectedObject,
     const Scene::FaceSelection &selectedFace,
@@ -53,7 +52,7 @@ bool buildExtrudeGizmoProjection(
         return false;
 
     // Matrizes da câmera.
-    const glm::mat4 viewProjection = camera.viewProjectionMatrix(fovDegrees);
+    const glm::mat4 viewProjection = camera.viewProjectionMatrix();
 
     // Projeta os três vértices da face para a tela.
     if (!projectWorldToScreen(
@@ -83,7 +82,7 @@ bool buildExtrudeGizmoProjection(
     // Mantém o tamanho visual da seta.
     result.worldLength = std::clamp(
         2.0f * depth *
-            std::tan(glm::radians(fovDegrees) * 0.5f) *
+            std::tan(glm::radians(camera.fov) * 0.5f) *
             85.0f / static_cast<float>(height),
         0.05f,
         5.0f);
@@ -200,7 +199,6 @@ bool isMouseOverExtrudeGizmo(
 bool buildScaleGizmo(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const Scene::Object &object,
     ScaleGizmoProjection &result)
 {
@@ -233,7 +231,7 @@ bool buildScaleGizmo(
     if (depth <= 0.05f)
         return false;
 
-    const glm::mat4 viewProjection = camera.viewProjectionMatrix(fovDegrees);
+    const glm::mat4 viewProjection = camera.viewProjectionMatrix();
 
     if (!projectWorldToScreen(
             worldCenter,
@@ -285,7 +283,6 @@ bool buildScaleGizmo(
 bool buildMoveGizmo(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const glm::vec3 &position,
     MoveGizmoProjection &result)
 {
@@ -305,7 +302,7 @@ bool buildMoveGizmo(
     if (depth <= 0.05f)
         return false;
 
-    const glm::mat4 viewProjection = camera.viewProjectionMatrix(fovDegrees);
+    const glm::mat4 viewProjection = camera.viewProjectionMatrix();
 
     if (!projectWorldToScreen(
             position,
@@ -322,7 +319,7 @@ bool buildMoveGizmo(
 
     const float worldLength = std::clamp(
         2.0f * depth *
-            std::tan(glm::radians(fovDegrees) * 0.5f) *
+            std::tan(glm::radians(camera.fov) * 0.5f) *
             desiredPixelLength / static_cast<float>(height),
         0.05f,
         5.0f);
@@ -384,7 +381,6 @@ bool buildMoveGizmo(
 bool buildRotateGizmo(
     const Window &window,
     const Camera &camera,
-    float fovDegrees,
     const Scene::Object &object,
     RotateGizmoProjection &result)
 {
@@ -404,7 +400,7 @@ bool buildRotateGizmo(
     if (depth <= 0.05f)
         return false;
 
-    const glm::mat4 viewProjection = camera.viewProjectionMatrix(fovDegrees);
+    const glm::mat4 viewProjection = camera.viewProjectionMatrix();
 
     if (!projectWorldToScreen(
             object.transform.position,
@@ -420,7 +416,7 @@ bool buildRotateGizmo(
     // Define o tamanho dos círculos na tela.
     const float worldRadius = std::clamp(
         2.0f * depth *
-            std::tan(glm::radians(fovDegrees) * 0.5f) *
+            std::tan(glm::radians(camera.fov) * 0.5f) *
             desiredPixelLength / static_cast<float>(height),
         0.05f,
         5.0f);

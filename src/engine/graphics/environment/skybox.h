@@ -16,7 +16,7 @@ public:
     bool load(const std::string& folder, const std::string& extension = "png");
 
     // Desenha o céu; deve ser chamado depois dos objetos da cena. Não faz nada se não foi carregado.
-    void draw(Camera& camera, float fovDegrees);
+    void draw(Camera& camera);
 
 private:
     Cubemap cubemap;

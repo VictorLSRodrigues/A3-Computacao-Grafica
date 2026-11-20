@@ -8,9 +8,9 @@
 #include "engine/scene/picking.h"
 
 Editor::Editor(Window &window, Camera &camera, Scene &scene, Light &light,
-               Settings &settings, UI &ui)
+               UI &ui)
     : window(window), camera(camera), scene(scene), light(light),
-      settings(settings), ui(ui)
+      ui(ui)
 {
 }
 
@@ -89,7 +89,6 @@ void Editor::update(bool inputEnabled)
                     if (buildExtrudeGizmoProjection(
                             window,
                             camera,
-                            settings.fov,
                             scene,
                             selectedObject,
                             selectedFace,
@@ -138,7 +137,7 @@ void Editor::update(bool inputEnabled)
                 if (!startedOnGizmo)
                 {
                     const glm::vec3 rayDirection =
-                        createMouseRay(window, camera, settings.fov);
+                        createMouseRay(window, camera);
 
                     const bool faceFound =
                         scene.pickFace(camera.position, rayDirection, selectedObject, selectedFace);
@@ -189,7 +188,6 @@ void Editor::update(bool inputEnabled)
                     if (buildMoveGizmo(
                             window,
                             camera,
-                            settings.fov,
                             selectedPosition,
                             gizmo))
                     {
@@ -245,7 +243,6 @@ void Editor::update(bool inputEnabled)
                     if (buildRotateGizmo(
                             window,
                             camera,
-                            settings.fov,
                             *selected,
                             gizmo))
                     {
@@ -258,7 +255,7 @@ void Editor::update(bool inputEnabled)
                                 gizmo.rings[ringIndex];
 
                             const glm::vec3 rayDirection =
-                                createMouseRay(window, camera, settings.fov);
+                                createMouseRay(window, camera);
 
                             glm::vec3 intersection;
 
@@ -312,7 +309,6 @@ void Editor::update(bool inputEnabled)
                     if (buildScaleGizmo(
                             window,
                             camera,
-                            settings.fov,
                             *selected,
                             gizmo))
                     {
@@ -391,7 +387,7 @@ void Editor::update(bool inputEnabled)
                 scalingAxis = -1;
 
                 const glm::vec3 rayDirection =
-                    createMouseRay(window, camera, settings.fov);
+                    createMouseRay(window, camera);
 
                 selected = scene.pickObject(
                     camera.position,
@@ -482,7 +478,7 @@ void Editor::update(bool inputEnabled)
             if (selected && rotatingAxis >= 0)
             {
                 const glm::vec3 rayDirection =
-                    createMouseRay(window, camera, settings.fov);
+                    createMouseRay(window, camera);
 
                 glm::vec3 intersection;
 
@@ -734,7 +730,6 @@ void Editor::drawMoveGizmo()
     if (!buildMoveGizmo(
             window,
             camera,
-            settings.fov,
             selectedPosition,
             gizmo))
     {
@@ -822,7 +817,6 @@ void Editor::drawRotateGizmo()
     if (!buildRotateGizmo(
             window,
             camera,
-            settings.fov,
             *selected,
             gizmo))
     {
@@ -893,7 +887,7 @@ void Editor::drawSelectedFaceOutline()
     if (width <= 0 || height <= 0)
         return;
 
-    const glm::mat4 viewProjection = camera.viewProjectionMatrix(settings.fov);
+    const glm::mat4 viewProjection = camera.viewProjectionMatrix();
 
     glm::vec2 screenA;
     glm::vec2 screenB;
@@ -934,7 +928,6 @@ void Editor::drawExtrudeGizmo()
     if (!buildExtrudeGizmoProjection(
             window,
             camera,
-            settings.fov,
             scene,
             selectedObject,
             selectedFace,
@@ -999,7 +992,6 @@ void Editor::drawScaleGizmo()
         if (buildScaleGizmo(
                 window,
                 camera,
-                settings.fov,
                 *selected,
                 gizmo))
         {

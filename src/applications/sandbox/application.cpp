@@ -70,10 +70,7 @@ void Application::update(float deltaTime)
             handleModelShortcuts(window, scene, selectedModelName);
     }
 
-    // Copia para a câmera os ajustes escolhidos no menu.
-    camera.walkSpeed = settings.walkSpeed;
-    camera.sprintSpeed = settings.sprintSpeed;
-    camera.sensitivity = settings.mouseSensitivity;
+    // Mantém a câmera com o tamanho atual da janela.
     camera.setViewportSize(window.getWidth(), window.getHeight());
 
     // O editor só trata o mouse quando o menu está fechado.
@@ -91,7 +88,7 @@ void Application::renderUI()
     hud.draw(ui, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
 
     // Desenha o menu.
-    menu.draw(window, ui, settings, light);
+    menu.draw(window, ui, settings, camera, light);
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.

@@ -2,6 +2,7 @@
 
 #include "engine/ui/UI.h"
 #include "engine/core/settings.h"
+#include "engine/graphics/camera/camera.h"
 #include "engine/scene/light.h"
 #include "engine/platform/window.h"
 
@@ -14,10 +15,10 @@ private:
     Page page = Page::Main;
 
     void drawMain(const Window& window, UI& ui);
-    void drawOptions(const Window& window, UI& ui, Settings& settings, Light& light);
+    void drawOptions(const Window& window, UI& ui, Settings& settings, Camera& camera, Light& light);
 
 public:
     void update(const Window& window); // ESC abre, fecha ou retorna à página anterior.
-    void draw(const Window& window, UI& ui, Settings& settings, Light& light);
+    void draw(const Window& window, UI& ui, Settings& settings, Camera& camera, Light& light);
     bool isOpen() const { return open; }
 };

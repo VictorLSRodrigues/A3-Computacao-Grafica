@@ -26,10 +26,13 @@ public:
     int viewportWidth;
     int viewportHeight;
 
+    // Campo de visão vertical, em graus.
+    float fov = kDefaultFov;
+
     float speed = 1.0f;
-    float walkSpeed = 1.5f;
-    float sprintSpeed = 5.0f;
-    float sensitivity = 100.0f;
+    float walkSpeed = kDefaultWalkSpeed;
+    float sprintSpeed = kDefaultSprintSpeed;
+    float sensitivity = kDefaultSensitivity;
     float zoomSpeed = 0.5f;
 
     // Distâncias mínima e máxima visíveis pela câmera.
@@ -41,15 +44,15 @@ public:
     // Matriz de visão: posiciona o mundo em relação à câmera.
     glm::mat4 viewMatrix() const;
 
-    // Matriz de projeção em perspectiva; usa o tamanho do viewport e os planos near e far da câmera.
-    glm::mat4 projectionMatrix(float fovDegrees) const;
+    // Matriz de projeção em perspectiva; usa o campo de visão, o tamanho do viewport e os planos near e far da câmera.
+    glm::mat4 projectionMatrix() const;
 
     // Projeção vezes visão: leva um ponto do mundo para o espaço de recorte.
-    glm::mat4 viewProjectionMatrix(float fovDegrees) const;
+    glm::mat4 viewProjectionMatrix() const;
 
     // Envia ao shader as matrizes de visão e projeção da câmera.
     // Com ignoreTranslation, a posição da câmera é ignorada (usado no céu).
-    void setViewProjection(float fovDegrees, Shader &shader, const char *uniformName,
+    void setViewProjection(Shader &shader, const char *uniformName,
                            bool ignoreTranslation = false);
 
     // Atualiza posição e orientação a partir do teclado e do mouse.
@@ -57,5 +60,14 @@ public:
 
     // Atualiza a área usada para calcular a projeção.
     void setViewportSize(int width, int height);
+
+    // Volta o campo de visão, as velocidades e a sensibilidade aos valores padrão.
+    void resetSettings();
+
+private:
+    static constexpr float kDefaultFov = 45.0f;
+    static constexpr float kDefaultWalkSpeed = 1.5f;
+    static constexpr float kDefaultSprintSpeed = 5.0f;
+    static constexpr float kDefaultSensitivity = 100.0f;
 };
 #endif

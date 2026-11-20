@@ -9,26 +9,34 @@ Camera::Camera(int width, int height, glm::vec3 position)
     this->position = position;
 }
 
+void Camera::resetSettings()
+{
+    fov = kDefaultFov;
+    walkSpeed = kDefaultWalkSpeed;
+    sprintSpeed = kDefaultSprintSpeed;
+    sensitivity = kDefaultSensitivity;
+}
+
 glm::mat4 Camera::viewMatrix() const
 {
     return glm::lookAt(position, position + orientation, up);
 }
 
-glm::mat4 Camera::projectionMatrix(float fovDegrees) const
+glm::mat4 Camera::projectionMatrix() const
 {
     return glm::perspective(
-        glm::radians(fovDegrees),
+        glm::radians(fov),
         static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight),
         nearPlane,
         farPlane);
 }
 
-glm::mat4 Camera::viewProjectionMatrix(float fovDegrees) const
+glm::mat4 Camera::viewProjectionMatrix() const
 {
-    return projectionMatrix(fovDegrees) * viewMatrix();
+    return projectionMatrix() * viewMatrix();
 }
 
-void Camera::setViewProjection(float fovDegrees, Shader &shader, const char *uniformName, bool ignoreTranslation)
+void Camera::setViewProjection(Shader &shader, const char *uniformName, bool ignoreTranslation)
 {
     glm::mat4 view = viewMatrix();
 
@@ -36,7 +44,7 @@ void Camera::setViewProjection(float fovDegrees, Shader &shader, const char *uni
     if (ignoreTranslation)
         view = glm::mat4(glm::mat3(view));
 
-    const glm::mat4 projection = projectionMatrix(fovDegrees);
+    const glm::mat4 projection = projectionMatrix();
 
     glUniformMatrix4fv(
         glGetUniformLocation(shader.ID, uniformName),

@@ -2,7 +2,6 @@
 
 #include <glm/glm.hpp>
 
-#include "engine/core/settings.h"
 #include "engine/graphics/camera/camera.h"
 #include "engine/platform/window.h"
 #include "engine/scene/light.h"
@@ -26,7 +25,7 @@ public:
     // O editor não é dono de nada: usa os objetos do Application, que precisam
     // viver mais que ele.
     Editor(Window &window, Camera &camera, Scene &scene, Light &light,
-           Settings &settings, UI &ui);
+           UI &ui);
 
     Editor(const Editor &) = delete;
     Editor &operator=(const Editor &) = delete;
@@ -58,7 +57,6 @@ private:
     Camera &camera;
     Scene &scene;
     Light &light;
-    Settings &settings;
     UI &ui;
 
     bool editingMode = false;

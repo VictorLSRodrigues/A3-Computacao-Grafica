@@ -5,8 +5,7 @@
 // Converte a posição do cursor em um raio que parte da câmera.
 glm::vec3 createMouseRay(
     const Window &window,
-    const Camera &camera,
-    float fovDegrees)
+    const Camera &camera)
 {
     const float width = static_cast<float>(window.getWidth());
     const float height = static_cast<float>(window.getHeight());
@@ -22,7 +21,7 @@ glm::vec3 createMouseRay(
         1.0f - 2.0f * static_cast<float>(window.getMouseY()) / height;
 
     const float aspect = width / height;
-    const float tanHalfFov = std::tan(glm::radians(fovDegrees) * 0.5f);
+    const float tanHalfFov = std::tan(glm::radians(camera.fov) * 0.5f);
 
     const glm::vec3 forward = glm::normalize(camera.orientation);
     const glm::vec3 right =

@@ -53,7 +53,7 @@ private:
 
     // Usa a janela, a câmera, a cena, a luz, os ajustes e a UI acima;
     // por isso é declarado depois deles.
-    Editor editor{window, camera, scene, light, settings, ui};
+    Editor editor{window, camera, scene, light, ui};
 
     Menu menu;
     LightPanel lightPanel;
