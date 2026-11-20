@@ -56,7 +56,7 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera, co
 
     // A cena, iluminada pela luz escolhida.
     sceneShader.use();
-    light.apply(sceneShader, settings.lightType, camera);
+    light.apply(sceneShader, camera);
     camera.setViewProjection(settings.fov, sceneShader, "camMatrix");
     drawScene(scene);
 

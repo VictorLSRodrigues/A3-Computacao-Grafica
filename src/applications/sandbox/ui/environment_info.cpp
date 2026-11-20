@@ -4,7 +4,6 @@ EnvironmentInfo makeEnvironmentInfo(
     const Scene &scene,
     const Camera &camera,
     const Light &light,
-    const Settings &settings,
     const Editor &editor,
     const std::string &viewedModel)
 {
@@ -28,7 +27,7 @@ EnvironmentInfo makeEnvironmentInfo(
     info.viewedModel = viewedModel;
     info.cameraPosition = camera.position;
 
-    switch (settings.lightType)
+    switch (light.type)
     {
     case LightType::Point:
         info.lightType = "Ponto";
@@ -41,7 +40,7 @@ EnvironmentInfo makeEnvironmentInfo(
         break;
     }
     info.lightPosition = light.position;
-    info.lightColor = glm::vec3(light.color);
+    info.lightColor = light.color;
     info.lightSelected = editor.isLightSelected();
 
     for (const Scene::Object &object : scene.getObjects())

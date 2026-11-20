@@ -18,13 +18,13 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(const Window &window, UI &ui, Settings &settings)
+void Menu::draw(const Window &window, UI &ui, Settings &settings, Light &light)
 {
     if (!open)
         return;
 
     if (page == Page::Options)
-        drawOptions(window, ui, settings);
+        drawOptions(window, ui, settings, light);
     else
         drawMain(window, ui);
 }
@@ -48,7 +48,7 @@ void Menu::drawMain(const Window &window, UI &ui)
             window.close(); });
 }
 
-void Menu::drawOptions(const Window &window, UI &ui, Settings &settings)
+void Menu::drawOptions(const Window &window, UI &ui, Settings &settings, Light &light)
 {
     PanelStyle style; // largura 560, linhas de 48 px e espaço de 14 px
 
@@ -63,7 +63,10 @@ void Menu::drawOptions(const Window &window, UI &ui, Settings &settings)
             settings.showSkybox = !settings.showSkybox;
 
         if (layout.button("Restaurar padrões"))
+        {
             settings = Settings{};
+            light.resetProperties();
+        }
 
         if (layout.button("Voltar", ButtonStyle::Primary))
             page = Page::Main; });

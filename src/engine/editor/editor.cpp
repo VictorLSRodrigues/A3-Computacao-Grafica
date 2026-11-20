@@ -450,7 +450,6 @@ void Editor::update(bool inputEnabled)
 
                 if (lightSelected)
                 {
-                    settings.lightPosition = newPosition;
                     light.position = newPosition;
                 }
                 else

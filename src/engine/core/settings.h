@@ -1,23 +1,12 @@
 #pragma once
-#include <glm/glm.hpp>
 
-enum class LightType
-{
-    Point = 0,
-    Directional = 1,
-    Spot = 2
-};
-
-// Configurações de câmera e iluminação compartilhadas pelo app e pela interface.
+// Configurações de câmera e renderização compartilhadas pelo app e pela interface.
+// Os dados da iluminação ficam na Light.
 struct Settings
 {
     float fov = 45.0f;               // campo de visão, em graus
     float walkSpeed = 1.5f;          // velocidade da câmera
     float sprintSpeed = 5.0f;        // velocidade da câmera com Shift
     float mouseSensitivity = 100.0f; // sensibilidade do mouse
-    LightType lightType = LightType::Point;
-    bool showSkybox = true;                    // mostra o céu ao redor da cena
-    glm::vec3 lightPosition{0.5f, 0.5f, 0.5f}; // onde a luz está
-    glm::vec3 lightTarget{0.0f, 0.0f, 0.0f};   // ponto para onde a luz aponta
-    glm::vec3 lightColor{1.0f, 1.0f, 1.0f};    // cor da luz em RGB, de 0 a 1
+    bool showSkybox = true;          // mostra o céu ao redor da cena
 };

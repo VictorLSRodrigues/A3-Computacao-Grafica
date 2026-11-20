@@ -36,7 +36,7 @@ namespace
     }
 }
 
-void LightPanel::draw(const Window &window, UI &ui, Settings &settings)
+void LightPanel::draw(const Window &window, UI &ui, Light &light)
 {
     PanelStyle style;
     style.width = 370.0f;
@@ -48,27 +48,27 @@ void LightPanel::draw(const Window &window, UI &ui, Settings &settings)
 
     drawRightPanel(window, ui, "Propriedades da luz", style, [&](Layout &layout)
                    {
-        if (layout.button(lightTypeLabel(settings.lightType)))
-            cycleLightType(settings.lightType);
+        if (layout.button(lightTypeLabel(light.type)))
+            cycleLightType(light.type);
 
         const float step = 0.25f;
         const float limit = 10.0f;
 
-        layout.stepper("Posição X", settings.lightPosition.x, step, -limit, limit, 2);
-        layout.stepper("Posição Y", settings.lightPosition.y, step, -limit, limit, 2);
-        layout.stepper("Posição Z", settings.lightPosition.z, step, -limit, limit, 2);
+        layout.stepper("Posição X", light.position.x, step, -limit, limit, 2);
+        layout.stepper("Posição Y", light.position.y, step, -limit, limit, 2);
+        layout.stepper("Posição Z", light.position.z, step, -limit, limit, 2);
 
-        layout.stepper("Alvo X", settings.lightTarget.x, step, -limit, limit, 2);
-        layout.stepper("Alvo Y", settings.lightTarget.y, step, -limit, limit, 2);
-        layout.stepper("Alvo Z", settings.lightTarget.z, step, -limit, limit, 2);
+        layout.stepper("Alvo X", light.target.x, step, -limit, limit, 2);
+        layout.stepper("Alvo Y", light.target.y, step, -limit, limit, 2);
+        layout.stepper("Alvo Z", light.target.z, step, -limit, limit, 2);
 
-        layout.colorPicker("Cor", settings.lightColor);
+        layout.colorPicker("Cor", light.color);
 
         if (layout.button("Restaurar luz"))
         {
-            const Settings defaults;
-            settings.lightPosition = defaults.lightPosition;
-            settings.lightTarget = defaults.lightTarget;
-            settings.lightColor = defaults.lightColor;
+            // Restaura posição, alvo e cor; o tipo de luz escolhido é mantido.
+            const LightType type = light.type;
+            light.resetProperties();
+            light.type = type;
         } });
 }

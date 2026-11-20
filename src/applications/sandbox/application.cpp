@@ -70,11 +70,7 @@ void Application::update(float deltaTime)
             handleModelShortcuts(window, scene, selectedModelName);
     }
 
-    // Copia para a luz e para a câmera os ajustes escolhidos no menu.
-    light.position = settings.lightPosition;
-    light.target = settings.lightTarget;
-    light.color = glm::vec4(settings.lightColor, 1.0f);
-
+    // Copia para a câmera os ajustes escolhidos no menu.
     camera.walkSpeed = settings.walkSpeed;
     camera.sprintSpeed = settings.sprintSpeed;
     camera.sensitivity = settings.mouseSensitivity;
@@ -92,10 +88,10 @@ void Application::renderUI()
     ui.begin(window);
 
     // Desenha o HUD e as informações da cena.
-    hud.draw(ui, makeEnvironmentInfo(scene, camera, light, settings, editor, selectedModelName));
+    hud.draw(ui, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
 
     // Desenha o menu.
-    menu.draw(window, ui, settings);
+    menu.draw(window, ui, settings, light);
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.
@@ -104,7 +100,7 @@ void Application::renderUI()
         editor.drawGizmos();
 
         if (editor.isLightSelected())
-            lightPanel.draw(window, ui, settings);
+            lightPanel.draw(window, ui, light);
 
         // Desenha a barra de ferramentas.
         editor.drawToolbar();
