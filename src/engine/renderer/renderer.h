@@ -15,6 +15,10 @@ public:
     // Mostra o céu ao redor da cena.
     bool showSkybox = kDefaultShowSkybox;
 
+    // Controla separadamente a contribuição difusa e as reflexões do cubemap.
+    float ambientStrength = kDefaultAmbientStrength;
+    float environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
+
     // Carrega shaders e textura padrão e liga os testes de profundidade e de face.
     // Exige a janela criada, pois usa OpenGL. Retorna false se algo falhar.
     bool init();
@@ -28,6 +32,8 @@ public:
 
 private:
     static constexpr bool kDefaultShowSkybox = true;
+    static constexpr float kDefaultAmbientStrength = 0.12f;
+    static constexpr float kDefaultEnvironmentReflectionStrength = 0.35f;
 
     bool loadShaders();
 

@@ -52,6 +52,8 @@ bool Renderer::loadShaders()
 void Renderer::resetSettings()
 {
     showSkybox = kDefaultShowSkybox;
+    ambientStrength = kDefaultAmbientStrength;
+    environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
 }
 
 void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
@@ -61,6 +63,8 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 
     // A cena, iluminada pela luz escolhida.
     sceneShader.use();
+    sceneShader.setFloat("ambientStrength", ambientStrength);
+    sceneShader.setFloat("environmentReflectionStrength", environmentReflectionStrength);
 
     light.apply(sceneShader, camera);
     camera.setViewProjection(sceneShader, "camMatrix");

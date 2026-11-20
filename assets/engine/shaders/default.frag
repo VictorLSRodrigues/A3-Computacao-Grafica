@@ -41,8 +41,8 @@ uniform vec3 camPos;
 uniform float lightIntensity;
 
 const float PI = 3.14159265359;
-const float ENVIRONMENT_STRENGTH = 1.0;
-const float AMBIENT_STRENGTH = 0.12;
+uniform float environmentReflectionStrength;
+uniform float ambientStrength;
 
 // Distribuição de microfacetas GGX.
 float distributionGGX(vec3 N, vec3 H, float roughness)
@@ -154,18 +154,15 @@ vec3 calculateNormal()
     return normalize(TBN * tangentNormal);
 }
 
-// Reflexão ambiental controlada pela incidência da luz.
+// Reflexão ambiental independente da incidência da luz direta.
 vec3 calculateEnvironmentReflection(
     vec3 N,
     vec3 V,
     vec3 albedo,
     float metallic,
-    float roughness,
-    float lightInfluence)
+    float roughness)
 {
-    if (hasEnvironmentMap == 0 ||
-        metallic <= 0.0 ||
-        lightInfluence <= 0.0)
+    if (hasEnvironmentMap == 0 || metallic <= 0.0)
     {
         return vec3(0.0);
     }
@@ -187,8 +184,7 @@ vec3 calculateEnvironmentReflection(
 
     return environmentColor *
            F *
-           ENVIRONMENT_STRENGTH *
-           lightInfluence;
+           environmentReflectionStrength;
 }
 
 void main()
@@ -272,12 +268,6 @@ void main()
         );
     }
 
-    // Incidência efetiva da fonte sobre a superfície.
-    float lightInfluence =
-        max(dot(N, L), 0.0) *
-        attenuation *
-        max(lightIntensity, 0.0);
-
     // Iluminação direta Cook-Torrance.
     vec3 directLighting = calculatePBR(
         N,
@@ -300,16 +290,15 @@ void main()
     // Ambiente difuso: metais não recebem difusão artificial.
     vec3 kD = (vec3(1.0) - ambientFresnel) * (1.0 - metallic);
 
-    vec3 ambient = AMBIENT_STRENGTH * kD * albedo;
+    vec3 ambient = ambientStrength * kD * albedo;
 
-    // Reflexão ambiental dependente da incidência da luz.
+    // Reflexão ambiental: não depende da iluminação direta.
     vec3 environmentReflection = calculateEnvironmentReflection(
         N,
         V,
         albedo,
         metallic,
-        roughness,
-        lightInfluence
+        roughness
     );
 
     // Composição final.
