@@ -45,7 +45,7 @@ bool buildWorld(Scene& scene)
         sacredMonkey->transform.scale = glm::vec3(0.5f);
     }
 
-    if (Scene::Object* lampada = scene.addModel(ASSETS_DIR "sandbox/models/Lampada.glb"))
+    if (Scene::Object* lampada = scene.addModel(ASSETS_DIR "sandbox/models/lampada.glb"))
     {
         lampada->name = "lampada";
         lampada->transform.position = glm::vec3(-0.75f, -1.48f, -1.5f);
@@ -54,7 +54,7 @@ bool buildWorld(Scene& scene)
 
 
     //
-    if (Scene::Object* multi = scene.addModel(ASSETS_DIR "sandbox/models/Lampada.glb"))
+    if (Scene::Object* multi = scene.addModel(ASSETS_DIR "sandbox/models/lapis.glb"))
     {
         multi->name = "multi";
         const float multiScale = 0.1f; // ajuste aqui: menor = modelo menor

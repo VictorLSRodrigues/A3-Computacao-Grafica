@@ -28,6 +28,9 @@ bool Renderer::init()
         return false;
     }
 
+    if (!rainScenario.init())
+        return false;
+
     // O céu é opcional: sem ele, a cena usa a cor de fundo lisa.
     if (!skybox.load(ASSETS_DIR "engine/skybox/"))
         std::cout << "Ceu desativado: nao consegui carregar a pasta assets/skybox." << std::endl;
@@ -69,6 +72,7 @@ void Renderer::resetSettings()
     showSkybox = kDefaultShowSkybox;
     ambientStrength = kDefaultAmbientStrength;
     environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
+    rainScenario.enabled = false;
 }
 
 void Renderer::applyLight(const Light &light, const Camera &camera)
@@ -99,7 +103,10 @@ void Renderer::drawLightMarker(const Light &light, Camera &camera)
 
 void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 {
-    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+    if (rainScenario.enabled)
+        glClearColor(0.035f, 0.055f, 0.075f, 1.0f);
+    else
+        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // A cena, iluminada pela luz escolhida.
@@ -123,6 +130,8 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (showSkybox)
         skybox.draw(camera);
+
+    rainScenario.render(camera);
 }
 
 void Renderer::drawScene(const Scene &scene)

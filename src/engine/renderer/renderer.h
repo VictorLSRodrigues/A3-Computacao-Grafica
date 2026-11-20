@@ -7,6 +7,7 @@
 #include "engine/graphics/resources/texture.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
+#include "engine/scene/scenarios/rain_scenario.h"
 
 // Desenha a cena 3D: guarda os shaders e recursos gráficos e define como um quadro é montado.
 class Renderer
@@ -29,6 +30,8 @@ public:
 
     // Volta as opções de renderização aos valores padrão.
     void resetSettings();
+
+    RainScenario rainScenario;
 
 private:
     static constexpr bool kDefaultShowSkybox = true;

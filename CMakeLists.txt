@@ -75,6 +75,7 @@ add_executable(OpenGLProjeto
     src/engine/scene/light.cpp
     src/engine/scene/picking.cpp
     src/engine/scene/scene.cpp
+    src/engine/scene/scenarios/rain_scenario.cpp
 
     # Engine: UI
     src/engine/ui/UI.cpp

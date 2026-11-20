@@ -62,6 +62,9 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
         if (layout.button(renderer.showSkybox ? "Céu: ligado" : "Céu: desligado"))
             renderer.showSkybox = !renderer.showSkybox;
 
+        if (layout.button(renderer.rainScenario.enabled ? "Chuva: ligada" : "Chuva: desligada"))
+            renderer.rainScenario.enabled = !renderer.rainScenario.enabled;
+
         layout.stepper("Luz ambiente difusa", renderer.ambientStrength, 0.02f, 0.0f, 1.0f, 2);
         layout.stepper("Reflexão ambiental", renderer.environmentReflectionStrength, 0.05f, 0.0f, 2.0f, 2);
 
