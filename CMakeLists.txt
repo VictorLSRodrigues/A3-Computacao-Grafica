@@ -85,6 +85,7 @@ add_executable(OpenGLProjeto
 )
 
 target_include_directories(OpenGLProjeto PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/external"
     "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
