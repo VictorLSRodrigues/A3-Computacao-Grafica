@@ -3,12 +3,12 @@
 #include "engine/graphics/camera/camera.h"
 #include "engine/graphics/resources/shader.h"
 #include "engine/graphics/environment/skybox.h"
+#include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/resources/texture.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
 
-// Desenha a cena 3D: guarda os shaders e a textura padrão, percorre os objetos da Scene
-// e define como um quadro é montado.
+// Desenha a cena 3D: guarda os shaders e recursos gráficos e define como um quadro é montado.
 class Renderer
 {
 public:
@@ -19,7 +19,7 @@ public:
     float ambientStrength = kDefaultAmbientStrength;
     float environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
 
-    // Carrega shaders e textura padrão e liga os testes de profundidade e de face.
+    // Carrega shaders e recursos gráficos e liga os testes de profundidade e de face.
     // Exige a janela criada, pois usa OpenGL. Retorna false se algo falhar.
     bool init();
 
@@ -37,11 +37,18 @@ private:
 
     bool loadShaders();
 
+    // Envia ao shader da cena as propriedades da fonte de luz.
+    void applyLight(const Light &light, const Camera &camera);
+
+    // Desenha o marcador visual da luz usando sua posição e cor atuais.
+    void drawLightMarker(const Light &light, Camera &camera);
+
     // Desenha os objetos visíveis com o shader da cena, na ordem em que estão na Scene.
     void drawScene(const Scene &scene);
 
     Shader sceneShader;
     Shader lightShader;
     Texture defaultTexture;
+    Mesh lightMarker;
     Skybox skybox;
 };

@@ -2,6 +2,10 @@
 
 #include <iostream>
 
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "engine/graphics/geometry/shapes.h"
+
 bool Renderer::init()
 {
     if (!defaultTexture.load(ASSETS_DIR "engine/textures/default.png"))
@@ -12,6 +16,17 @@ bool Renderer::init()
 
     if (!loadShaders())
         return false;
+
+    if (!lightMarker.createIndexed(
+            shapes::cube(),
+            shapes::cubeIndices(),
+            3,
+            GL_TRIANGLES,
+            {3}))
+    {
+        std::cout << "Falha ao criar a malha do marcador da luz." << std::endl;
+        return false;
+    }
 
     // O céu é opcional: sem ele, a cena usa a cor de fundo lisa.
     if (!skybox.load(ASSETS_DIR "engine/skybox/"))
@@ -56,6 +71,32 @@ void Renderer::resetSettings()
     environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
 }
 
+void Renderer::applyLight(const Light &light, const Camera &camera)
+{
+    sceneShader.setVec4("lightColor", light.color.x, light.color.y, light.color.z, 1.0f);
+    sceneShader.setFloat("lightIntensity", light.intensity);
+    sceneShader.setVec3("lightPos", light.position.x, light.position.y, light.position.z);
+    sceneShader.setVec3("camPos", camera.position.x, camera.position.y, camera.position.z);
+
+    const glm::vec3 direction = light.direction();
+    sceneShader.setVec3("lightDir", direction.x, direction.y, direction.z);
+    sceneShader.setInt("lightType", static_cast<int>(light.type));
+}
+
+void Renderer::drawLightMarker(const Light &light, Camera &camera)
+{
+    glm::mat4 model(1.0f);
+    model = glm::translate(model, light.position);
+    model = glm::scale(model, glm::vec3(0.2f));
+
+    lightShader.use();
+    camera.setViewProjection(lightShader, "camMatrix");
+    lightShader.setVec4("lightColor", light.color.x, light.color.y, light.color.z, 1.0f);
+    lightShader.setMat4("model", model);
+
+    lightMarker.draw();
+}
+
 void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 {
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
@@ -66,7 +107,7 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
     sceneShader.setFloat("ambientStrength", ambientStrength);
     sceneShader.setFloat("environmentReflectionStrength", environmentReflectionStrength);
 
-    light.apply(sceneShader, camera);
+    applyLight(light, camera);
     camera.setViewProjection(sceneShader, "camMatrix");
 
     // Ambiente para reflexões dos materiais.
@@ -77,9 +118,7 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
     drawScene(scene);
 
     // O cubo que marca onde a luz está.
-    lightShader.use();
-    camera.setViewProjection(lightShader, "camMatrix");
-    light.drawMarker(lightShader);
+    drawLightMarker(light, camera);
 
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (showSkybox)

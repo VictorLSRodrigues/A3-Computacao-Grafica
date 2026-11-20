@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <iostream>
-
 #include "applications/sandbox/ui/environment_info.h"
 #include "world.h"
 
@@ -13,12 +12,6 @@ bool Application::init()
 
     if (!renderer.init())
         return false;
-
-    if (!light.create())
-    {
-        std::cout << "Erro ao criar a malha da luz." << std::endl;
-        return false;
-    }
 
     if (!ui.create())
     {
