@@ -65,6 +65,9 @@ add_executable(OpenGLProjeto
     # Engine: Graphics Environment
     src/engine/graphics/environment/skybox.cpp
 
+    # Engine: Graphics Manager
+    src/engine/graphics/resources/texture_manager.cpp
+
     # Engine: Renderer
     src/engine/renderer/renderer.cpp
 

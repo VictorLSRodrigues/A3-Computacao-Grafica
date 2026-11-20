@@ -1,5 +1,6 @@
+#include "engine/graphics/resources/texture_manager.h"
 #include "model.h"
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/resources/shader.h"
 #include "engine/graphics/resources/texture.h"
@@ -130,179 +131,177 @@ void Model::draw(Shader &shader, const Texture &diffuseFallback,
 }
 
 bool Model::intersectRay(
-    const glm::vec3& rayOrigin,
-    const glm::vec3& rayDirection,
-    const glm::mat4& objectMatrix,
-    std::size_t& hitMeshIndex,
-    unsigned int& hitFaceIndex,
-    float& hitDistance) const
+	const glm::vec3 &rayOrigin,
+	const glm::vec3 &rayDirection,
+	const glm::mat4 &objectMatrix,
+	std::size_t &hitMeshIndex,
+	unsigned int &hitFaceIndex,
+	float &hitDistance) const
 {
-    if (meshes.empty() || matricesMeshes.size() != meshes.size())
-        return false;
+	if (meshes.empty() || matricesMeshes.size() != meshes.size())
+		return false;
 
-    const float directionLength = glm::length(rayDirection);
+	const float directionLength = glm::length(rayDirection);
 
-    if (directionLength < 0.000001f)
-        return false;
+	if (directionLength < 0.000001f)
+		return false;
 
-    const glm::vec3 worldDirection =
-        rayDirection / directionLength;
+	const glm::vec3 worldDirection =
+		rayDirection / directionLength;
 
-    float nearestDistance =
-        std::numeric_limits<float>::max();
+	float nearestDistance =
+		std::numeric_limits<float>::max();
 
-    bool foundIntersection = false;
+	bool foundIntersection = false;
 
-    // Percorre todas as malhas do modelo.
-    for (std::size_t i = 0; i < meshes.size(); ++i)
-    {
-        // Combina a transformação do objeto com a transformação interna.
-        const glm::mat4 meshMatrix =
-            objectMatrix * matricesMeshes[i];
+	// Percorre todas as malhas do modelo.
+	for (std::size_t i = 0; i < meshes.size(); ++i)
+	{
+		// Combina a transformação do objeto com a transformação interna.
+		const glm::mat4 meshMatrix =
+			objectMatrix * matricesMeshes[i];
 
-        const float determinant = glm::determinant(meshMatrix);
+		const float determinant = glm::determinant(meshMatrix);
 
-        if (std::abs(determinant) < 0.000001f)
-            continue;
+		if (std::abs(determinant) < 0.000001f)
+			continue;
 
-        const glm::mat4 inverseMatrix = glm::inverse(meshMatrix);
+		const glm::mat4 inverseMatrix = glm::inverse(meshMatrix);
 
-        // Converte o raio do espaço global para o espaço local da malha.
-        const glm::vec3 localOrigin = glm::vec3(
-            inverseMatrix * glm::vec4(rayOrigin, 1.0f));
+		// Converte o raio do espaço global para o espaço local da malha.
+		const glm::vec3 localOrigin = glm::vec3(
+			inverseMatrix * glm::vec4(rayOrigin, 1.0f));
 
-        glm::vec3 localDirection = glm::vec3(
-            inverseMatrix * glm::vec4(worldDirection, 0.0f));
+		glm::vec3 localDirection = glm::vec3(
+			inverseMatrix * glm::vec4(worldDirection, 0.0f));
 
-        const float localDirectionLength =
-            glm::length(localDirection);
+		const float localDirectionLength =
+			glm::length(localDirection);
 
-        if (localDirectionLength < 0.000001f)
-            continue;
+		if (localDirectionLength < 0.000001f)
+			continue;
 
-        localDirection /= localDirectionLength;
+		localDirection /= localDirectionLength;
 
-        unsigned int faceIndex = 0;
-        float localDistance = 0.0f;
+		unsigned int faceIndex = 0;
+		float localDistance = 0.0f;
 
-        // Verifica a interseção com a malha atual.
-        if (!meshes[i].getGeometry().intersectRay(
-                localOrigin,
-                localDirection,
-                faceIndex,
-                localDistance))
-        {
-            continue;
-        }
+		// Verifica a interseção com a malha atual.
+		if (!meshes[i].getGeometry().intersectRay(
+				localOrigin,
+				localDirection,
+				faceIndex,
+				localDistance))
+		{
+			continue;
+		}
 
-        // Converte o ponto atingido novamente para o espaço global.
-        const glm::vec3 localHitPosition =
-            localOrigin + localDirection * localDistance;
+		// Converte o ponto atingido novamente para o espaço global.
+		const glm::vec3 localHitPosition =
+			localOrigin + localDirection * localDistance;
 
-        const glm::vec3 worldHitPosition = glm::vec3(
-            meshMatrix * glm::vec4(localHitPosition, 1.0f));
+		const glm::vec3 worldHitPosition = glm::vec3(
+			meshMatrix * glm::vec4(localHitPosition, 1.0f));
 
-        const float worldDistance = glm::dot(
-            worldHitPosition - rayOrigin,
-            worldDirection);
+		const float worldDistance = glm::dot(
+			worldHitPosition - rayOrigin,
+			worldDirection);
 
-        if (worldDistance < 0.0f)
-            continue;
+		if (worldDistance < 0.0f)
+			continue;
 
-        // Guarda a face mais próxima da câmera.
-        if (worldDistance < nearestDistance)
-        {
-            nearestDistance = worldDistance;
-            hitMeshIndex = i;
-            hitFaceIndex = faceIndex;
-            foundIntersection = true;
-        }
-    }
+		// Guarda a face mais próxima da câmera.
+		if (worldDistance < nearestDistance)
+		{
+			nearestDistance = worldDistance;
+			hitMeshIndex = i;
+			hitFaceIndex = faceIndex;
+			foundIntersection = true;
+		}
+	}
 
-    if (!foundIntersection)
-        return false;
+	if (!foundIntersection)
+		return false;
 
-    hitDistance = nearestDistance;
+	hitDistance = nearestDistance;
 
-    return true;
+	return true;
 }
 
 // Recupera os vértices da face considerando as transformações.
 bool Model::getFacePositions(
-    std::size_t meshIndex,
-    unsigned int faceIndex,
-    const glm::mat4& objectMatrix,
-    glm::vec3& a,
-    glm::vec3& b,
-    glm::vec3& c) const
+	std::size_t meshIndex,
+	unsigned int faceIndex,
+	const glm::mat4 &objectMatrix,
+	glm::vec3 &a,
+	glm::vec3 &b,
+	glm::vec3 &c) const
 {
-    if (meshIndex >= meshes.size() ||
-        meshIndex >= matricesMeshes.size())
-        return false;
+	if (meshIndex >= meshes.size() ||
+		meshIndex >= matricesMeshes.size())
+		return false;
 
-    // Recupera as posições locais da face.
-    if (!meshes[meshIndex].getGeometry().getFacePositions(
-            faceIndex, a, b, c))
-        return false;
+	// Recupera as posições locais da face.
+	if (!meshes[meshIndex].getGeometry().getFacePositions(
+			faceIndex, a, b, c))
+		return false;
 
-    // Combina a transformação do objeto com a da malha.
-    const glm::mat4 finalMatrix =
-        objectMatrix * matricesMeshes[meshIndex];
+	// Combina a transformação do objeto com a da malha.
+	const glm::mat4 finalMatrix =
+		objectMatrix * matricesMeshes[meshIndex];
 
-    // Converte os três vértices para o espaço global.
-    a = glm::vec3(finalMatrix * glm::vec4(a, 1.0f));
-    b = glm::vec3(finalMatrix * glm::vec4(b, 1.0f));
-    c = glm::vec3(finalMatrix * glm::vec4(c, 1.0f));
+	// Converte os três vértices para o espaço global.
+	a = glm::vec3(finalMatrix * glm::vec4(a, 1.0f));
+	b = glm::vec3(finalMatrix * glm::vec4(b, 1.0f));
+	c = glm::vec3(finalMatrix * glm::vec4(c, 1.0f));
 
-    return true;
+	return true;
 }
 
-
 bool Model::beginExtrusion(
-    std::size_t meshIndex,
-    unsigned int faceIndex)
+	std::size_t meshIndex,
+	unsigned int faceIndex)
 {
-    if (meshIndex >= meshes.size())
-        return false;
+	if (meshIndex >= meshes.size())
+		return false;
 
-    return meshes[meshIndex].beginExtrusion(faceIndex);
+	return meshes[meshIndex].beginExtrusion(faceIndex);
 }
 
 bool Model::updateExtrusion(
-    std::size_t meshIndex,
-    float distance)
+	std::size_t meshIndex,
+	float distance)
 {
-    if (meshIndex >= meshes.size())
-        return false;
+	if (meshIndex >= meshes.size())
+		return false;
 
-    return meshes[meshIndex].updateExtrusion(distance);
+	return meshes[meshIndex].updateExtrusion(distance);
 }
 
 void Model::finishExtrusion(std::size_t meshIndex)
 {
-    if (meshIndex >= meshes.size())
-        return;
+	if (meshIndex >= meshes.size())
+		return;
 
-    meshes[meshIndex].finishExtrusion();
+	meshes[meshIndex].finishExtrusion();
 }
 
 void Model::cancelExtrusion(std::size_t meshIndex)
 {
-    if (meshIndex >= meshes.size())
-        return;
+	if (meshIndex >= meshes.size())
+		return;
 
-    meshes[meshIndex].cancelExtrusion();
+	meshes[meshIndex].cancelExtrusion();
 }
 
 unsigned int Model::getExtrudedFaceIndex(
-    std::size_t meshIndex) const
+	std::size_t meshIndex) const
 {
-    if (meshIndex >= meshes.size())
-        return std::numeric_limits<unsigned int>::max();
+	if (meshIndex >= meshes.size())
+		return std::numeric_limits<unsigned int>::max();
 
-    return meshes[meshIndex].getGeometry().getExtrudedFaceIndex();
+	return meshes[meshIndex].getGeometry().getExtrudedFaceIndex();
 }
-
 
 // Calcula normais suaves a partir dos triângulos, para modelos que não trazem normais.
 static std::vector<glm::vec3> computeNormals(const std::vector<glm::vec3> &positions,
@@ -331,81 +330,211 @@ static std::vector<glm::vec3> computeNormals(const std::vector<glm::vec3> &posit
 	return normals;
 }
 
+static std::vector<glm::vec4> computeTangents(
+	const std::vector<glm::vec3> &positions,
+	const std::vector<glm::vec3> &normals,
+	const std::vector<glm::vec2> &texUVs,
+	const std::vector<GLuint> &indices)
+{
+	std::vector<glm::vec3> tangentAccum(positions.size(), glm::vec3(0.0f));
+	std::vector<glm::vec3> bitangentAccum(positions.size(), glm::vec3(0.0f));
+
+	for (std::size_t i = 0; i + 2 < indices.size(); i += 3)
+	{
+		GLuint i0 = indices[i];
+		GLuint i1 = indices[i + 1];
+		GLuint i2 = indices[i + 2];
+
+		if (i0 >= positions.size() ||
+			i1 >= positions.size() ||
+			i2 >= positions.size())
+			continue;
+
+		glm::vec3 edge1 = positions[i1] - positions[i0];
+		glm::vec3 edge2 = positions[i2] - positions[i0];
+
+		glm::vec2 deltaUV1 = texUVs[i1] - texUVs[i0];
+		glm::vec2 deltaUV2 = texUVs[i2] - texUVs[i0];
+
+		float determinant =
+			deltaUV1.x * deltaUV2.y -
+			deltaUV2.x * deltaUV1.y;
+
+		if (std::abs(determinant) < 0.000001f)
+			continue;
+
+		float inverseDeterminant = 1.0f / determinant;
+
+		glm::vec3 tangent =
+			(edge1 * deltaUV2.y - edge2 * deltaUV1.y) * inverseDeterminant;
+
+		glm::vec3 bitangent =
+			(edge2 * deltaUV1.x - edge1 * deltaUV2.x) * inverseDeterminant;
+
+		tangentAccum[i0] += tangent;
+		tangentAccum[i1] += tangent;
+		tangentAccum[i2] += tangent;
+
+		bitangentAccum[i0] += bitangent;
+		bitangentAccum[i1] += bitangent;
+		bitangentAccum[i2] += bitangent;
+	}
+
+	std::vector<glm::vec4> tangents;
+	tangents.reserve(positions.size());
+
+	for (std::size_t i = 0; i < positions.size(); ++i)
+	{
+		glm::vec3 N = glm::normalize(normals[i]);
+
+		// Remove a possível componente paralela à normal.
+		glm::vec3 T =
+			tangentAccum[i] - N * glm::dot(N, tangentAccum[i]);
+
+		// Fallback para UVs degeneradas ou tangentes inválidas.
+		if (glm::length(T) < 0.000001f)
+		{
+			glm::vec3 axis =
+				std::abs(N.y) < 0.999f
+					? glm::vec3(0.0f, 1.0f, 0.0f)
+					: glm::vec3(1.0f, 0.0f, 0.0f);
+
+			T = glm::cross(axis, N);
+		}
+
+		T = glm::normalize(T);
+
+		float handedness =
+			glm::dot(glm::cross(N, T), bitangentAccum[i]) < 0.0f
+				? -1.0f
+				: 1.0f;
+
+		tangents.emplace_back(T, handedness);
+	}
+
+	return tangents;
+}
+
 void Model::loadMesh(unsigned int meshIndex, const glm::mat4 &matrix)
 {
-	// Uma malha do arquivo pode ter várias primitivas (por exemplo, uma por material);
-	// cada uma vira uma Mesh própria, com a mesma matriz do nó.
+	// Uma malha do arquivo pode ter várias primitivas.
 	for (const json &primitive : JSON["meshes"][meshIndex]["primitives"])
 	{
-		// Só triângulos (modo 4, o padrão do formato).
+		// Só triângulos.
 		if (primitive.value("mode", 4) != 4)
 			continue;
 
 		const json &attributes = primitive["attributes"];
+
 		if (!attributes.contains("POSITION"))
 			continue;
 
-		// A posição é obrigatória; os outros atributos são opcionais.
+		// Posições.
 		std::vector<glm::vec3> positions =
-			groupFloatsVec3(getFloats(JSON["accessors"][attributes["POSITION"].get<unsigned int>()]));
+			groupFloatsVec3(
+				getFloats(JSON["accessors"][attributes["POSITION"].get<unsigned int>()]));
 
-		// Calcula o raio considerando a transformação interna do modelo.
+		// Atualiza os limites do modelo.
 		for (const glm::vec3 &position : positions)
 		{
 			glm::vec3 transformedPosition =
 				glm::vec3(matrix * glm::vec4(position, 1.0f));
 
-			//transforma cada malha contribui para os limites gerais do modelo
-			boundingBox.expand(transformedPosition); 	
+			boundingBox.expand(transformedPosition);
 
 			boundingRadius = std::max(
 				boundingRadius,
 				glm::length(transformedPosition));
 		}
 
-		// Sem índices no arquivo, os vértices já vêm em ordem: 0, 1, 2...
+		// Índices.
 		std::vector<GLuint> indices;
+
 		if (primitive.contains("indices"))
 		{
-			indices = getIndices(JSON["accessors"][primitive["indices"].get<unsigned int>()]);
+			indices = getIndices(
+				JSON["accessors"][primitive["indices"].get<unsigned int>()]);
 		}
 		else
 		{
 			indices.resize(positions.size());
+
 			for (GLuint i = 0; i < indices.size(); i++)
 				indices[i] = i;
 		}
 
-		// Sem UV, todos os vértices usam (0, 0).
+		// Coordenadas UV.
 		std::vector<glm::vec2> texUVs;
+
 		if (attributes.contains("TEXCOORD_0"))
-			texUVs = groupFloatsVec2(getFloats(JSON["accessors"][attributes["TEXCOORD_0"].get<unsigned int>()]));
+		{
+			texUVs = groupFloatsVec2(
+				getFloats(JSON["accessors"][attributes["TEXCOORD_0"].get<unsigned int>()]));
+		}
+
 		texUVs.resize(positions.size(), glm::vec2(0.0f));
 
-		// Sem normais, calcula a partir dos triângulos.
+		// Normais.
 		std::vector<glm::vec3> normals;
+
 		if (attributes.contains("NORMAL"))
-			normals = groupFloatsVec3(getFloats(JSON["accessors"][attributes["NORMAL"].get<unsigned int>()]));
+		{
+			normals = groupFloatsVec3(
+				getFloats(JSON["accessors"][attributes["NORMAL"].get<unsigned int>()]));
+		}
+
 		if (normals.size() != positions.size())
 			normals = computeNormals(positions, indices);
 
-		// Reúne os atributos em vértices completos e lê o material da primitiva.
-		std::vector<Vertex> vertices = assembleVertices(positions, normals, texUVs);
+		// Tangentes fornecidas pelo GLB.
+		std::vector<glm::vec4> tangents;
 
-		std::vector<Texture> textures;
+		if (attributes.contains("TANGENT"))
+		{
+			tangents = groupFloatsVec4(
+				getFloats(JSON["accessors"][attributes["TANGENT"].get<unsigned int>()]));
+		}
+
+		// Calcula tangentes quando o GLB não fornece valores válidos.
+		if (tangents.size() != positions.size())
+		{
+			tangents = computeTangents(
+				positions,
+				normals,
+				texUVs,
+				indices);
+		}
+
+		// Monta os vértices completos.
+		std::vector<Vertex> vertices = assembleVertices(
+			positions,
+			normals,
+			texUVs,
+			tangents);
+
+		// Carrega o material da primitiva.
+		std::vector<std::shared_ptr<Texture>> textures;
 		Material material;
+
 		loadMaterial(primitive, textures, material);
 
+		
+
+		// Cria a malha.
 		Mesh &mesh = meshes.emplace_back();
+
 		if (!mesh.createIndexed(vertices, indices))
 			throw std::runtime_error("Failed to create model mesh.");
 
 		mesh.setMaterial(material);
 
-		for (Texture &texture : textures)
-			mesh.addTexture(std::move(texture));
+		for (const auto &texture : textures)
+		{
+			if (texture)
+				mesh.addTexture(texture);
+		}
 
-		// meshes e matricesMeshes andam juntas: a posição i de uma corresponde à posição i da outra.
+		// Mantém as matrizes sincronizadas com as malhas.
 		matricesMeshes.push_back(matrix);
 	}
 }
@@ -582,123 +711,233 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	return indices;
 }
 
-void Model::loadMaterial(const json &primitive,
-                         std::vector<Texture> &textures,
-                         Material &material)
+void Model::loadMaterial(
+	const json &primitive,
+	std::vector<std::shared_ptr<Texture>> &textures,
+	Material &material)
 {
-    // Sem material, mantém os valores padrão definidos em Material.
-    if (!primitive.contains("material"))
-        return;
+	// Sem material, mantém os valores padrão.
+	if (!primitive.contains("material"))
+		return;
 
-    const unsigned int materialIndex = primitive["material"].get<unsigned int>();
-    if (!JSON.contains("materials") || materialIndex >= JSON["materials"].size())
-        return;
+	const unsigned int materialIndex =
+		primitive["material"].get<unsigned int>();
 
-    const json &materialJson = JSON["materials"][materialIndex];
-    const json pbr = materialJson.value("pbrMetallicRoughness", json::object());
+	if (!JSON.contains("materials") ||
+		materialIndex >= JSON["materials"].size())
+		return;
 
-    if (pbr.contains("baseColorFactor") && pbr["baseColorFactor"].is_array() &&
-        pbr["baseColorFactor"].size() == 4)
-    {
-        for (unsigned int i = 0; i < 4; ++i)
-            material.baseColorFactor[i] = pbr["baseColorFactor"][i].get<float>();
-    }
+	const json &materialJson = JSON["materials"][materialIndex];
 
-    material.metallicFactor = pbr.value("metallicFactor", 1.0f);
-    material.roughnessFactor = pbr.value("roughnessFactor", 1.0f);
-    material.metallicFactor = std::clamp(material.metallicFactor, 0.0f, 1.0f);
-    material.roughnessFactor = std::clamp(material.roughnessFactor, 0.04f, 1.0f);
+	const json pbr =
+		materialJson.value("pbrMetallicRoughness", json::object());
 
-    Texture colorTexture;
-    if (pbr.contains("baseColorTexture") &&
-        loadMaterialTexture(pbr["baseColorTexture"], colorTexture))
-    {
-        colorTexture.setType("diffuse");
-        textures.push_back(std::move(colorTexture));
-    }
-    else
-    {
-        // Pixel branco: permite que baseColorFactor apareça sem ser tingido
-        // pela textura padrão usada pela aplicação.
-        const unsigned char white[4] = {255, 255, 255, 255};
-        Texture solid;
-        if (solid.create(1, 1, 4, white))
-        {
-            solid.setType("diffuse");
-            textures.push_back(std::move(solid));
-        }
-    }
+	// Cor-base.
+	if (pbr.contains("baseColorFactor") &&
+		pbr["baseColorFactor"].is_array() &&
+		pbr["baseColorFactor"].size() == 4)
+	{
+		for (unsigned int i = 0; i < 4; ++i)
+		{
+			material.baseColorFactor[i] =
+				pbr["baseColorFactor"][i].get<float>();
+		}
+	}
 
-    // No glTF, G = roughness e B = metallic. Não é um mapa specular tradicional.
-    Texture metallicRoughnessTexture;
-    if (pbr.contains("metallicRoughnessTexture") &&
-        loadMaterialTexture(pbr["metallicRoughnessTexture"], metallicRoughnessTexture))
-    {
-        metallicRoughnessTexture.setType("metallicRoughness");
-        textures.push_back(std::move(metallicRoughnessTexture));
-    }
+	// Fatores Metallic e Roughness.
+	material.metallicFactor = pbr.value("metallicFactor", 1.0f);
+	material.roughnessFactor = pbr.value("roughnessFactor", 1.0f);
+
+	material.metallicFactor =
+		std::clamp(material.metallicFactor, 0.0f, 1.0f);
+
+	material.roughnessFactor =
+		std::clamp(material.roughnessFactor, 0.04f, 1.0f);
+
+	// Diffuse / Albedo.
+	std::shared_ptr<Texture> colorTexture;
+
+	if (pbr.contains("baseColorTexture") &&
+		loadMaterialTexture(
+			pbr["baseColorTexture"],
+			colorTexture,
+			"diffuse"))
+	{
+		textures.push_back(colorTexture);
+	}
+	else
+	{
+		// Textura branca para preservar o baseColorFactor.
+		const unsigned char white[4] = {255, 255, 255, 255};
+
+		auto solid = std::make_shared<Texture>();
+
+		if (solid->create(1, 1, 4, white))
+		{
+			solid->setType("diffuse");
+			textures.push_back(solid);
+		}
+	}
+
+	// Metallic / Roughness.
+	std::shared_ptr<Texture> metallicRoughnessTexture;
+
+	if (pbr.contains("metallicRoughnessTexture") &&
+		loadMaterialTexture(
+			pbr["metallicRoughnessTexture"],
+			metallicRoughnessTexture,
+			"metallicRoughness"))
+	{
+		textures.push_back(metallicRoughnessTexture);
+	}
+
+	// Normal Map.
+	std::shared_ptr<Texture> normalTexture;
+
+	if (materialJson.contains("normalTexture") &&
+		loadMaterialTexture(
+			materialJson["normalTexture"],
+			normalTexture,
+			"normal"))
+	{
+		textures.push_back(normalTexture);
+	}
 }
 
-
-bool Model::loadMaterialTexture(const json &textureInfo, Texture &texture)
+bool Model::loadMaterialTexture(
+	const json &textureInfo,
+	std::shared_ptr<Texture> &texture,
+	const std::string &type)
 {
-	// O material aponta para uma textura, e a textura aponta para uma imagem.
-	const unsigned int textureIndex = textureInfo["index"].get<unsigned int>();
+	if (!textureInfo.contains("index"))
+		return false;
+
+	const unsigned int textureIndex =
+		textureInfo["index"].get<unsigned int>();
+
+	if (!JSON.contains("textures") ||
+		textureIndex >= JSON["textures"].size())
+		return false;
+
 	const json &textureDesc = JSON["textures"][textureIndex];
 
 	if (!textureDesc.contains("source"))
 		return false;
 
-	loadImage(textureDesc["source"].get<unsigned int>(), texture);
-	return true;
+	const unsigned int imageIndex =
+		textureDesc["source"].get<unsigned int>();
+
+	return loadImage(imageIndex, texture, type);
 }
 
-void Model::loadImage(unsigned int imageIndex, Texture &texture)
+bool Model::loadImage(
+	unsigned int imageIndex,
+	std::shared_ptr<Texture> &texture,
+	const std::string &type)
 {
-	std::string fileStr = std::string(file);
-	std::string fileDirectory = fileStr.substr(0, fileStr.find_last_of('/') + 1);
+	if (!JSON.contains("images") ||
+		imageIndex >= JSON["images"].size())
+		return false;
 
-	// A imagem pode estar em arquivo separado ou dentro do próprio GLB.
 	const json &image = JSON["images"][imageIndex];
-	const std::string texPath = image.value("uri", image.value("name", std::string()));
 
-	bool loaded = false;
+	std::string fileStr = std::string(file);
+
+	const std::size_t lastSlash =
+		fileStr.find_last_of("/\\");
+
+	const std::string fileDirectory =
+		lastSlash == std::string::npos
+			? ""
+			: fileStr.substr(0, lastSlash + 1);
+
+	// Imagem externa.
 	if (image.contains("uri"))
 	{
+		const std::string texPath =
+			image["uri"].get<std::string>();
+
 		if (texPath.rfind("data:", 0) == 0)
-			throw std::runtime_error("Data URI textures are not supported.");
-		loaded = texture.load(fileDirectory + texPath);
-	}
-	else if (image.contains("bufferView"))
-	{
-		const unsigned int viewIndex = image["bufferView"].get<unsigned int>();
-		const json &view = JSON["bufferViews"][viewIndex];
-		const std::size_t offset = view.value("byteOffset", std::size_t(0));
-		const std::size_t length = view["byteLength"].get<std::size_t>();
-		if (offset > data.size() || length > data.size() - offset)
-			throw std::runtime_error("GLB image data is outside the binary buffer.");
-		loaded = texture.loadFromMemory(data.data() + offset, length);
+			throw std::runtime_error(
+				"Data URI textures are not supported.");
+
+		texture = TextureManager::load(
+			fileDirectory + texPath,
+			type);
+
+		if (!texture)
+			throw std::runtime_error(
+				"Failed to load model texture: " + texPath);
+
+		return true;
 	}
 
-	if (!loaded)
-		throw std::runtime_error("Failed to load model texture: " + texPath);
+	// Imagem embutida no GLB.
+	if (image.contains("bufferView"))
+	{
+		const unsigned int viewIndex =
+			image["bufferView"].get<unsigned int>();
+
+		if (!JSON.contains("bufferViews") ||
+			viewIndex >= JSON["bufferViews"].size())
+			return false;
+
+		const json &view = JSON["bufferViews"][viewIndex];
+
+		const std::size_t offset =
+			view.value("byteOffset", std::size_t(0));
+
+		const std::size_t length =
+			view["byteLength"].get<std::size_t>();
+
+		if (offset > data.size() ||
+			length > data.size() - offset)
+		{
+			throw std::runtime_error(
+				"GLB image data is outside the binary buffer.");
+		}
+
+		// Identificador exclusivo para a imagem embutida.
+		const std::string cacheKey =
+			std::string(file) +
+			"#embedded-image-" +
+			std::to_string(imageIndex);
+
+		texture = TextureManager::loadFromMemory(
+			cacheKey,
+			data.data() + offset,
+			length,
+			type);
+
+		if (!texture)
+			throw std::runtime_error(
+				"Failed to load embedded GLB texture.");
+
+		return true;
+	}
+
+	return false;
 }
 
 std::vector<Vertex> Model::assembleVertices(
 	std::vector<glm::vec3> positions,
 	std::vector<glm::vec3> normals,
-	std::vector<glm::vec2> texUVs)
+	std::vector<glm::vec2> texUVs,
+	std::vector<glm::vec4> tangents)
 {
 	std::vector<Vertex> vertices;
-	for (int i = 0; i < positions.size(); i++)
+
+	for (std::size_t i = 0; i < positions.size(); ++i)
 	{
 		vertices.push_back(
 			Vertex{
 				positions[i],
-				glm::vec3(1.0f, 1.0f, 1.0f),
+				glm::vec3(1.0f),
 				texUVs[i],
-				normals[i]});
+				normals[i],
+				tangents[i]});
 	}
+
 	return vertices;
 }
 

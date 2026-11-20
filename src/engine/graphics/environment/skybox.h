@@ -18,6 +18,8 @@ public:
     // Desenha o céu; deve ser chamado depois dos objetos da cena. Não faz nada se não foi carregado.
     void draw(Camera& camera);
 
+    bool bindEnvironment(unsigned int unit = 5) const;
+
 private:
     Cubemap cubemap;
     Shader shader;

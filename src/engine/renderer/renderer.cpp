@@ -61,15 +61,22 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 
     // A cena, iluminada pela luz escolhida.
     sceneShader.use();
+
     light.apply(sceneShader, camera);
     camera.setViewProjection(sceneShader, "camMatrix");
+
+    // Ambiente para reflexões dos materiais.
+    sceneShader.setInt("environmentMap", 5);
+    sceneShader.setInt("hasEnvironmentMap",
+                       skybox.bindEnvironment(5) ? 1 : 0);
+
     drawScene(scene);
 
     // O cubo que marca onde a luz está.
     lightShader.use();
     camera.setViewProjection(lightShader, "camMatrix");
     light.drawMarker(lightShader);
-    
+
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (showSkybox)
         skybox.draw(camera);

@@ -2,7 +2,7 @@
 #define MODEL_CLASS_H
 
 #include <deque>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 
 #include "engine/graphics/buffers/VAO.h"
 #include "engine/graphics/mesh/mesh.h"
@@ -10,6 +10,8 @@
 #include "engine/graphics/geometry/bounding_box.h"
 #include <cstddef>
 #include "engine/graphics/mesh/material.h"
+#include <vector>
+#include <memory>
 
 using json = nlohmann::json;
 
@@ -98,11 +100,20 @@ private:
     void traverseNode(unsigned int nodeIndex, glm::mat4 parentTransform = glm::mat4(1.0f));
 
     // Lê o material da parte: cor base e texturas de cor e de brilho.
-    void loadMaterial(const json &primitive, std::vector<Texture> &textures, Material &material);
+    void loadMaterial(
+        const json &primitive,
+        std::vector<std::shared_ptr<Texture>> &textures,
+        Material &material);
     // Carrega a imagem apontada por uma textura do material; retorna false se ela não tiver imagem.
-    bool loadMaterialTexture(const json &textureInfo, Texture &texture);
+    bool loadMaterialTexture(
+        const json &textureInfo,
+        std::shared_ptr<Texture> &texture,
+        const std::string &type);
     // Carrega uma imagem do arquivo, seja ela externa ou embutida no GLB.
-    void loadImage(unsigned int imageIndex, Texture &texture);
+    bool loadImage(
+        unsigned int imageIndex,
+        std::shared_ptr<Texture> &texture,
+        const std::string &type);
     // Lê os dados binários associados à descrição do modelo.
     std::vector<unsigned char> getData();
     // Converte referências do arquivo em dados de vértices, índices e imagens.
@@ -113,7 +124,8 @@ private:
     std::vector<Vertex> assembleVertices(
         std::vector<glm::vec3> positions,
         std::vector<glm::vec3> normals,
-        std::vector<glm::vec2> texUVs);
+        std::vector<glm::vec2> texUVs,
+        std::vector<glm::vec4> tangents);
 
     // Agrupa uma lista de números em vetores com 2, 3 ou 4 componentes.
     std::vector<glm::vec2> groupFloatsVec2(std::vector<float> values);

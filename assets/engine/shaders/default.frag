@@ -1,5 +1,4 @@
 
-
 #version 330 core
 
 out vec4 FragColor;
@@ -10,16 +9,28 @@ in vec2 texCoord;
 in vec3 Normal;
 in vec3 crntPos;
 
+// Base TBN para Normal Mapping.
+in vec3 Tangent;
+in vec3 Bitangent;
+
 // Texturas.
 uniform sampler2D tex0;
 uniform sampler2D specular0;
 uniform sampler2D metallicRoughnessMap;
+uniform sampler2D normalMap;
+
+// Cubemap do ambiente.
+uniform samplerCube environmentMap;
+
+// Controle dos mapas.
+uniform int hasMetallicRoughnessMap;
+uniform int hasNormalMap;
+uniform int hasEnvironmentMap;
 
 // Material.
 uniform vec4 baseColor;
 uniform float metallicFactor;
 uniform float roughnessFactor;
-uniform int hasMetallicRoughnessMap;
 
 // Iluminação.
 uniform int lightType;
@@ -29,6 +40,9 @@ uniform vec3 lightDir;
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
+
+// Intensidade das reflexões ambientais.
+const float ENVIRONMENT_STRENGTH = 1.0;
 
 // Distribuição de microfacetas GGX.
 float distributionGGX(vec3 N, vec3 H, float roughness)
@@ -97,7 +111,6 @@ vec3 calculatePBR(
     if (NdotL <= 0.0 || NdotV <= 0.0)
         return vec3(0.0);
 
-    // Reflexão na superfície.
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
     vec3 F = fresnelSchlick(
@@ -124,6 +137,61 @@ vec3 calculatePBR(
     return (diffuse + specular) * radiance * NdotL;
 }
 
+// Calcula a normal utilizando o Normal Map.
+vec3 calculateNormal()
+{
+    vec3 N = normalize(Normal);
+
+    // Sem mapa normal, utiliza a normal original.
+    if (hasNormalMap == 0)
+        return N;
+
+    // Reconstrói uma base ortonormal.
+    vec3 T = normalize(Tangent - dot(Tangent, N) * N);
+
+    vec3 B = normalize(cross(N, T));
+
+    // Preserva a orientação da bitangente.
+    if (dot(B, Bitangent) < 0.0)
+        B = -B;
+
+    mat3 TBN = mat3(T, B, N);
+
+    // Converte os valores da textura de [0,1] para [-1,1].
+    vec3 tangentNormal = texture(normalMap, texCoord).rgb;
+    tangentNormal = normalize(tangentNormal * 2.0 - 1.0);
+
+    // Transforma a normal para o espaço do mundo.
+    return normalize(TBN * tangentNormal);
+}
+
+// Calcula a reflexão do ambiente.
+vec3 calculateEnvironmentReflection(
+    vec3 N,
+    vec3 V,
+    vec3 albedo,
+    float metallic)
+{
+    if (hasEnvironmentMap == 0 || metallic <= 0.0)
+        return vec3(0.0);
+
+    // Direção da reflexão.
+    vec3 R = reflect(-V, N);
+
+    // Cor refletida pelo ambiente.
+    vec3 environmentColor = texture(environmentMap, R).rgb;
+
+    // Fresnel do material metálico.
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+    vec3 F = fresnelSchlick(
+        max(dot(N, V), 0.0),
+        F0
+    );
+
+    return environmentColor * F * metallic * ENVIRONMENT_STRENGTH;
+}
+
 void main()
 {
     // Cor-base e transparência.
@@ -146,9 +214,9 @@ void main()
         metallic = clamp(metallic, 0.0, 1.0);
     }
 
-	
+    // Normal final, com suporte a Normal Map.
+    vec3 N = calculateNormal();
 
-    vec3 N = normalize(Normal);
     vec3 V = normalize(camPos - crntPos);
 
     vec3 L;
@@ -204,7 +272,7 @@ void main()
              b * distanceToLight + 1.0);
     }
 
-    // Contribuição direta da luz.
+    // Iluminação direta PBR.
     vec3 directLighting = calculatePBR(
         N,
         V,
@@ -215,10 +283,22 @@ void main()
         roughness
     );
 
-// Ambiente simplificado: não substitui iluminação por imagem (IBL).
-vec3 ambient = 0.12 * albedo;
+    // Ambiente difuso simplificado.
+    vec3 ambient = 0.12 * albedo;
 
-vec3 finalColor = ambient + directLighting;
+    // Reflexões ambientais metálicas.
+    vec3 environmentReflection = calculateEnvironmentReflection(
+        N,
+        V,
+        albedo,
+        metallic
+    );
+
+    // Resultado final.
+    vec3 finalColor =
+        ambient +
+        directLighting +
+        environmentReflection;
 
     FragColor = vec4(finalColor, albedoSample.a);
 }

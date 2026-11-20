@@ -9,6 +9,7 @@
 #include "engine/graphics/geometry/geometry.h"
 #include "engine/graphics/resources/texture.h"
 #include "material.h"
+#include <memory>
 
 class Shader;
 
@@ -68,22 +69,28 @@ public:
     // Cancela e restaura a geometria original.
     void cancelExtrusion();
 
-    void addTexture(Texture&& texture);
-    void setTexture(Texture&& texture); // Substitui uma textura do mesmo tipo.
-    void setMaterial(const Material& material)
+    // Gerenciamento de texturas compartilhadas.
+    void addTexture(std::shared_ptr<Texture> texture);
+    void setTexture(std::shared_ptr<Texture> texture);
+    
+    // Compatibilidade temporária com o Model atual.
+    void addTexture(Texture &&texture);
+    void setTexture(Texture &&texture); // Substitui uma textura do mesmo tipo.
+
+    const std::vector<std::shared_ptr<Texture>>& getTextures() const;
+
+    void setMaterial(const Material &material)
     {
         this->material = material;
         baseColor = material.baseColorFactor;
     }
-    void setBaseColor(const glm::vec4& color)
+    void setBaseColor(const glm::vec4 &color)
     {
         baseColor = color;
         material.baseColorFactor = color;
     }
 
-    const Material& getMaterial() const { return material; }
-
-    const std::vector<Texture>& getTextures() const;
+    const Material &getMaterial() const { return material; }    
 
     void draw() const;
 
@@ -101,7 +108,7 @@ private:
 
     GLenum drawMode = GL_TRIANGLES;
 
-    std::vector<Texture> textures;
+    std::vector<std::shared_ptr<Texture>> textures;
 
     // Cor que multiplica a textura ao desenhar (vem do material do modelo).
     glm::vec4 baseColor{1.0f};

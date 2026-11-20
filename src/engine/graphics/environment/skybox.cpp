@@ -60,3 +60,12 @@ void Skybox::draw(Camera& camera)
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
 }
+
+bool Skybox::bindEnvironment(unsigned int unit) const
+{
+    if (!loaded)
+        return false;
+
+    cubemap.bind(unit);
+    return true;
+}

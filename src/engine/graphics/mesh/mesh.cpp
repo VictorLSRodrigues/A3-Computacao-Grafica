@@ -1,8 +1,12 @@
+
 #include "mesh.h"
 
 #include <iostream>
 #include <cstddef>
+#include <memory>
+#include <string>
 #include <utility>
+
 #include "engine/graphics/resources/shader.h"
 
 namespace
@@ -15,24 +19,31 @@ namespace
         case GL_POINTS:
             topology = PrimitiveTopology::Points;
             return true;
+
         case GL_LINES:
             topology = PrimitiveTopology::Lines;
             return true;
+
         case GL_LINE_LOOP:
             topology = PrimitiveTopology::LineLoop;
             return true;
+
         case GL_LINE_STRIP:
             topology = PrimitiveTopology::LineStrip;
             return true;
+
         case GL_TRIANGLES:
             topology = PrimitiveTopology::Triangles;
             return true;
+
         case GL_TRIANGLE_STRIP:
             topology = PrimitiveTopology::TriangleStrip;
             return true;
+
         case GL_TRIANGLE_FAN:
             topology = PrimitiveTopology::TriangleFan;
             return true;
+
         default:
             std::cout << "Mesh: modo de desenho não suportado." << std::endl;
             return false;
@@ -86,7 +97,7 @@ void Mesh::setupVertexAttributes()
         reinterpret_cast<const void *>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
-    // Localização 2: coordenadas da textura.
+    // Localização 2: coordenadas UV.
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE,
         stride,
@@ -99,6 +110,13 @@ void Mesh::setupVertexAttributes()
         stride,
         reinterpret_cast<const void *>(offsetof(Vertex, normal)));
     glEnableVertexAttribArray(3);
+
+    // Localização 4: tangente e handedness.
+    glVertexAttribPointer(
+        4, 4, GL_FLOAT, GL_FALSE,
+        stride,
+        reinterpret_cast<const void *>(offsetof(Vertex, tangent)));
+    glEnableVertexAttribArray(4);
 }
 
 // Envia a geometria atual aos buffers da GPU.
@@ -110,7 +128,6 @@ void Mesh::upload()
     {
         vbo.Upload(geometry.getStructuredVertices());
 
-        // Upload desvincula GL_ARRAY_BUFFER; associe-o novamente antes de configurar os atributos.
         vbo.Bind();
 
         setupVertexAttributes();
@@ -126,7 +143,7 @@ void Mesh::upload()
 
     vbo.Unbind();
 
-    // O EBO fica associado ao VAO que está ativo.
+    // O EBO fica associado ao VAO ativo.
     if (geometry.isIndexed())
         ebo.Upload(geometry.getIndexData());
 
@@ -147,12 +164,13 @@ bool Mesh::create(
         return false;
 
     this->drawMode = drawMode;
+
     upload();
 
     return true;
 }
 
-// Cria uma malha cujos triângulos referenciam vértices por índice.
+// Cria uma malha com índices.
 bool Mesh::createIndexed(
     const std::vector<float> &vertices,
     const std::vector<unsigned int> &indices,
@@ -163,10 +181,16 @@ bool Mesh::createIndexed(
     PrimitiveTopology topology;
 
     if (!toTopology(drawMode, topology) ||
-        !geometry.createIndexed(vertices, indices, componentCount, topology, layout))
+        !geometry.createIndexed(
+            vertices,
+            indices,
+            componentCount,
+            topology,
+            layout))
         return false;
 
     this->drawMode = drawMode;
+
     upload();
 
     return true;
@@ -184,6 +208,7 @@ bool Mesh::create(
         return false;
 
     this->drawMode = drawMode;
+
     upload();
 
     return true;
@@ -202,38 +227,43 @@ bool Mesh::createIndexed(
         return false;
 
     this->drawMode = drawMode;
+
     upload();
 
     return true;
 }
 
+// Inicia a extrusão de uma face.
 bool Mesh::beginExtrusion(unsigned int faceIndex)
 {
     return geometry.beginExtrusion(faceIndex);
 }
 
+// Atualiza a extrusão.
 bool Mesh::updateExtrusion(float distance)
 {
     if (!geometry.updateExtrusion(distance))
         return false;
 
-    // A geometria mudou: reenvia os vértices e os índices.
     upload();
 
     return true;
 }
 
+// Finaliza a extrusão.
 void Mesh::finishExtrusion()
 {
     geometry.finishExtrusion();
 }
 
+// Cancela a extrusão.
 void Mesh::cancelExtrusion()
 {
     if (geometry.cancelExtrusion())
         upload();
 }
 
+// Desenha a malha.
 void Mesh::draw() const
 {
     vao.Bind();
@@ -256,70 +286,138 @@ void Mesh::draw() const
 
     vao.Unbind();
 }
-void Mesh::draw(Shader &shader, const Texture *diffuseFallback) const
+
+// Desenha a malha aplicando texturas e propriedades do material.
+
+void Mesh::draw(
+    Shader &shader,
+    const Texture *diffuseFallback) const
 {
     bool hasDiffuse = false;
     bool hasSpecular = false;
     bool hasMetallicRoughness = false;
+    bool hasNormal = false;
 
-    // Associa cada textura à unidade usada pelo shader.
-    for (const Texture &texture : textures)
+    // Percorre as texturas associadas à malha.
+    for (const auto& texture : textures)
     {
-        if (texture.getType() == "diffuse" || texture.getType() == "fallback")
+        if (!texture)
+            continue;
+
+        const std::string& type = texture->getType();
+
+        // Diffuse / Albedo.
+        if (type == "diffuse" || type == "fallback")
         {
             hasDiffuse = true;
-            texture.bind(0);
+
+            texture->bind(0);
             shader.setInt("tex0", 0);
         }
-        else if (texture.getType() == "specular")
+        // Specular.
+        else if (type == "specular")
         {
             hasSpecular = true;
-            texture.bind(1);
+
+            texture->bind(1);
             shader.setInt("specular0", 1);
         }
-        else if (texture.getType() == "metallicRoughness")
+        // Metallic / Roughness.
+        else if (type == "metallicRoughness")
         {
             hasMetallicRoughness = true;
-            texture.bind(2);
+
+            texture->bind(2);
             shader.setInt("metallicRoughnessMap", 2);
+        }
+        // Normal Map.
+        else if (type == "normal" || type == "normalMap")
+        {
+            hasNormal = true;
+
+            texture->bind(3);
+            shader.setInt("normalMap", 3);
         }
     }
 
-    if (!hasDiffuse && diffuseFallback)
+    // Fallback para Diffuse.
+    if (!hasDiffuse)
     {
-        diffuseFallback->bind(0);
+        if (diffuseFallback)
+        {
+            diffuseFallback->bind(0);
+        }
+        else
+        {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+
         shader.setInt("tex0", 0);
     }
 
+    // Remove mapas ausentes para evitar herança de outra malha.
     if (!hasSpecular)
     {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
-        shader.setInt("specular0", 1);
     }
 
     if (!hasMetallicRoughness)
     {
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, 0);
-        shader.setInt("metallicRoughnessMap", 2);
     }
 
-    shader.setVec4("baseColor", baseColor.r, baseColor.g, baseColor.b, baseColor.a);
-    shader.setFloat("metallicFactor", material.metallicFactor);
-    shader.setFloat("roughnessFactor", material.roughnessFactor);
-    shader.setFloat("shininess", material.shininess);
+    if (!hasNormal)
+    {
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
+    // Configura os samplers.
+    shader.setInt("specular0", 1);
+    shader.setInt("metallicRoughnessMap", 2);
+    shader.setInt("normalMap", 3);
+
+    // Informa ao shader quais mapas estão disponíveis.
     shader.setInt(
         "hasMetallicRoughnessMap",
         hasMetallicRoughness ? 1 : 0);
 
+    shader.setInt(
+        "hasNormalMap",
+        hasNormal ? 1 : 0);
+
+    // Propriedades do material.
+    shader.setVec4(
+        "baseColor",
+        baseColor.r,
+        baseColor.g,
+        baseColor.b,
+        baseColor.a);
+
+    shader.setFloat(
+        "metallicFactor",
+        material.metallicFactor);
+
+    shader.setFloat(
+        "roughnessFactor",
+        material.roughnessFactor);
+
+    shader.setFloat(
+        "shininess",
+        material.shininess);
+
+    // Desenha a geometria.
     draw();
 
-    // Restaurar a unidade de textura padrão
+    // Restaura a unidade de textura padrão.
     glActiveTexture(GL_TEXTURE0);
 }
 
+
+// Libera os recursos da malha.
 void Mesh::destroy()
 {
     vao.Delete();
@@ -327,21 +425,39 @@ void Mesh::destroy()
     ebo.Delete();
 
     geometry.clear();
+
+    // Libera as referências compartilhadas.
+    // A textura só será destruída quando não houver
+    // mais referências compartilhadas para ela.
     textures.clear();
 }
 
-void Mesh::addTexture(Texture &&texture)
+// Adiciona uma textura compartilhada.
+void Mesh::addTexture(std::shared_ptr<Texture> texture)
 {
+    if (!texture)
+        return;
+
     textures.push_back(std::move(texture));
 }
 
-void Mesh::setTexture(Texture &&texture)
+// Substitui uma textura pelo seu tipo.
+void Mesh::setTexture(std::shared_ptr<Texture> texture)
 {
-    for (Texture &current : textures)
+    if (!texture)
+        return;
+
+    for (auto& current : textures)
     {
-        const bool sameType = current.getType() == texture.getType();
+        if (!current)
+            continue;
+
+        const bool sameType =
+            current->getType() == texture->getType();
+
         const bool replacingNeutral =
-            texture.getType() == "diffuse" && current.getType() == "fallback";
+            texture->getType() == "diffuse" &&
+            current->getType() == "fallback";
 
         if (sameType || replacingNeutral)
         {
@@ -353,7 +469,23 @@ void Mesh::setTexture(Texture &&texture)
     textures.push_back(std::move(texture));
 }
 
-const std::vector<Texture> &Mesh::getTextures() const
+// Compatibilidade temporária com o Model atual.
+void Mesh::addTexture(Texture&& texture)
+{
+    addTexture(
+        std::make_shared<Texture>(std::move(texture)));
+}
+
+// Compatibilidade temporária com o Model atual.
+void Mesh::setTexture(Texture&& texture)
+{
+    setTexture(
+        std::make_shared<Texture>(std::move(texture)));
+}
+
+// Retorna as texturas compartilhadas da malha.
+const std::vector<std::shared_ptr<Texture>>&
+Mesh::getTextures() const
 {
     return textures;
 }
