@@ -188,7 +188,7 @@ void Editor::update(bool inputEnabled)
                 case TransformTool::Move:
                 {
                     const glm::vec3 &selectedPosition =
-                        lightSelected ? light.position : selected->transform.position;
+                        lightSelected ? light.position : selected->transform.position();
 
                     // Primeiro verifica se o clique atingiu uma seta do gizmo.
                     MoveGizmoProjection gizmo;
@@ -270,16 +270,16 @@ void Editor::update(bool inputEnabled)
                             if (intersectRayPlane(
                                     camera.position,
                                     rayDirection,
-                                    selected->transform.position,
+                                    selected->transform.position(),
                                     selectedRing.worldAxis,
                                     intersection))
                             {
                                 // Guarda a direção inicial do mouse no plano do anel.
                                 rotationStartVector = glm::normalize(
-                                    intersection - selected->transform.position);
+                                    intersection - selected->transform.position());
 
                                 // Guarda a rotação original do objeto.
-                                rotationStart = selected->transform.rotation;
+                                rotationStart = selected->transform.rotation();
 
                                 // Guarda o eixo escolhido.
                                 rotatingWorldAxis = selectedRing.worldAxis;
@@ -339,7 +339,7 @@ void Editor::update(bool inputEnabled)
                                 scalingAxis = handleIndex;
 
                                 // Guarda a escala original.
-                                scaleStart = selected->transform.scale;
+                                scaleStart = selected->transform.scale();
 
                                 const BoundingBox *bounds = selected->boundingBox();
 
@@ -458,7 +458,7 @@ void Editor::update(bool inputEnabled)
                 }
                 else
                 {
-                    selected->transform.position = newPosition;
+                    selected->transform.move(newPosition);
                 }
             }
             else
@@ -493,12 +493,12 @@ void Editor::update(bool inputEnabled)
                 if (intersectRayPlane(
                         camera.position,
                         rayDirection,
-                        selected->transform.position,
+                        selected->transform.position(),
                         rotatingWorldAxis,
                         intersection))
                 {
                     glm::vec3 currentVector =
-                        intersection - selected->transform.position;
+                        intersection - selected->transform.position();
 
                     if (glm::length(currentVector) > 0.0001f)
                     {
@@ -515,9 +515,13 @@ void Editor::update(bool inputEnabled)
                             glm::degrees(deltaAngle);
 
                         // Aplica a rotação ao eixo selecionado.
-                        selected->transform.rotation[rotatingAxis] =
+                        glm::vec3 newRotation = selected->transform.rotation();
+
+                        newRotation[rotatingAxis] =
                             rotationStart[rotatingAxis] +
                             rotationAccumulatedAngle;
+
+                        selected->transform.setRotation(newRotation);
 
                         // Atualiza o vetor para o próximo quadro.
                         rotationStartVector = currentVector;
@@ -566,8 +570,12 @@ void Editor::update(bool inputEnabled)
                     std::max(0.001f, 1.0f + scaleDelta);
 
                 // Aplica a escala somente no eixo selecionado.
-                selected->transform.scale[scalingAxis] =
+                glm::vec3 newScale = selected->transform.scale();
+
+                newScale[scalingAxis] =
                     scaleStart[scalingAxis] * scaleMultiplier;
+
+                selected->transform.setScale(newScale);
             }
             else
             {
@@ -750,7 +758,7 @@ void Editor::drawMoveGizmo()
         return;
 
     const glm::vec3 &selectedPosition =
-        lightSelected ? light.position : selected->transform.position;
+        lightSelected ? light.position : selected->transform.position();
 
     MoveGizmoProjection gizmo;
 

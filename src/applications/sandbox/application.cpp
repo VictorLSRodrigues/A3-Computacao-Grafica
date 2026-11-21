@@ -1,3 +1,4 @@
+
 #include "application.h"
 
 #include <algorithm>
@@ -19,6 +20,13 @@
 #include "applications/sandbox/ui/environment_info.h"
 #include "world.h"
 
+namespace
+{
+    // Arquivo utilizado para persistir o estado da cena.
+    constexpr const char* SCENE_STATE_PATH =
+        "user_data/scene_state.json";
+}
+
 bool Application::init()
 {
     if (!window.create("OpenGL - RotorGrafico"))
@@ -35,11 +43,24 @@ bool Application::init()
 
     if (!editor.create())
     {
-        std::cout << "Falha ao inicializar os recursos do Editor!" << std::endl;
+        std::cout << "Falha ao inicializar os recursos do Editor!"
+                  << std::endl;
         return false;
     }
 
-    return buildWorld(scene);
+    // Primeiro cria os objetos e suas transformações iniciais.
+    if (!buildWorld(scene))
+        return false;
+
+    // Depois recupera as transformações salvas anteriormente.
+    if (!scene.loadTransforms(SCENE_STATE_PATH))
+    {
+        std::cout << "Nenhum estado salvo foi restaurado. "
+                  << "Utilizando as transformacoes iniciais."
+                  << std::endl;
+    }
+
+    return true;
 }
 
 void Application::run()
@@ -51,15 +72,26 @@ void Application::run()
         const double currentFrame = glfwGetTime();
 
         // Evita um salto grande de movimento se um quadro demorar demais.
-        const float deltaTime = static_cast<float>(std::min(currentFrame - lastFrame, 0.1));
+        const float deltaTime =
+            static_cast<float>(std::min(currentFrame - lastFrame, 0.1));
+
         lastFrame = currentFrame;
 
         update(deltaTime);
+
         renderer.render(scene, light, camera);
+
         renderUI();
 
         window.swapBuffers();
         window.pollEvents();
+    }
+
+    // Salva as transformações quando a aplicação encerra.
+    if (!scene.saveTransforms(SCENE_STATE_PATH))
+    {
+        std::cerr << "Falha ao salvar as transformacoes da cena!"
+                  << std::endl;
     }
 }
 
@@ -89,6 +121,7 @@ void Application::update(float deltaTime)
     // O editor só trata o mouse quando o menu está fechado.
     editor.update(!menu.isOpen());
 
+    // Atualiza as animações e os objetos da cena.
     scene.update(deltaTime);
 }
 
@@ -98,7 +131,11 @@ void Application::renderUI()
     ui.begin(window);
 
     // Desenha o HUD e as informações da cena.
-    hud.draw(ui, window, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
+    hud.draw(
+        ui,
+        window,
+        makeEnvironmentInfo(scene, camera, light, editor, selectedModelName)
+    );
 
     // Desenha o menu.
     menu.draw(window, ui, renderer, camera, light, [this]() { launchDoom(); });

@@ -102,6 +102,12 @@ public:
     // Atualiza as animações dos objetos; deltaTime é o tempo do quadro, em segundos.
     void update(float deltaTime);
 
+    // Salva as transformações das instâncias em arquivo JSON.
+    bool saveTransforms(const std::string &filePath) const;
+
+    // Restaura as transformações das instâncias a partir de arquivo JSON.
+    bool loadTransforms(const std::string &filePath);
+
 private:
     std::map<std::string, std::shared_ptr<Model>> modelCache;
     std::deque<Object> objects; // Mantém válidos os ponteiros retornados ao adicionar objetos.

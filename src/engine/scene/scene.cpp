@@ -7,6 +7,54 @@
 #include <glm/gtx/norm.hpp>
 #include <limits>
 #include <glm/gtc/matrix_inverse.hpp>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <nlohmann/json.hpp>
+
+namespace
+{
+    using json = nlohmann::json;
+
+    // Converte glm::vec3 para uma lista JSON.
+    json vectorToJson(const glm::vec3& value)
+    {
+        return json::array({
+            value.x,
+            value.y,
+            value.z
+        });
+    }
+
+    // Recupera um glm::vec3 de uma lista JSON.
+    bool jsonToVector(const json& value, glm::vec3& result)
+    {
+        if (!value.is_array() || value.size() != 3)
+            return false;
+
+        for (const auto& component : value)
+        {
+            if (!component.is_number())
+                return false;
+        }
+
+        const glm::vec3 parsed(
+            value[0].get<float>(),
+            value[1].get<float>(),
+            value[2].get<float>()
+        );
+
+        if (!std::isfinite(parsed.x) ||
+            !std::isfinite(parsed.y) ||
+            !std::isfinite(parsed.z))
+        {
+            return false;
+        }
+
+        result = parsed;
+        return true;
+    }
+}
 
 Scene::Object *Scene::addModel(const std::string &path, const Transform &transform)
 {
@@ -110,7 +158,7 @@ Scene::Object *Scene::pickObject(
             continue;
 
         // Considera a maior escala aplicada ao objeto.
-        const glm::vec3 scale = glm::abs(object.transform.scale);
+        const glm::vec3 scale = glm::abs(object.transform.scale());
 
         const float maxScale = std::max(
             scale.x,
@@ -120,7 +168,7 @@ Scene::Object *Scene::pickObject(
 
         // Teste de interseção entre o raio e a esfera do objeto.
         const glm::vec3 offset =
-            rayOrigin - object.transform.position;
+            rayOrigin - object.transform.position();
 
         const float b = glm::dot(offset, direction);
 
@@ -430,5 +478,145 @@ void Scene::cancelFaceExtrusion(Object *object, const FaceSelection &face)
     else if (object->mesh)
     {
         object->mesh->cancelExtrusion();
+    }
+}
+
+bool Scene::saveTransforms(const std::string& filePath) const
+{
+    try
+    {
+        const std::filesystem::path path(filePath);
+
+        if (path.has_parent_path())
+            std::filesystem::create_directories(path.parent_path());
+
+        json data;
+
+        data["version"] = 1;
+        data["objects"] = json::array();
+
+        for (const Object& object : objects)
+        {
+            if (object.name.empty())
+                continue;
+
+            data["objects"].push_back({
+                {"name", object.name},
+                {"position", vectorToJson(object.transform.position())},
+                {"rotation", vectorToJson(object.transform.rotation())},
+                {"scale", vectorToJson(object.transform.scale())}
+            });
+        }
+
+        std::ofstream output(
+            path,
+            std::ios::out | std::ios::trunc
+        );
+
+        if (!output.is_open())
+        {
+            std::cerr << "Falha ao abrir arquivo de estado para salvar: "
+                      << filePath << std::endl;
+            return false;
+        }
+
+        output << std::setw(4) << data << '\n';
+
+        return output.good();
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "Erro ao salvar transformacoes: "
+                  << error.what() << std::endl;
+        return false;
+    }
+}
+
+bool Scene::loadTransforms(const std::string& filePath)
+{
+    try
+    {
+        std::ifstream input(filePath);
+
+        // Na primeira execução, ainda não existe arquivo salvo.
+        if (!input.is_open())
+            return false;
+
+        json data;
+        input >> data;
+
+        if (!data.is_object() ||
+            !data.contains("version") ||
+            !data["version"].is_number_integer() ||
+            data["version"].get<int>() != 1 ||
+            !data.contains("objects") ||
+            !data["objects"].is_array())
+        {
+            std::cerr << "Arquivo de transformacoes invalido."
+                      << std::endl;
+            return false;
+        }
+
+        std::size_t restoredCount = 0;
+
+        for (const auto& savedObject : data["objects"])
+        {
+            if (!savedObject.is_object() ||
+                !savedObject.contains("name") ||
+                !savedObject["name"].is_string() ||
+                !savedObject.contains("position") ||
+                !savedObject.contains("rotation") ||
+                !savedObject.contains("scale"))
+            {
+                continue;
+            }
+
+            const std::string name =
+                savedObject["name"].get<std::string>();
+
+            glm::vec3 position;
+            glm::vec3 rotation;
+            glm::vec3 scale;
+
+            if (!jsonToVector(savedObject["position"], position) ||
+                !jsonToVector(savedObject["rotation"], rotation) ||
+                !jsonToVector(savedObject["scale"], scale))
+            {
+                std::cerr << "Transformacao invalida para: "
+                          << name << std::endl;
+                continue;
+            }
+
+            // Procura a instância correspondente na cena atual.
+            auto object = std::find_if(
+                objects.begin(),
+                objects.end(),
+                [&name](const Object& candidate)
+                {
+                    return candidate.name == name;
+                }
+            );
+
+            if (object == objects.end())
+                continue;
+
+            // Restaura o estado através da interface do Transform.
+            object->transform.move(position);
+            object->transform.setRotation(rotation);
+            object->transform.setScale(scale);
+
+            ++restoredCount;
+        }
+
+        std::cout << "Transformacoes restauradas: "
+                  << restoredCount << std::endl;
+
+        return restoredCount > 0;
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "Erro ao carregar transformacoes: "
+                  << error.what() << std::endl;
+        return false;
     }
 }

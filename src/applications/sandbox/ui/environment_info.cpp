@@ -62,9 +62,9 @@ EnvironmentInfo makeEnvironmentInfo(
     {
         info.hasSelection = true;
         info.selectedName = selectedObject->name;
-        info.selectedPosition = selectedObject->transform.position;
-        info.selectedRotation = selectedObject->transform.rotation;
-        info.selectedScale = selectedObject->transform.scale;
+        info.selectedPosition = selectedObject->transform.position();
+        info.selectedRotation = selectedObject->transform.rotation();
+        info.selectedScale = selectedObject->transform.scale();
 
         const Scene::FaceSelection &face = editor.getSelectedFace();
         info.hasFace = face.valid;
