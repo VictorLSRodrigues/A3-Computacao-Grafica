@@ -13,19 +13,20 @@ class Menu
 {
 private:
     enum class Page { Main, Options };
-    enum class OptionsCategory { Camera, Environment, Lighting, Doom };
+    enum class OptionsCategory { Camera, Environment, Lighting, Window, Doom };
 
     bool open = false;
     Page page = Page::Main;
     OptionsCategory optionsCategory = OptionsCategory::Camera;
+    bool windowModeChangeFailed = false;
 
     void drawMain(const Window& window, UI& ui);
-    void drawOptions(const Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light,
+    void drawOptions(Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light,
                      const std::function<void()>& launchDoom);
 
 public:
     void update(const Window& window); // ESC abre, fecha ou retorna à página anterior.
-    void draw(const Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light,
+    void draw(Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light,
               const std::function<void()>& launchDoom);
     bool isOpen() const { return open; }
 };

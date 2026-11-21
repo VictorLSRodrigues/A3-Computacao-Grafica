@@ -1,7 +1,32 @@
 #pragma once
 
+#include <string>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+enum class WindowMode
+{
+    Windowed,   // Janela convencional com bordas.
+    Maximized,  // Janela convencional maximizada.
+    Borderless, // Janela sem bordas ocupando o monitor, sem trocar o modo de vídeo.
+    Fullscreen  // Janela associada ao monitor, utilizando seu modo de vídeo.
+};
+
+struct WindowConfig
+{
+    std::string title = "Rotor";
+    WindowMode mode = WindowMode::Windowed;
+
+    int width = 1280;
+    int height = 720;
+    int minWidth = 0;
+    int minHeight = 0;
+    int samples = 4;
+
+    bool resizable = true;
+    bool vsync = true;
+};
 
 class Window
 {
@@ -10,6 +35,14 @@ private:
     int width = 0;
     int height = 0;
     bool glfwInitialized = false;
+    bool changingMode = false;
+    WindowConfig config;
+    WindowMode currentMode = WindowMode::Windowed;
+
+    int windowedX = 100;
+    int windowedY = 100;
+    int windowedWidth = 1280;
+    int windowedHeight = 720;
 
     // Estados contínuos e eventos de pressionamento de teclado e mouse.
     bool keyStates[GLFW_KEY_LAST + 1] = {};             // true enquanto a tecla estiver pressionada
@@ -24,9 +57,15 @@ private:
     static void onMouseMove(GLFWwindow *window, double x, double y);
     static void onMouseButton(GLFWwindow *window, int button, int action, int mods);
     static void onScroll(GLFWwindow *window, double xOffset, double yOffset);
+    static void onWindowPosition(GLFWwindow *window, int x, int y);
+    static void onWindowSize(GLFWwindow *window, int width, int height);
+    static void onWindowMaximize(GLFWwindow *window, int maximized);
 
     // Atualiza o viewport e as dimensões ao redimensionar a janela.
     static void onFramebufferResize(GLFWwindow *window, int width, int height);
+
+    void saveWindowedBounds();
+    void updateFramebufferSize();
 
 public:
     Window() = default;
@@ -35,9 +74,11 @@ public:
     Window(const Window &) = delete;
     Window &operator=(const Window &) = delete;
 
-    // Em tela cheia usa a resolução do monitor; caso contrário, usa as dimensões informadas.
-    bool create(const char *title, bool fullscreen = true,
-                int windowWidth = 1280, int windowHeight = 720);
+    bool create(const WindowConfig &config);
+
+    // Altera o modo da janela sem recriar o contexto OpenGL.
+    bool setMode(WindowMode mode);
+    WindowMode getMode() const { return currentMode; }
 
     bool shouldClose() const;
     void close() const; // Solicita o fechamento da janela.

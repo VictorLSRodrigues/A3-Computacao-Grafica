@@ -68,8 +68,52 @@ void Window::onMouseButton(GLFWwindow *window, int button, int action, int /*mod
     }
 }
 
-bool Window::create(const char *title, bool fullscreen, int windowWidth, int windowHeight)
+void Window::onWindowPosition(GLFWwindow *window, int x, int y)
 {
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+    if (!self || self->changingMode || self->currentMode != WindowMode::Windowed ||
+        glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE)
+        return;
+
+    self->windowedX = x;
+    self->windowedY = y;
+}
+
+void Window::onWindowSize(GLFWwindow *window, int width, int height)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+    if (!self || self->changingMode || self->currentMode != WindowMode::Windowed ||
+        glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE)
+        return;
+
+    self->windowedWidth = std::max(1, width);
+    self->windowedHeight = std::max(1, height);
+}
+
+void Window::onWindowMaximize(GLFWwindow *window, int maximized)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+    if (!self || self->changingMode)
+        return;
+
+    if (glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE)
+        self->currentMode = WindowMode::Maximized;
+    else if (self->currentMode == WindowMode::Maximized)
+        self->currentMode = WindowMode::Windowed;
+
+    (void)maximized;
+}
+
+bool Window::create(const WindowConfig &windowConfig)
+{
+    if (windowHandle)
+        destroy();
+
+    config = windowConfig;
+    currentMode = WindowMode::Windowed;
+    windowedWidth = std::max(1, config.width);
+    windowedHeight = std::max(1, config.height);
+
     glfwSetErrorCallback([](int errorCode, const char *description)
                          { std::cout << "Erro do GLFW (" << errorCode << "): " << description << std::endl; });
 
@@ -83,20 +127,15 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
     // Solicita OpenGL 3.3 no perfil Core.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_SAMPLES, 4); // Ativa antisserrilhamento com quatro amostras.
+    glfwWindowHint(GLFW_SAMPLES, std::max(0, config.samples));
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, config.resizable ? GLFW_TRUE : GLFW_FALSE);
 
-    // Em tela cheia, associa a janela ao monitor principal.
-    GLFWmonitor *monitor = nullptr;
-    if (fullscreen)
-    {
-        monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-        windowWidth = mode->width;
-        windowHeight = mode->height;
-    }
-
-    windowHandle = glfwCreateWindow(windowWidth, windowHeight, title, monitor, nullptr);
+    // A janela nasce em modo convencional para preservar suas dimensões
+    // antes de aplicar Maximized, Borderless ou Fullscreen.
+    windowHandle = glfwCreateWindow(windowedWidth, windowedHeight,
+                                    config.title.c_str(), nullptr, nullptr);
     if (!windowHandle)
     {
         std::cout << "Erro ao criar a janela!" << std::endl;
@@ -105,8 +144,7 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
     }
 
     glfwMakeContextCurrent(windowHandle);
-
-    glfwSwapInterval(1); // Sincroniza a troca de quadros com a tela.
+    glfwSwapInterval(config.vsync ? 1 : 0);
 
     if (!gladLoadGL())
     {
@@ -115,19 +153,147 @@ bool Window::create(const char *title, bool fullscreen, int windowWidth, int win
         return false;
     }
 
-    glfwGetFramebufferSize(windowHandle, &width, &height);
+    // Guarda o estado convencional para permitir retornar de outros modos.
+    saveWindowedBounds();
 
     // Permite que os callbacks encontrem esta instância e atualizem seus dados.
     glfwSetWindowUserPointer(windowHandle, this);
     glfwSetFramebufferSizeCallback(windowHandle, onFramebufferResize);
-
     glfwSetKeyCallback(windowHandle, onKey);
     glfwSetCursorPosCallback(windowHandle, onMouseMove);
     glfwSetMouseButtonCallback(windowHandle, onMouseButton);
     glfwSetScrollCallback(windowHandle, onScroll);
+    glfwSetWindowPosCallback(windowHandle, onWindowPosition);
+    glfwSetWindowSizeCallback(windowHandle, onWindowSize);
+    glfwSetWindowMaximizeCallback(windowHandle, onWindowMaximize);
     glfwGetCursorPos(windowHandle, &mouseX, &mouseY);
 
+    if (config.minWidth > 0 || config.minHeight > 0)
+    {
+        glfwSetWindowSizeLimits(windowHandle,
+                                config.minWidth > 0 ? config.minWidth : GLFW_DONT_CARE,
+                                config.minHeight > 0 ? config.minHeight : GLFW_DONT_CARE,
+                                GLFW_DONT_CARE, GLFW_DONT_CARE);
+    }
+
+    updateFramebufferSize();
+
+    if (config.mode != WindowMode::Windowed && !setMode(config.mode))
+    {
+        destroy();
+        return false;
+    }
+
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << std::endl;
+    return true;
+}
+
+void Window::saveWindowedBounds()
+{
+    if (!windowHandle)
+        return;
+
+    glfwGetWindowPos(windowHandle, &windowedX, &windowedY);
+    glfwGetWindowSize(windowHandle, &windowedWidth, &windowedHeight);
+    windowedWidth = std::max(1, windowedWidth);
+    windowedHeight = std::max(1, windowedHeight);
+}
+
+void Window::updateFramebufferSize()
+{
+    if (!windowHandle)
+        return;
+
+    glfwGetFramebufferSize(windowHandle, &width, &height);
+    glViewport(0, 0, width, height);
+}
+
+bool Window::setMode(WindowMode mode)
+{
+    if (!windowHandle)
+        return false;
+
+    if (mode == currentMode)
+        return true;
+
+    // Atualiza as dimensões restauráveis somente enquanto a janela está
+    // no modo convencional. Maximizada, sem bordas ou tela cheia não devem
+    // sobrescrever o último tamanho escolhido pelo usuário.
+    if (currentMode == WindowMode::Windowed)
+    {
+        if (glfwGetWindowAttrib(windowHandle, GLFW_MAXIMIZED) == GLFW_FALSE)
+            saveWindowedBounds();
+        else
+            currentMode = WindowMode::Maximized;
+    }
+
+    GLFWmonitor *primaryMonitor = nullptr;
+    const GLFWvidmode *videoMode = nullptr;
+    if (mode == WindowMode::Borderless || mode == WindowMode::Fullscreen)
+    {
+        primaryMonitor = glfwGetPrimaryMonitor();
+        videoMode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
+        if (!primaryMonitor || !videoMode)
+        {
+            std::cout << "Nao foi possivel obter o monitor para alterar o modo da janela!" << std::endl;
+            return false;
+        }
+    }
+
+    changingMode = true;
+    switch (mode)
+    {
+    case WindowMode::Windowed:
+        glfwSetWindowMonitor(windowHandle, nullptr,
+                             windowedX, windowedY,
+                             windowedWidth, windowedHeight,
+                             GLFW_DONT_CARE);
+        glfwSetWindowAttrib(windowHandle, GLFW_DECORATED, GLFW_TRUE);
+        glfwSetWindowAttrib(windowHandle, GLFW_RESIZABLE,
+                            config.resizable ? GLFW_TRUE : GLFW_FALSE);
+        break;
+
+    case WindowMode::Maximized:
+        glfwSetWindowMonitor(windowHandle, nullptr,
+                             windowedX, windowedY,
+                             windowedWidth, windowedHeight,
+                             GLFW_DONT_CARE);
+        glfwSetWindowAttrib(windowHandle, GLFW_DECORATED, GLFW_TRUE);
+        glfwSetWindowAttrib(windowHandle, GLFW_RESIZABLE,
+                            config.resizable ? GLFW_TRUE : GLFW_FALSE);
+        glfwMaximizeWindow(windowHandle);
+        break;
+
+    case WindowMode::Borderless:
+    {
+        // Primeiro retorna ao modo de janela; depois remove as decorações
+        // e ocupa a área total do monitor sem trocar seu modo de vídeo.
+        glfwSetWindowMonitor(windowHandle, nullptr,
+                             windowedX, windowedY,
+                             windowedWidth, windowedHeight,
+                             GLFW_DONT_CARE);
+        glfwSetWindowAttrib(windowHandle, GLFW_DECORATED, GLFW_FALSE);
+        glfwSetWindowAttrib(windowHandle, GLFW_RESIZABLE, GLFW_FALSE);
+
+        int monitorX = 0;
+        int monitorY = 0;
+        glfwGetMonitorPos(primaryMonitor, &monitorX, &monitorY);
+        glfwSetWindowPos(windowHandle, monitorX, monitorY);
+        glfwSetWindowSize(windowHandle, videoMode->width, videoMode->height);
+        break;
+    }
+
+    case WindowMode::Fullscreen:
+        glfwSetWindowAttrib(windowHandle, GLFW_DECORATED, GLFW_TRUE);
+        glfwSetWindowMonitor(windowHandle, primaryMonitor, 0, 0,
+                             videoMode->width, videoMode->height,
+                             videoMode->refreshRate);
+        break;
+    }
+
+    currentMode = mode;
+    changingMode = false;
+    updateFramebufferSize();
     return true;
 }
 
@@ -158,6 +324,11 @@ void Window::destroy()
         glfwTerminate();
         glfwInitialized = false;
     }
+
+    currentMode = WindowMode::Windowed;
+    changingMode = false;
+    width = 0;
+    height = 0;
 }
 
 void Window::setCursorMode(CursorMode mode)

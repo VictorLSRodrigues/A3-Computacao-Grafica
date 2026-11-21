@@ -28,7 +28,11 @@ namespace
 
 bool Application::init()
 {
-    if (!window.create("OpenGL - RotorGrafico"))
+    WindowConfig windowConfig;
+    windowConfig.title = "OpenGL - RotorGrafico";
+    windowConfig.mode = WindowMode::Fullscreen;
+
+    if (!window.create(windowConfig))
         return false;
 
     if (!renderer.init())

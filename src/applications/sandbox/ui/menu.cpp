@@ -1,6 +1,7 @@
 #include "menu.h"
 
 #include <algorithm>
+#include <string>
 
 #include "applications/sandbox/ui/sandbox_ui_style.h"
 
@@ -22,7 +23,7 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
+void Menu::draw(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
                 const std::function<void()>& launchDoom)
 {
     if (!open)
@@ -73,7 +74,7 @@ void Menu::drawMain(const Window &window, UI &ui)
         window.close();
 }
 
-void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
+void Menu::drawOptions(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
                        const std::function<void()>& launchDoom)
 {
     const float screenW = static_cast<float>(window.getWidth());
@@ -93,7 +94,7 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
 
     const float tabsY = y + 112.0f;
     const float tabGap = 8.0f;
-    const float tabW = (innerW - tabGap * 3.0f) / 4.0f;
+    const float tabW = (innerW - tabGap * 4.0f) / 5.0f;
     const float tabH = 36.0f;
 
     struct CategoryTab
@@ -105,9 +106,10 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
         {OptionsCategory::Camera, "Câmera"},
         {OptionsCategory::Environment, "Ambiente"},
         {OptionsCategory::Lighting, "Iluminação"},
+        {OptionsCategory::Window, "Janela"},
         {OptionsCategory::Doom, "DOOM"}};
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         const float tabX = innerX + i * (tabW + tabGap);
         const bool selected = optionsCategory == tabs[i].category;
@@ -175,6 +177,81 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
         break;
     }
 
+    case OptionsCategory::Window:
+    {
+        sandbox_ui::drawSection(ui, innerX, contentY, innerW, "MODO DA JANELA");
+        sandbox_ui::drawTextFit(ui, "Escolha como o Sandbox deve ocupar a tela.",
+                                innerX, contentY + 39.0f, innerW, 0.40f,
+                                sandbox_ui::palette::muted);
+
+        struct ModeOption
+        {
+            WindowMode mode;
+            const char *label;
+        };
+        const ModeOption modes[] = {
+            {WindowMode::Windowed, "Janela normal"},
+            {WindowMode::Maximized, "Maximizada"},
+            {WindowMode::Borderless, "Sem bordas"},
+            {WindowMode::Fullscreen, "Tela cheia"}};
+
+        const float modeGap = 10.0f;
+        const float modeButtonWidth = (innerW - modeGap) * 0.5f;
+        const float modeButtonHeight = 42.0f;
+        const float modeStartY = contentY + 52.0f;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            const int column = i % 2;
+            const int row = i / 2;
+            const float buttonX = innerX + column * (modeButtonWidth + modeGap);
+            const float buttonY = modeStartY + row * (modeButtonHeight + 10.0f);
+            const bool selected = window.getMode() == modes[i].mode;
+
+            if (sandbox_ui::button(ui, modes[i].label, buttonX, buttonY,
+                                   modeButtonWidth, modeButtonHeight,
+                                   selected ? ButtonTone::Selected : ButtonTone::Neutral))
+            {
+                windowModeChangeFailed = !window.setMode(modes[i].mode);
+            }
+        }
+
+        const char *currentModeName = "Janela normal";
+        const char *currentModeDescription = "Janela com bordas, barra de título e tamanho ajustável.";
+        switch (window.getMode())
+        {
+        case WindowMode::Windowed:
+            break;
+        case WindowMode::Maximized:
+            currentModeName = "Maximizada";
+            currentModeDescription = "Janela maximizada, mantendo a barra de título.";
+            break;
+        case WindowMode::Borderless:
+            currentModeName = "Sem bordas";
+            currentModeDescription = "Ocupa o monitor sem bordas e sem trocar o modo de vídeo.";
+            break;
+        case WindowMode::Fullscreen:
+            currentModeName = "Tela cheia";
+            currentModeDescription = "Tela cheia associada ao monitor, utilizando seu modo de vídeo.";
+            break;
+        }
+
+        sandbox_ui::drawTextFit(ui, std::string("Modo atual: ") + currentModeName,
+                                innerX, contentY + 178.0f, innerW, 0.43f,
+                                sandbox_ui::palette::text);
+        sandbox_ui::drawTextFit(ui, currentModeDescription,
+                                innerX, contentY + 205.0f, innerW, 0.37f,
+                                sandbox_ui::palette::muted);
+
+        if (windowModeChangeFailed)
+        {
+            sandbox_ui::drawTextFit(ui, "Não foi possível alterar o modo da janela.",
+                                    innerX, contentY + 232.0f, innerW, 0.37f,
+                                    sandbox_ui::palette::danger);
+        }
+        break;
+    }
+
     case OptionsCategory::Doom:
         sandbox_ui::drawSection(ui, innerX, contentY, innerW, "JOGAR DOOM");
         sandbox_ui::drawTextFit(ui, "Coloque doom1.wad ao lado de OpenGLProjeto.exe.",
@@ -207,6 +284,7 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
         renderer.resetSettings();
         camera.resetSettings();
         light.resetProperties();
+        windowModeChangeFailed = !window.setMode(WindowMode::Fullscreen);
     }
     if (sandbox_ui::button(ui, "Voltar", backX, footerY - 2.0f,
                            backW, 36.0f, ButtonTone::Primary))

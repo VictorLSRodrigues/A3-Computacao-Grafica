@@ -39,7 +39,15 @@ namespace
 
 bool LauncherApplication::init()
 {
-    if (!window.create("Rotor | Launcher", false, 1060, 700))
+    WindowConfig windowConfig;
+    windowConfig.title = "Rotor | Launcher";
+    windowConfig.mode = WindowMode::Windowed;
+    windowConfig.width = 1060;
+    windowConfig.height = 700;
+    windowConfig.minWidth = 900;
+    windowConfig.minHeight = 620;
+
+    if (!window.create(windowConfig))
         return false;
 
     if (!ui.create())
@@ -51,7 +59,6 @@ bool LauncherApplication::init()
     executableDirectory = launcher::executableDirectory();
     applications = launcher::discoverCompatibleApplications(executableDirectory);
 
-    glfwSetWindowSizeLimits(window.getHandle(), 900, 620, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glViewport(0, 0, window.getWidth(), window.getHeight());
     return true;
 }
