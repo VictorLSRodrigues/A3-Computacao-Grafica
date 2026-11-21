@@ -45,11 +45,24 @@ void Editor::update(bool inputEnabled)
         selectedFace.valid = false;
     }
 
+    const bool controlPressed =
+        window.keyDown(GLFW_KEY_LEFT_CONTROL) ||
+        window.keyDown(GLFW_KEY_RIGHT_CONTROL);
+    if (inputEnabled && controlPressed &&
+        window.keyPressed(GLFW_KEY_Z) && !draggingGizmo &&
+        !draggingRotationGizmo && !draggingScaleGizmo)
+    {
+        undoLastTransform();
+    }
+
     // Seleção e movimentação de objetos no modo de edição.
     const bool editingAvailable = editingMode && inputEnabled;
 
     if (!editingAvailable)
     {
+        if (draggingGizmo || draggingRotationGizmo || draggingScaleGizmo)
+            finishTransformDrag();
+
         draggingGizmo = false;
         draggedAxis = -1;
 
@@ -213,6 +226,13 @@ void Editor::update(bool inputEnabled)
 
                             draggingGizmo = true;
                             draggedAxis = axis;
+                            draggedObject =
+                                lightSelected ? nullptr : selected;
+                            draggedLight = lightSelected;
+                            if (draggedObject)
+                                dragStartTransform = draggedObject->transform;
+                            else if (draggedLight)
+                                dragStartLight = light;
 
                             dragStartPosition =
                                 selectedPosition;
@@ -280,6 +300,9 @@ void Editor::update(bool inputEnabled)
 
                                 // Guarda a rotação original do objeto.
                                 rotationStart = selected->transform.rotation();
+                                draggedObject = selected;
+                                draggedLight = false;
+                                dragStartTransform = selected->transform;
 
                                 // Guarda o eixo escolhido.
                                 rotatingWorldAxis = selectedRing.worldAxis;
@@ -340,6 +363,9 @@ void Editor::update(bool inputEnabled)
 
                                 // Guarda a escala original.
                                 scaleStart = selected->transform.scale();
+                                draggedObject = selected;
+                                draggedLight = false;
+                                dragStartTransform = selected->transform;
 
                                 const BoundingBox *bounds = selected->boundingBox();
 
@@ -463,6 +489,7 @@ void Editor::update(bool inputEnabled)
             }
             else
             {
+                finishTransformDrag();
                 draggingGizmo = false;
                 draggedAxis = -1;
             }
@@ -470,6 +497,7 @@ void Editor::update(bool inputEnabled)
         else
         {
             // Soltar o botão encerra a movimentação.
+            finishTransformDrag();
             draggingGizmo = false;
             draggedAxis = -1;
         }
@@ -530,6 +558,7 @@ void Editor::update(bool inputEnabled)
             }
             else
             {
+                finishTransformDrag();
                 draggingRotationGizmo = false;
                 rotatingAxis = -1;
             }
@@ -537,6 +566,7 @@ void Editor::update(bool inputEnabled)
         else
         {
             // Soltar o botão encerra a rotação.
+            finishTransformDrag();
             draggingRotationGizmo = false;
             rotatingAxis = -1;
         }
@@ -579,6 +609,7 @@ void Editor::update(bool inputEnabled)
             }
             else
             {
+                finishTransformDrag();
                 draggingScaleGizmo = false;
                 scalingAxis = -1;
             }
@@ -586,6 +617,7 @@ void Editor::update(bool inputEnabled)
         else
         {
             // Soltar o botão encerra a escala.
+            finishTransformDrag();
             draggingScaleGizmo = false;
             scalingAxis = -1;
         }
@@ -643,6 +675,65 @@ void Editor::update(bool inputEnabled)
             extrusionDistance = 0.0f;
             extrusionChanged = false;
         }
+    }
+}
+
+void Editor::recordLightChange(const Light &previousState)
+{
+    const bool changed =
+        glm::any(glm::notEqual(previousState.position, light.position)) ||
+        glm::any(glm::notEqual(previousState.target, light.target));
+    if (!changed)
+        return;
+
+    UndoEntry entry;
+    entry.isLight = true;
+    entry.lightState = previousState;
+    undoHistory.push_back(entry);
+}
+
+void Editor::finishTransformDrag()
+{
+    if (draggedObject &&
+        (glm::any(glm::notEqual(
+             draggedObject->transform.position(),
+             dragStartTransform.position())) ||
+         glm::any(glm::notEqual(
+             draggedObject->transform.rotation(),
+             dragStartTransform.rotation())) ||
+         glm::any(glm::notEqual(
+             draggedObject->transform.scale(),
+             dragStartTransform.scale()))))
+    {
+        UndoEntry entry;
+        entry.object = draggedObject;
+        entry.transform = dragStartTransform;
+        undoHistory.push_back(entry);
+    }
+    else if (draggedLight)
+    {
+        recordLightChange(dragStartLight);
+    }
+
+    draggedObject = nullptr;
+    draggedLight = false;
+}
+
+void Editor::undoLastTransform()
+{
+    if (undoHistory.empty())
+        return;
+
+    const UndoEntry entry = undoHistory.back();
+    undoHistory.pop_back();
+
+    if (entry.isLight)
+    {
+        light = entry.lightState;
+    }
+    else if (entry.object)
+    {
+        entry.object->transform = entry.transform;
     }
 }
 

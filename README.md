@@ -121,6 +121,7 @@ Após uma compilação bem-sucedida, execute:
 ```powershell
 .\build\OpenGLProjeto.exe
 ```
+
 Para executar o Launcher, utilize:
 
 ```powershell
@@ -153,6 +154,12 @@ Após copiar o arquivo, execute:
 **3. Inicie o jogo**
 
 Execute `OpenGLProjeto.exe`, pressione Esc e acesse **Configurações → DOOM → Iniciar DOOM**. O jogo roda dentro da mesma janela da engine. Durante o jogo, pressione **F10** para voltar ao Sandbox sem fechar a aplicação.
+
+### Metodos
+
+**### ↩️ Ctrl + Z (Desfazer)**
+
+A engine possui um sistema de histórico de ações que permite desfazer alterações realizadas na cena utilizando **Ctrl + Z**. É possível restaurar o estado anterior de qualquer objeto ou da luz, incluindo movimentação, rotação e escalonamento, sem precisar selecionar novamente o elemento.
 
 ## 📁 Estrutura do projeto
 

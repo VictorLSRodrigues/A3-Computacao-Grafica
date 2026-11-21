@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include <vector>
+
 #include "engine/graphics/camera/camera.h"
 #include "engine/platform/window.h"
 #include "engine/scene/light.h"
@@ -47,6 +49,9 @@ public:
     // Desenha a barra de ferramentas no canto superior direito.
     void drawToolbar();
 
+    // Registra alterações da luz feitas diretamente pela interface.
+    void recordLightChange(const Light &previousState);
+
     bool isEditing() const { return editingMode; }
     bool isLightSelected() const { return lightSelected; }
 
@@ -84,6 +89,20 @@ private:
 
     glm::vec3 dragStartPosition{0.0f};
     glm::vec3 draggedWorldAxis{0.0f};
+    Scene::Object *draggedObject = nullptr;
+    bool draggedLight = false;
+    Transform dragStartTransform;
+    Light dragStartLight;
+
+    struct UndoEntry
+    {
+        Scene::Object *object = nullptr;
+        Transform transform;
+        bool isLight = false;
+        Light lightState;
+    };
+
+    std::vector<UndoEntry> undoHistory;
 
     glm::vec2 dragStartMouse{0.0f};
     glm::vec2 dragScreenDirection{0.0f};
@@ -129,6 +148,9 @@ private:
     float rotationAccumulatedAngle = 0.0f;
 
     float dragWorldPerPixel = 0.0f;
+
+    void finishTransformDrag();
+    void undoLastTransform();
 
     void drawMoveGizmo();
     void drawRotateGizmo();

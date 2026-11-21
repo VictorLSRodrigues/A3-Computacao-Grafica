@@ -171,7 +171,11 @@ void Application::renderUI()
         editor.drawGizmos();
 
         if (editor.isLightSelected())
+        {
+            const Light previousLight = light;
             lightPanel.draw(window, ui, light);
+            editor.recordLightChange(previousLight);
+        }
 
         // Desenha a barra de ferramentas.
         editor.drawToolbar();
