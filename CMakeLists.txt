@@ -1,4 +1,3 @@
-
 cmake_minimum_required(VERSION 3.20)
 
 project(OpenGLProjeto
@@ -18,19 +17,13 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(Libraries/glfw-3.5.1)
+add_subdirectory(external/doomgeneric/doomgeneric)
 
-add_executable(OpenGLProjeto
-    # Application: Sandbox
-    src/applications/sandbox/main.cpp
-    src/applications/sandbox/application.cpp
-    src/applications/sandbox/world.cpp
+find_package(OpenGL REQUIRED)
 
-    # Application: Sandbox UI
-    src/applications/sandbox/ui/HUD.cpp
-    src/applications/sandbox/ui/environment_info.cpp
-    src/applications/sandbox/ui/light_panel.cpp
-    src/applications/sandbox/ui/menu.cpp
-
+# Código compartilhado do motor. Cada aplicação possui seu próprio executável,
+# mas utiliza a mesma implementação do Rotor Engine.
+set(ROTOR_ENGINE_SOURCES
     # Engine: Editor
     src/engine/editor/editor.cpp
     src/engine/editor/gizmo.cpp
@@ -62,12 +55,10 @@ add_executable(OpenGLProjeto
     src/engine/graphics/resources/cubemap.cpp
     src/engine/graphics/resources/shader.cpp
     src/engine/graphics/resources/texture.cpp
+    src/engine/graphics/resources/texture_manager.cpp
 
     # Engine: Graphics Environment
     src/engine/graphics/environment/skybox.cpp
-
-    # Engine: Graphics Manager
-    src/engine/graphics/resources/texture_manager.cpp
 
     # Engine: Renderer
     src/engine/renderer/renderer.cpp
@@ -82,25 +73,66 @@ add_executable(OpenGLProjeto
     src/engine/ui/UI.cpp
     src/engine/ui/font.cpp
 
-    # Dependencies
+    # Dependency
     Libraries/glad/src/glad.c
 )
 
-add_subdirectory(external/doomgeneric/doomgeneric)
+add_library(rotor_engine STATIC ${ROTOR_ENGINE_SOURCES})
 
-target_include_directories(OpenGLProjeto PRIVATE
+target_include_directories(rotor_engine PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/external"
     "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-target_compile_definitions(OpenGLProjeto PRIVATE
+target_compile_definitions(rotor_engine PUBLIC
     ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/"
 )
 
-find_package(OpenGL REQUIRED)
-
-target_link_libraries(OpenGLProjeto PRIVATE
+target_link_libraries(rotor_engine PUBLIC
     glfw
     OpenGL::GL
 )
+
+# Aplicação existente. O nome do alvo OpenGLProjeto é preservado para manter
+# compatibilidade com os comandos de build já utilizados no projeto.
+add_executable(OpenGLProjeto
+    src/applications/sandbox/main.cpp
+    src/applications/sandbox/application.cpp
+    src/applications/sandbox/world.cpp
+
+    # Sandbox UI
+    src/applications/sandbox/ui/HUD.cpp
+    src/applications/sandbox/ui/environment_info.cpp
+    src/applications/sandbox/ui/light_panel.cpp
+    src/applications/sandbox/ui/menu.cpp
+)
+
+target_link_libraries(OpenGLProjeto PRIVATE rotor_engine)
+
+# Manifesto gerado junto ao executável: o Launcher descobre o Sandbox sem
+# precisar conhecer seu nome ou registrar a aplicação manualmente no código.
+file(GENERATE
+    OUTPUT "$<TARGET_FILE_DIR:OpenGLProjeto>/sandbox.rotor-app.json"
+    CONTENT "{\n  \"manifest_version\": 1,\n  \"id\": \"rotor.sandbox\",\n  \"name\": \"Rotor Sandbox\",\n  \"description\": \"Ambiente de testes e exploracao do motor grafico Rotor.\",\n  \"executable\": \"$<TARGET_FILE_NAME:OpenGLProjeto>\",\n  \"rotor_api_version\": 1\n}\n"
+)
+
+# Inicializador independente: descobre aplicações compatíveis por manifesto.
+if(WIN32)
+    add_executable(RotorLauncher WIN32
+        src/applications/launcher/main.cpp
+        src/applications/launcher/launcher_application.cpp
+        src/applications/launcher/application_discovery.cpp
+        src/applications/launcher/process_launcher.cpp
+    )
+else()
+    add_executable(RotorLauncher
+        src/applications/launcher/main.cpp
+        src/applications/launcher/launcher_application.cpp
+        src/applications/launcher/application_discovery.cpp
+        src/applications/launcher/process_launcher.cpp
+    )
+endif()
+
+target_link_libraries(RotorLauncher PRIVATE rotor_engine)
+add_dependencies(RotorLauncher OpenGLProjeto)
