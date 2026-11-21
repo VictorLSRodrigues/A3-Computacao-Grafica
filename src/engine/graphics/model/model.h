@@ -1,19 +1,17 @@
 #ifndef MODEL_CLASS_H
 #define MODEL_CLASS_H
 
-#include <deque>
-#include <nlohmann/json.hpp>
-
-#include "engine/graphics/buffers/VAO.h"
-#include "engine/graphics/mesh/mesh.h"
-#include "engine/graphics/resources/texture.h"
-#include "engine/graphics/geometry/bounding_box.h"
 #include <cstddef>
-#include "engine/graphics/mesh/material.h"
+#include <deque>
 #include <vector>
-#include <memory>
 
-using json = nlohmann::json;
+#include <glm/glm.hpp>
+
+#include "engine/graphics/geometry/bounding_box.h"
+#include "engine/graphics/mesh/mesh.h"
+
+class Shader;
+class Texture;
 
 class Model
 {
@@ -81,55 +79,11 @@ public:
     }
 
 private:
-    // Dados do arquivo e descrição de sua estrutura.
-    const char *file;
-    std::vector<unsigned char> data;
-    json JSON;
-
-    // Geometria encontrada no arquivo e transformações de cada parte.
+    // Malhas e transformações internas prontas para renderização.
     std::deque<Mesh> meshes;
     std::vector<glm::mat4> matricesMeshes;
     float boundingRadius = 0.0f;
-
     BoundingBox boundingBox;
-
-    // Lê uma malha descrita no arquivo e prepara seus dados para desenho.
-    void loadMesh(unsigned int meshIndex, const glm::mat4 &matrix);
-
-    // Percorre a hierarquia de partes do modelo e acumula suas transformações.
-    void traverseNode(unsigned int nodeIndex, glm::mat4 parentTransform = glm::mat4(1.0f));
-
-    // Lê o material da parte: cor base e texturas de cor e de brilho.
-    void loadMaterial(
-        const json &primitive,
-        std::vector<std::shared_ptr<Texture>> &textures,
-        Material &material);
-    // Carrega a imagem apontada por uma textura do material; retorna false se ela não tiver imagem.
-    bool loadMaterialTexture(
-        const json &textureInfo,
-        std::shared_ptr<Texture> &texture,
-        const std::string &type);
-    // Carrega uma imagem do arquivo, seja ela externa ou embutida no GLB.
-    bool loadImage(
-        unsigned int imageIndex,
-        std::shared_ptr<Texture> &texture,
-        const std::string &type);
-    // Lê os dados binários associados à descrição do modelo.
-    std::vector<unsigned char> getData();
-    // Converte referências do arquivo em dados de vértices, índices e imagens.
-    std::vector<float> getFloats(json accessor);
-    std::vector<GLuint> getIndices(json accessor);
-
-    // Combina os atributos separados do arquivo em vértices completos.
-    std::vector<Vertex> assembleVertices(
-        std::vector<glm::vec3> positions,
-        std::vector<glm::vec3> normals,
-        std::vector<glm::vec2> texUVs,
-        std::vector<glm::vec4> tangents);
-
-    // Agrupa uma lista de números em vetores com 2, 3 ou 4 componentes.
-    std::vector<glm::vec2> groupFloatsVec2(std::vector<float> values);
-    std::vector<glm::vec3> groupFloatsVec3(std::vector<float> values);
-    std::vector<glm::vec4> groupFloatsVec4(std::vector<float> values);
 };
+
 #endif

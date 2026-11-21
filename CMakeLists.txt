@@ -56,6 +56,7 @@ add_executable(OpenGLProjeto
 
     # Engine: Graphics Model
     src/engine/graphics/model/model.cpp
+    src/engine/graphics/model/model_loader.cpp
 
     # Engine: Graphics Resources
     src/engine/graphics/resources/cubemap.cpp
