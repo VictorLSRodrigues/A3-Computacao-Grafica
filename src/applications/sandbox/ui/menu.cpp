@@ -177,10 +177,10 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
 
     case OptionsCategory::Doom:
         sandbox_ui::drawSection(ui, innerX, contentY, innerW, "JOGAR DOOM");
-        sandbox_ui::drawTextFit(ui, "Coloque doom1.wad ao lado de DoomGeneric.exe.",
+        sandbox_ui::drawTextFit(ui, "Coloque doom1.wad ao lado de OpenGLProjeto.exe.",
                                 innerX, contentY + 48.0f, innerW, 0.38f,
                                 sandbox_ui::palette::text);
-        sandbox_ui::drawTextFit(ui, "O WAD não é incluído no projeto.",
+        sandbox_ui::drawTextFit(ui, "F10 volta ao Sandbox durante o jogo.",
                                 innerX, contentY + 76.0f, innerW, 0.36f,
                                 sandbox_ui::palette::muted);
         if (sandbox_ui::button(ui, "Iniciar DOOM", innerX, contentY + 112.0f,

@@ -127,6 +127,8 @@ Para executar o Launcher, utilize:
 .\build\RotorLauncher.exe
 ```
 
+O CMake configurará e compilará o GLFW e os executáveis `OpenGLProjeto` (sandbox com DOOM integrado), `RotorLauncher` e `DoomGeneric` (port standalone).
+
 ### 🎮 Executando o DOOM
 
 O projeto também possui integração com o **DOOM**, permitindo iniciar o jogo diretamente pelo menu da aplicação.
@@ -150,9 +152,7 @@ Após copiar o arquivo, execute:
 
 **3. Inicie o jogo**
 
-Execute o OpenGLProjeto.exe, pressione Esc e acesse:
-
-Configurações → DOOM → Iniciar DOOM
+Execute `OpenGLProjeto.exe`, pressione Esc e acesse **Configurações → DOOM → Iniciar DOOM**. O jogo roda dentro da mesma janela da engine. Durante o jogo, pressione **F10** para voltar ao Sandbox sem fechar a aplicação.
 
 ## 📁 Estrutura do projeto
 

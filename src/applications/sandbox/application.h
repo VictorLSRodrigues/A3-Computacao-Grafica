@@ -10,6 +10,7 @@
 #include "engine/ui/UI.h"
 #include "applications/sandbox/ui/light_panel.h"
 #include "applications/sandbox/ui/menu.h"
+#include "applications/sandbox/doom/doom_game.h"
 #include "engine/editor/editor.h"
 #include "engine/platform/window.h"
 #include <glm/glm.hpp>
@@ -33,7 +34,7 @@ public:
 private:
     void update(float deltaTime);
     void renderUI();
-    void launchDoom();
+    void startDoom();
 
     // A janela é declarada primeiro para ser destruída por último,
     // depois dos recursos OpenGL que dependem do contexto dela.
@@ -57,4 +58,6 @@ private:
     Menu menu;
     LightPanel lightPanel;
     HUD hud;
+    DoomGame doomGame;
+    bool doomActive = false;
 };

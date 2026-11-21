@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
-#include <string>
 #include <vector>
 
 #ifdef _WIN32
@@ -79,9 +78,15 @@ void Application::run()
 
         update(deltaTime);
 
-        renderer.render(scene, light, camera);
-
-        renderUI();
+        if (doomActive)
+        {
+            doomGame.render(window.getWidth(), window.getHeight());
+        }
+        else
+        {
+            renderer.render(scene, light, camera);
+            renderUI();
+        }
 
         window.swapBuffers();
         window.pollEvents();
@@ -97,6 +102,21 @@ void Application::run()
 
 void Application::update(float deltaTime)
 {
+    if (doomActive)
+    {
+        if (window.keyPressed(GLFW_KEY_F10))
+        {
+            doomGame.suspend();
+            doomActive = false;
+            window.setCursorMode(Window::CursorMode::Normal);
+        }
+        else
+        {
+            doomGame.update(window);
+        }
+        return;
+    }
+
     hud.update(window, deltaTime);
     menu.update(window);
 
@@ -138,7 +158,7 @@ void Application::renderUI()
     );
 
     // Desenha o menu.
-    menu.draw(window, ui, renderer, camera, light, [this]() { launchDoom(); });
+    menu.draw(window, ui, renderer, camera, light, [this]() { startDoom(); });
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.
@@ -157,12 +177,13 @@ void Application::renderUI()
     ui.end();
 }
 
-void Application::launchDoom()
+void Application::startDoom()
 {
 #ifdef _WIN32
-    wchar_t applicationPath[MAX_PATH] = {};
-    const DWORD pathLength = GetModuleFileNameW(nullptr, applicationPath, MAX_PATH);
-    if (pathLength == 0 || pathLength >= MAX_PATH)
+    std::vector<wchar_t> applicationPath(32768, L'\0');
+    const DWORD pathLength = GetModuleFileNameW(
+        nullptr, applicationPath.data(), static_cast<DWORD>(applicationPath.size()));
+    if (pathLength == 0 || pathLength >= applicationPath.size())
     {
         MessageBoxW(nullptr, L"Não foi possível localizar a pasta do aplicativo.",
                     L"DOOM", MB_OK | MB_ICONERROR);
@@ -170,54 +191,49 @@ void Application::launchDoom()
     }
 
     const std::filesystem::path applicationDirectory =
-        std::filesystem::path(applicationPath).parent_path();
-    const std::filesystem::path doomExecutable = applicationDirectory / L"DoomGeneric.exe";
+        std::filesystem::path(std::wstring(applicationPath.data(), pathLength)).parent_path();
     const std::filesystem::path doomWad = applicationDirectory / L"doom1.wad";
 
     std::error_code fileError;
-    if (!std::filesystem::exists(doomExecutable, fileError) || fileError)
-    {
-        MessageBoxW(nullptr, L"DoomGeneric.exe nao foi encontrado. Recompile o projeto.",
-                    L"DOOM", MB_OK | MB_ICONERROR);
-        return;
-    }
-
-    fileError.clear();
-    if (!std::filesystem::exists(doomWad, fileError) || fileError)
+    if (!std::filesystem::is_regular_file(doomWad, fileError) || fileError)
     {
         const std::wstring message =
-            L"Coloque um arquivo doom1.wad obtido legalmente nesta pasta:\n\n" +
+            L"Coloque um arquivo doom1.wad obtido legalmente ao lado de OpenGLProjeto.exe:\n\n" +
             applicationDirectory.wstring();
         MessageBoxW(nullptr, message.c_str(), L"DOOM - WAD necessário",
                     MB_OK | MB_ICONINFORMATION);
         return;
     }
 
-    const std::wstring commandText =
-        L"\"" + doomExecutable.wstring() + L"\" -iwad doom1.wad";
-    std::vector<wchar_t> commandLine(commandText.begin(), commandText.end());
-    commandLine.push_back(L'\0');
-
-    STARTUPINFOW startupInfo = {};
-    startupInfo.cb = sizeof(startupInfo);
-    PROCESS_INFORMATION processInfo = {};
-    const std::wstring workingDirectory = applicationDirectory.wstring();
-
-    if (!CreateProcessW(doomExecutable.c_str(), commandLine.data(), nullptr, nullptr,
-                        FALSE, 0, nullptr, workingDirectory.c_str(),
-                        &startupInfo, &processInfo))
+    std::string error;
+    if (!doomGame.start(doomWad, error))
     {
-        const DWORD error = GetLastError();
-        const std::wstring message =
-            L"Não foi possível iniciar DoomGeneric.exe. Erro do Windows: " +
-            std::to_wstring(error);
-        MessageBoxW(nullptr, message.c_str(), L"DOOM", MB_OK | MB_ICONERROR);
+        std::cerr << error << std::endl;
+        MessageBoxW(nullptr,
+                    L"Não foi possível iniciar o DOOM dentro da engine. Consulte a saída do aplicativo.",
+                    L"DOOM", MB_OK | MB_ICONERROR);
         return;
     }
 
-    CloseHandle(processInfo.hThread);
-    CloseHandle(processInfo.hProcess);
+    doomActive = true;
+    window.setCursorMode(Window::CursorMode::Hidden);
 #else
-    std::cerr << "O lançamento do DOOM pelo menu só está disponível no Windows." << std::endl;
+    std::error_code fileError;
+    const std::filesystem::path doomWad =
+        std::filesystem::current_path() / "build" / "doom1.wad";
+    if (!std::filesystem::is_regular_file(doomWad, fileError) || fileError)
+    {
+        std::cerr << "Arquivo doom1.wad não encontrado: " << doomWad << std::endl;
+        return;
+    }
+
+    std::string error;
+    if (!doomGame.start(doomWad, error))
+    {
+        std::cerr << error << std::endl;
+        return;
+    }
+
+    doomActive = true;
 #endif
 }

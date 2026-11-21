@@ -100,6 +100,7 @@ add_executable(OpenGLProjeto
     src/applications/sandbox/main.cpp
     src/applications/sandbox/application.cpp
     src/applications/sandbox/world.cpp
+    src/applications/sandbox/doom/doom_game.cpp
 
     # Sandbox UI
     src/applications/sandbox/ui/HUD.cpp
@@ -108,7 +109,7 @@ add_executable(OpenGLProjeto
     src/applications/sandbox/ui/menu.cpp
 )
 
-target_link_libraries(OpenGLProjeto PRIVATE rotor_engine)
+target_link_libraries(OpenGLProjeto PRIVATE rotor_engine DoomCore)
 
 # Manifesto gerado junto ao executável: o Launcher descobre o Sandbox sem
 # precisar conhecer seu nome ou registrar a aplicação manualmente no código.
