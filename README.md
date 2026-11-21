@@ -112,7 +112,7 @@ O preset seleciona o gerador **MinGW Makefiles** e configura os arquivos de comp
 cmake --build --preset mingw
 ```
 
-O CMake configurará e compilará o GLFW a partir do código-fonte incluído no projeto, além de compilar os arquivos do programa.
+O CMake configurará e compilará o GLFW e os dois executáveis: `OpenGLProjeto` (sandbox) e `DoomGeneric` (DOOM).
 
 ## ▶️ Como executar
 
@@ -122,7 +122,32 @@ Após uma compilação bem-sucedida, execute:
 .\build\OpenGLProjeto.exe
 ```
 
-O executável será gerado localmente durante a compilação. Ele não precisa estar incluído no repositório.
+### 🎮 Executando o DOOM
+
+O projeto também possui integração com o **DOOM**, permitindo iniciar o jogo diretamente pelo menu da aplicação.
+
+Para utilizar essa funcionalidade, é necessário possuir o arquivo `doom1.wad` (IWAD) que está diponivel na pasta doom_licença.
+
+**1. Configurar o arquivo WAD**
+
+Coloque o arquivo `doom1.wad` na pasta `build` do projeto.
+
+```powershell
+Copy-Item ".\external\doom_licença\doom1.wad" ".\build\doom1.wad"
+```
+**2. Execute o projeto novamente**
+
+Após copiar o arquivo, execute:
+
+```powershell
+.\build\OpenGLProjeto.exe
+```
+
+**3. Inicie o jogo**
+
+Execute o OpenGLProjeto.exe, pressione Esc e acesse:
+
+Configurações → DOOM → Iniciar DOOM
 
 ## 📁 Estrutura do projeto
 

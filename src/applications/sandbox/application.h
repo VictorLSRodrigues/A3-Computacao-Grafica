@@ -33,6 +33,7 @@ public:
 private:
     void update(float deltaTime);
     void renderUI();
+    void launchDoom();
 
     // A janela é declarada primeiro para ser destruída por último,
     // depois dos recursos OpenGL que dependem do contexto dela.

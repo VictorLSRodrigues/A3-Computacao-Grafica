@@ -1,7 +1,21 @@
 #include "application.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
+#include <string>
+#include <vector>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#endif
+
 #include "applications/sandbox/ui/environment_info.h"
 #include "world.h"
 
@@ -87,7 +101,7 @@ void Application::renderUI()
     hud.draw(ui, window, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
 
     // Desenha o menu.
-    menu.draw(window, ui, renderer, camera, light);
+    menu.draw(window, ui, renderer, camera, light, [this]() { launchDoom(); });
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.
@@ -104,4 +118,69 @@ void Application::renderUI()
 
     // Finaliza a interface gráfica.
     ui.end();
+}
+
+void Application::launchDoom()
+{
+#ifdef _WIN32
+    wchar_t applicationPath[MAX_PATH] = {};
+    const DWORD pathLength = GetModuleFileNameW(nullptr, applicationPath, MAX_PATH);
+    if (pathLength == 0 || pathLength >= MAX_PATH)
+    {
+        MessageBoxW(nullptr, L"Não foi possível localizar a pasta do aplicativo.",
+                    L"DOOM", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    const std::filesystem::path applicationDirectory =
+        std::filesystem::path(applicationPath).parent_path();
+    const std::filesystem::path doomExecutable = applicationDirectory / L"DoomGeneric.exe";
+    const std::filesystem::path doomWad = applicationDirectory / L"doom1.wad";
+
+    std::error_code fileError;
+    if (!std::filesystem::exists(doomExecutable, fileError) || fileError)
+    {
+        MessageBoxW(nullptr, L"DoomGeneric.exe nao foi encontrado. Recompile o projeto.",
+                    L"DOOM", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    fileError.clear();
+    if (!std::filesystem::exists(doomWad, fileError) || fileError)
+    {
+        const std::wstring message =
+            L"Coloque um arquivo doom1.wad obtido legalmente nesta pasta:\n\n" +
+            applicationDirectory.wstring();
+        MessageBoxW(nullptr, message.c_str(), L"DOOM - WAD necessário",
+                    MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+
+    const std::wstring commandText =
+        L"\"" + doomExecutable.wstring() + L"\" -iwad doom1.wad";
+    std::vector<wchar_t> commandLine(commandText.begin(), commandText.end());
+    commandLine.push_back(L'\0');
+
+    STARTUPINFOW startupInfo = {};
+    startupInfo.cb = sizeof(startupInfo);
+    PROCESS_INFORMATION processInfo = {};
+    const std::wstring workingDirectory = applicationDirectory.wstring();
+
+    if (!CreateProcessW(doomExecutable.c_str(), commandLine.data(), nullptr, nullptr,
+                        FALSE, 0, nullptr, workingDirectory.c_str(),
+                        &startupInfo, &processInfo))
+    {
+        const DWORD error = GetLastError();
+        const std::wstring message =
+            L"Não foi possível iniciar DoomGeneric.exe. Erro do Windows: " +
+            std::to_wstring(error);
+        MessageBoxW(nullptr, message.c_str(), L"DOOM", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    CloseHandle(processInfo.hThread);
+    CloseHandle(processInfo.hProcess);
+#else
+    std::cerr << "O lançamento do DOOM pelo menu só está disponível no Windows." << std::endl;
+#endif
 }

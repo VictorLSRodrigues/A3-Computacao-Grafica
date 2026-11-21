@@ -22,13 +22,14 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light)
+void Menu::draw(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
+                const std::function<void()>& launchDoom)
 {
     if (!open)
         return;
 
     if (page == Page::Options)
-        drawOptions(window, ui, renderer, camera, light);
+        drawOptions(window, ui, renderer, camera, light, launchDoom);
     else
         drawMain(window, ui);
 }
@@ -72,7 +73,8 @@ void Menu::drawMain(const Window &window, UI &ui)
         window.close();
 }
 
-void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light)
+void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
+                       const std::function<void()>& launchDoom)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -91,7 +93,7 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
 
     const float tabsY = y + 112.0f;
     const float tabGap = 8.0f;
-    const float tabW = (innerW - tabGap * 2.0f) / 3.0f;
+    const float tabW = (innerW - tabGap * 3.0f) / 4.0f;
     const float tabH = 36.0f;
 
     struct CategoryTab
@@ -102,9 +104,10 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
     const CategoryTab tabs[] = {
         {OptionsCategory::Camera, "Câmera"},
         {OptionsCategory::Environment, "Ambiente"},
-        {OptionsCategory::Lighting, "Iluminação"}};
+        {OptionsCategory::Lighting, "Iluminação"},
+        {OptionsCategory::Doom, "DOOM"}};
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         const float tabX = innerX + i * (tabW + tabGap);
         const bool selected = optionsCategory == tabs[i].category;
@@ -171,6 +174,19 @@ void Menu::drawOptions(const Window &window, UI &ui, Renderer &renderer, Camera 
                             innerX, contentY + 34.0f + rowHeight + rowGap, innerW, rowHeight);
         break;
     }
+
+    case OptionsCategory::Doom:
+        sandbox_ui::drawSection(ui, innerX, contentY, innerW, "JOGAR DOOM");
+        sandbox_ui::drawTextFit(ui, "Coloque doom1.wad ao lado de DoomGeneric.exe.",
+                                innerX, contentY + 48.0f, innerW, 0.38f,
+                                sandbox_ui::palette::text);
+        sandbox_ui::drawTextFit(ui, "O WAD não é incluído no projeto.",
+                                innerX, contentY + 76.0f, innerW, 0.36f,
+                                sandbox_ui::palette::muted);
+        if (sandbox_ui::button(ui, "Iniciar DOOM", innerX, contentY + 112.0f,
+                               std::min(220.0f, innerW), 42.0f, ButtonTone::Primary))
+            launchDoom();
+        break;
     }
 
     const float footerY = y + panelH - 58.0f;

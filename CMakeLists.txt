@@ -86,6 +86,8 @@ add_executable(OpenGLProjeto
     Libraries/glad/src/glad.c
 )
 
+add_subdirectory(external/doomgeneric/doomgeneric)
+
 target_include_directories(OpenGLProjeto PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/external"
     "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/include"
