@@ -121,6 +121,11 @@ Após uma compilação bem-sucedida, execute:
 ```powershell
 .\build\OpenGLProjeto.exe
 ```
+Para executar o Launcher, utilize:
+
+```powershell
+.\build\RotorLauncher.exe
+```
 
 ### 🎮 Executando o DOOM
 
