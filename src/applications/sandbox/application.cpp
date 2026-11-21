@@ -19,6 +19,12 @@ bool Application::init()
         return false;
     }
 
+    if (!editor.create())
+    {
+        std::cout << "Falha ao inicializar os recursos do Editor!" << std::endl;
+        return false;
+    }
+
     return buildWorld(scene);
 }
 
@@ -78,7 +84,7 @@ void Application::renderUI()
     ui.begin(window);
 
     // Desenha o HUD e as informações da cena.
-    hud.draw(ui, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
+    hud.draw(ui, window, makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
 
     // Desenha o menu.
     menu.draw(window, ui, renderer, camera, light);

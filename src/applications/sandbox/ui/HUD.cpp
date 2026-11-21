@@ -1,97 +1,79 @@
 #include "HUD.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
 #include <vector>
 
-#include "engine/ui/theme.h"
+#include "applications/sandbox/ui/sandbox_ui_style.h"
 
 namespace
 {
-    constexpr float kTextScale = 0.4f;
-    constexpr float kLineHeight = 22.0f;
-    constexpr float kBaselineOffset = 16.0f; // da parte de cima da linha até a linha de base
-    constexpr float kSectionGap = 10.0f;
-    constexpr float kPadding = 12.0f;
-    constexpr float kIndent = 10.0f;
     constexpr float kMargin = 16.0f;
-    constexpr float kSwatchSize = 12.0f;
-    constexpr float kMinPanelWidth = 260.0f;
+    constexpr float kPadding = 12.0f;
+    constexpr float kTextScale = 0.38f;
+    constexpr float kLineHeight = 19.0f;
+    constexpr float kSectionGap = 6.0f;
+    constexpr float kIndent = 10.0f;
 
-    // Uma linha do painel completo: título de seção ou item.
     struct Row
     {
         std::string text;
         bool heading = false;
-        bool hasSwatch = false; // mostra um quadrado de cor depois do texto
-        glm::vec3 swatch{0.0f};
     };
 
     Row heading(const std::string &text)
     {
-        Row row;
-        row.text = text;
-        row.heading = true;
-        return row;
+        return {text, true};
     }
 
     Row item(const std::string &text)
     {
-        Row row;
-        row.text = text;
-        return row;
+        return {text, false};
     }
 
-    std::string vec3Text(const char *label, const glm::vec3 &v, int decimals)
+    std::string vectorText(const char *label, const glm::vec3 &value, int decimals)
     {
         char buffer[96];
         std::snprintf(buffer, sizeof(buffer), "%s %.*f  %.*f  %.*f",
-                      label, decimals, v.x, decimals, v.y, decimals, v.z);
+                      label, decimals, value.x, decimals, value.y, decimals, value.z);
         return buffer;
     }
 
-    std::string hexColor(const glm::vec3 &color)
+    std::string colorText(const glm::vec3 &color)
     {
-        const glm::vec3 c = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
+        const glm::vec3 clamped = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
         char buffer[16];
         std::snprintf(buffer, sizeof(buffer), "#%02X%02X%02X",
-                      static_cast<int>(std::lround(c.r * 255.0f)),
-                      static_cast<int>(std::lround(c.g * 255.0f)),
-                      static_cast<int>(std::lround(c.b * 255.0f)));
+                      static_cast<int>(clamped.r * 255.0f),
+                      static_cast<int>(clamped.g * 255.0f),
+                      static_cast<int>(clamped.b * 255.0f));
         return buffer;
     }
 
     std::vector<Row> buildRows(const EnvironmentInfo &info, float fps, float frameTimeMs)
     {
         std::vector<Row> rows;
-        char buffer[96];
+        char buffer[128];
 
         rows.push_back(heading("Desempenho"));
-        std::snprintf(buffer, sizeof(buffer), "FPS: %.0f  (%.1f ms)", fps, frameTimeMs);
+        std::snprintf(buffer, sizeof(buffer), "%.0f FPS   ·   %.1f ms", fps, frameTimeMs);
         rows.push_back(item(buffer));
 
-        rows.push_back(heading("Câmera"));
-        rows.push_back(item(vec3Text("Pos:", info.cameraPosition, 2)));
-
-        rows.push_back(heading("Modo"));
-        if (info.editing)
-            rows.push_back(item("Edição (" + info.tool + ")"));
-        else
-            rows.push_back(item("Visualização"));
+        rows.push_back(heading("Sessão"));
+        rows.push_back(item(info.editing ? "Modo: edição / " + info.tool : "Modo: visualização"));
         rows.push_back(item("Exibindo: " + info.viewedModel));
+
+        rows.push_back(heading("Câmera"));
+        rows.push_back(item(vectorText("Posição:", info.cameraPosition, 2)));
 
         rows.push_back(heading("Luz"));
         rows.push_back(item("Tipo: " + info.lightType));
-        rows.push_back(item(vec3Text("Pos:", info.lightPosition, 2)));
-        Row color = item("Cor: " + hexColor(info.lightColor));
-        color.hasSwatch = true;
-        color.swatch = info.lightColor;
-        rows.push_back(color);
+        rows.push_back(item(vectorText("Posição:", info.lightPosition, 2)));
+        rows.push_back(item("Cor: " + colorText(info.lightColor)));
 
         rows.push_back(heading("Cena"));
-        std::snprintf(buffer, sizeof(buffer), "Objetos: %d / %d visíveis",
-                      info.visibleObjectCount, info.objectCount);
+        std::snprintf(buffer, sizeof(buffer), "Objetos: %d   ·   Visíveis: %d",
+                      info.objectCount, info.visibleObjectCount);
         rows.push_back(item(buffer));
         std::snprintf(buffer, sizeof(buffer), "Faces: %zu", info.faceCount);
         rows.push_back(item(buffer));
@@ -99,14 +81,14 @@ namespace
         rows.push_back(heading("Seleção"));
         if (info.lightSelected)
         {
-            rows.push_back(item("Luz"));
+            rows.push_back(item("Luz selecionada"));
         }
         else if (info.hasSelection)
         {
-            rows.push_back(item(info.selectedName.empty() ? "(sem nome)" : info.selectedName));
-            rows.push_back(item(vec3Text("Pos:", info.selectedPosition, 2)));
-            rows.push_back(item(vec3Text("Rot:", info.selectedRotation, 1)));
-            rows.push_back(item(vec3Text("Esc:", info.selectedScale, 2)));
+            rows.push_back(item(info.selectedName.empty() ? "Objeto sem nome" : info.selectedName));
+            rows.push_back(item(vectorText("Posição:", info.selectedPosition, 2)));
+            rows.push_back(item(vectorText("Rotação:", info.selectedRotation, 1)));
+            rows.push_back(item(vectorText("Escala:", info.selectedScale, 2)));
             if (info.hasFace)
             {
                 std::snprintf(buffer, sizeof(buffer), "Face: %u", info.selectedFace);
@@ -127,11 +109,10 @@ void HUD::update(const Window &window, float deltaTime)
     if (window.keyPressed(GLFW_KEY_F3))
         visible = !visible;
 
-    // Atualiza o FPS a cada meio segundo para reduzir oscilações na leitura.
     timeAccumulator += deltaTime;
     ++frameCount;
 
-    if (timeAccumulator >= 0.5f)
+    if (timeAccumulator >= 0.5f && frameCount > 0)
     {
         fps = frameCount / timeAccumulator;
         frameTimeMs = 1000.0f * timeAccumulator / frameCount;
@@ -140,71 +121,89 @@ void HUD::update(const Window &window, float deltaTime)
     }
 }
 
-void HUD::draw(UI &ui, const EnvironmentInfo &info)
+void HUD::draw(UI &ui, const Window &window, const EnvironmentInfo &info)
 {
     if (visible)
-        drawPanel(ui, info);
+        drawPanel(ui, window, info);
 }
 
-void HUD::drawPanel(UI &ui, const EnvironmentInfo &info) const
+void HUD::drawPanel(UI &ui, const Window &window, const EnvironmentInfo &info) const
 {
     const std::vector<Row> rows = buildRows(info, fps, frameTimeMs);
+    const float screenW = static_cast<float>(window.getWidth());
+    const float screenH = static_cast<float>(window.getHeight());
+    const float maxWidth = std::max(160.0f, screenW - 2.0f * kMargin);
+    const float maxHeight = std::max(140.0f, screenH - 2.0f * kMargin);
 
-    // Primeira passada: mede o painel para que ele se ajuste ao conteúdo.
-    float width = kMinPanelWidth;
-    float height = 2.0f * kPadding;
-    for (std::size_t i = 0; i < rows.size(); ++i)
+    float textScale = kTextScale;
+    float lineHeight = kLineHeight;
+    float sectionGap = kSectionGap;
+    float padding = kPadding;
+
+    // Largura estável: nomes longos são truncados, em vez de fazer o HUD mudar de tamanho.
+    const float panelW = std::min(360.0f, maxWidth);
+
+    const auto measureHeight = [&](float rowHeight, float gap, float panelPadding)
     {
-        const Row &row = rows[i];
+        float result = 2.0f * panelPadding + 8.0f;
+        for (std::size_t i = 0; i < rows.size(); ++i)
+        {
+            if (rows[i].heading && i > 0)
+                result += gap;
+            result += rowHeight;
+        }
+        return result;
+    };
 
-        float rowWidth = ui.measureText(row.text, kTextScale) + 2.0f * kPadding;
-        if (!row.heading)
-            rowWidth += kIndent;
-        if (row.hasSwatch)
-            rowWidth += 8.0f + kSwatchSize;
-        width = std::max(width, rowWidth);
-
-        if (row.heading && i > 0)
-            height += kSectionGap;
-        height += kLineHeight;
+    float panelH = measureHeight(lineHeight, sectionGap, padding);
+    if (panelH > maxHeight)
+    {
+        const float ratio = std::clamp(maxHeight / panelH, 0.55f, 1.0f);
+        textScale *= ratio;
+        lineHeight = std::max(12.0f, lineHeight * ratio);
+        sectionGap = std::max(3.0f, sectionGap * ratio);
+        padding = std::max(8.0f, padding * ratio);
+        panelH = measureHeight(lineHeight, sectionGap, padding);
     }
 
-    ui.addRegion(kMargin, kMargin, width, height);
-    ui.drawRect(kMargin, kMargin, width, height,
-                theme::panelBackground.r, theme::panelBackground.g, theme::panelBackground.b,
-                theme::hudOpacity);
-    ui.drawRect(kMargin, kMargin, width, 3.0f,
-                theme::accent.r, theme::accent.g, theme::accent.b);
+    const float x = kMargin;
+    const float y = kMargin;
+    ui.addRegion(x, y, panelW, panelH);
+    ui.drawRect(x, y, panelW, panelH,
+                sandbox_ui::palette::panel.r,
+                sandbox_ui::palette::panel.g,
+                sandbox_ui::palette::panel.b,
+                0.90f);
+    ui.drawRect(x, y, panelW, 1.0f,
+                sandbox_ui::palette::border.r,
+                sandbox_ui::palette::border.g,
+                sandbox_ui::palette::border.b);
+    ui.drawRect(x, y + panelH - 1.0f, panelW, 1.0f,
+                sandbox_ui::palette::border.r,
+                sandbox_ui::palette::border.g,
+                sandbox_ui::palette::border.b);
+    ui.drawRect(x, y, 2.0f, panelH,
+                sandbox_ui::palette::accent.r,
+                sandbox_ui::palette::accent.g,
+                sandbox_ui::palette::accent.b);
 
-    // Segunda passada: desenha as linhas.
-    float top = kMargin + kPadding;
+    const float textWidth = std::max(0.0f, panelW - 2.0f * padding - kIndent);
+    float top = y + padding + 4.0f;
     for (std::size_t i = 0; i < rows.size(); ++i)
     {
         const Row &row = rows[i];
-
         if (row.heading && i > 0)
-            top += kSectionGap;
+            top += sectionGap;
 
-        const float baseline = top + kBaselineOffset;
-        const float x = kMargin + kPadding + (row.heading ? 0.0f : kIndent);
-
-        if (row.heading)
-            ui.drawText(row.text, x, baseline, kTextScale,
-                        theme::accent.r, theme::accent.g, theme::accent.b);
-        else
-            ui.drawText(row.text, x, baseline, kTextScale,
-                        theme::textMuted.r, theme::textMuted.g, theme::textMuted.b);
-
-        if (row.hasSwatch)
-        {
-            const float swatchX = x + ui.measureText(row.text, kTextScale) + 8.0f;
-            const float swatchY = baseline - kSwatchSize + 1.0f;
-            ui.drawRect(swatchX - 1.0f, swatchY - 1.0f, kSwatchSize + 2.0f, kSwatchSize + 2.0f,
-                        0.85f, 0.85f, 0.90f, 1.0f);
-            ui.drawRect(swatchX, swatchY, kSwatchSize, kSwatchSize,
-                        row.swatch.r, row.swatch.g, row.swatch.b, 1.0f);
-        }
-
-        top += kLineHeight;
+        const float indent = row.heading ? 0.0f : kIndent;
+        const float baseline = top + lineHeight * 0.74f;
+        const float textX = x + padding + indent;
+        const glm::vec3 &color = row.heading
+            ? sandbox_ui::palette::accent
+            : sandbox_ui::palette::muted;
+        sandbox_ui::drawTextFit(ui, row.text, textX, baseline,
+                                std::max(0.0f, textWidth - (row.heading ? 0.0f : indent)),
+                                textScale, color);
+        top += lineHeight;
     }
 }

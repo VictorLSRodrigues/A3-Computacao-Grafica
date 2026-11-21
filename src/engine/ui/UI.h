@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "font.h"
+#include "theme.h"
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/resources/shader.h"
 #include "engine/platform/window.h"
@@ -57,27 +58,22 @@ public:
     // (por exemplo 255 para mostrar uma cor de 0 a 1 como 0 a 255).
     bool slider(const std::string &label, float &value, float minValue, float maxValue,
                 float x, float y, float width, float height,
-                float r = 0.25f, float g = 0.55f, float b = 0.95f,
-                int decimals = 2, float displayScale = 1.0f);
+                float r = theme::accent.r, float g = theme::accent.g, float b = theme::accent.b,
+                int decimals = 2, float displayScale = 1.0f,
+                const std::string &id = {});
 
     // Editor de cor RGB (0 a 1): amostra com o código hexadecimal e uma barra por canal.
-    // Não depende de onde é usado: quem chama informa a cor, a posição e a largura.
+    // O ID opcional mantém a identidade dos controles independente da posição na tela.
     // Retorna true se a cor mudar neste quadro.
-    bool colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y, float width);
+    bool colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y, float width,
+                     const std::string &id = {});
 
     // Altura que o colorPicker ocupa, para quem precisa reservar espaço no layout.
     static float colorPickerHeight();
 
-    enum class Icon
-    {
-        Move,
-        Rotate,
-        Scale,
-        Extrude
-    };
-
+    // Botão com ícone fornecido pela aplicação ou ferramenta que o utiliza.
     bool iconButton(
-        Icon icon,
+        const Texture &icon,
         const std::string &tooltip,
         float x, float y,
         float width, float height,
@@ -103,11 +99,6 @@ private:
     std::size_t activeSliderId = 0; // Slider sendo arrastado; 0 se nenhum.
 
     Shader iconShader;
-
-    Texture moveIcon;
-    Texture rotateIcon;
-    Texture scaleIcon;
-    Texture extrudeIcon;
 
     void drawIcon(
         const Texture &texture,

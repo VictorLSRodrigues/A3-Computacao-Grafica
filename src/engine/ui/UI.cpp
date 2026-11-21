@@ -37,16 +37,6 @@ bool UI::create()
         return false;
     }
 
-    if (!moveIcon.load(ASSETS_DIR "editor/icons/move.png", false) ||
-        !rotateIcon.load(ASSETS_DIR "editor/icons/rotate-3d.png", false) ||
-        !scaleIcon.load(ASSETS_DIR "editor/icons/scaling.png", false) ||
-        !extrudeIcon.load(ASSETS_DIR "editor/icons/extrude.png", false))
-
-    {
-        std::cout << "Falha ao carregar os icones da UI!" << std::endl;
-        return false;
-    }
-
     return font.load(ASSETS_DIR "engine/fonts/DejaVuSans.ttf");
 }
 
@@ -168,11 +158,24 @@ void UI::drawText(const std::string &text, float x, float y, float scale,
 void UI::drawTextCentered(const std::string &text, float x, float y, float width, float height,
                           float scale, float r, float g, float b, float a)
 {
-    float textWidth = font.measure(text, scale);
-    float capHeight = font.getPixelHeight() * scale * 0.62f; // Aproxima a altura das maiúsculas.
+    // Evita que rótulos longos escapem de botões e campos em janelas estreitas.
+    const float horizontalPadding = std::min(8.0f, std::max(2.0f, width * 0.08f));
+    const float availableWidth = std::max(1.0f, width - horizontalPadding * 2.0f);
+    const float textWidth = font.measure(text, scale);
+    if (textWidth > availableWidth && textWidth > 0.0f)
+        scale *= availableWidth / textWidth;
+
+    // Também limita a altura para controles compactos.
+    const float availableHeight = std::max(1.0f, height - 4.0f);
+    const float glyphHeight = font.getPixelHeight() * scale;
+    if (glyphHeight > availableHeight && glyphHeight > 0.0f)
+        scale *= availableHeight / glyphHeight;
+
+    const float fittedWidth = font.measure(text, scale);
+    const float capHeight = font.getPixelHeight() * scale * theme::metrics::textCapHeightFactor;
 
     drawText(text,
-             x + (width - textWidth) / 2.0f,
+             x + (width - fittedWidth) / 2.0f,
              y + (height + capHeight) / 2.0f,
              scale, r, g, b, a);
 }
@@ -189,22 +192,45 @@ bool UI::button(const std::string &label, float x, float y, float width, float h
     float my = (float)window->getMouseY();
     bool hovered = enabled && mx >= x && mx <= x + width && my >= y && my <= y + height;
 
+    const bool pressed = hovered && window->mouseDown(GLFW_MOUSE_BUTTON_LEFT);
     if (!enabled)
     {
-        r = 0.22f;
-        g = 0.24f;
-        b = 0.28f; // Mantém a cor do botão desativado em tons de cinza.
+        r = theme::buttonDisabled.r;
+        g = theme::buttonDisabled.g;
+        b = theme::buttonDisabled.b;
+    }
+    else if (pressed)
+    {
+        r *= theme::buttonPressedFactor;
+        g *= theme::buttonPressedFactor;
+        b *= theme::buttonPressedFactor;
     }
     else if (hovered)
     {
-        r = std::min(r * 1.35f, 1.0f);
-        g = std::min(g * 1.35f, 1.0f);
-        b = std::min(b * 1.35f, 1.0f);
+        r = std::min(r * theme::buttonHoverFactor, 1.0f);
+        g = std::min(g * theme::buttonHoverFactor, 1.0f);
+        b = std::min(b * theme::buttonHoverFactor, 1.0f);
     }
 
     drawRect(x, y, width, height, r, g, b, 1.0f);
-    drawTextCentered(label, x, y, width, height, 0.6f,
-                     theme::text.r, theme::text.g, theme::text.b, enabled ? 1.0f : 0.4f);
+
+    // Borda discreta para separar o controle do fundo sem criar excesso de linhas.
+    const glm::vec3 &border = theme::buttonBorder;
+    drawRect(x, y, width, 1.0f, border.r, border.g, border.b,
+             enabled ? theme::buttonBorderOpacity : 0.45f);
+    drawRect(x, y + height - 1.0f, width, 1.0f, border.r, border.g, border.b,
+             enabled ? theme::buttonBorderOpacity : 0.45f);
+
+    if (enabled && hovered)
+    {
+        const glm::vec3 &mark = pressed ? theme::accentSoft : theme::accent;
+        drawRect(x, y, width, theme::buttonHoverMarkHeight,
+                 mark.r, mark.g, mark.b, 1.0f);
+    }
+
+    drawTextCentered(label, x, y, width, height, theme::metrics::buttonTextScale,
+                     theme::text.r, theme::text.g, theme::text.b,
+                     enabled ? 1.0f : theme::disabledTextOpacity);
 
     return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
 }
@@ -217,31 +243,48 @@ bool UI::stepper(const std::string &label, float &value, float step, float minVa
 
     addRegion(x, y, width, height);
 
-    const float buttonSize = height;
-    const float valueW = 90.0f;
-    const float controlsW = buttonSize + valueW + buttonSize;
+    const float buttonSize = theme::metrics::stepperButtonWidth;
+    const float valueW = theme::metrics::stepperValueWidth;
+    const float controlHeight = std::min(height, theme::metrics::stepperControlHeight);
+    const float controlY = y + (height - controlHeight) * 0.5f;
+    const float controlGap = theme::metrics::stepperControlGap;
+    const float controlsW = buttonSize + valueW + buttonSize + 2.0f * controlGap;
     const float controlsX = x + width - controlsW;
     const float old = value;
 
     // Mostra o nome do ajuste à esquerda dos controles.
-    const float labelScale = 0.5f;
-    const float capHeight = font.getPixelHeight() * labelScale * 0.62f;
-    drawText(label, x, y + (height + capHeight) / 2.0f, labelScale, 1.0f, 1.0f, 1.0f);
+    const float labelScale = theme::metrics::labelTextScale;
+    const float capHeight = font.getPixelHeight() * labelScale * theme::metrics::textCapHeightFactor;
+    drawText(label, x, y + (height + capHeight) / 2.0f, labelScale,
+             theme::text.r, theme::text.g, theme::text.b);
 
     // Atualiza o valor antes de desenhá-lo para exibir a alteração no mesmo quadro.
-    if (button("-", controlsX, y, buttonSize, height, 0.25f, 0.30f, 0.40f))
+    if (button("-", controlsX, controlY, buttonSize, controlHeight,
+               theme::buttonNeutral.r, theme::buttonNeutral.g, theme::buttonNeutral.b))
         value -= step;
-    if (button("+", controlsX + buttonSize + valueW, y, buttonSize, height, 0.25f, 0.30f, 0.40f))
+    if (button("+", controlsX + buttonSize + valueW + 2.0f * controlGap, controlY,
+               buttonSize, controlHeight,
+               theme::buttonNeutral.r, theme::buttonNeutral.g, theme::buttonNeutral.b))
         value += step;
 
     value = std::clamp(value, minValue, maxValue);
 
     // Destaca o valor entre os botões de decremento e incremento.
-    drawRect(controlsX + buttonSize, y, valueW, height, 0.04f, 0.05f, 0.08f, 1.0f);
+    const float valueX = controlsX + buttonSize + controlGap;
+    drawRect(valueX, controlY, valueW, controlHeight,
+             theme::fieldBackground.r, theme::fieldBackground.g, theme::fieldBackground.b, 1.0f);
+    drawRect(valueX, controlY, 2.0f, controlHeight,
+             theme::accentSoft.r, theme::accentSoft.g, theme::accentSoft.b, 1.0f);
+    drawRect(valueX, controlY, valueW, 1.0f,
+             theme::buttonBorder.r, theme::buttonBorder.g, theme::buttonBorder.b, 0.75f);
+    drawRect(valueX, controlY + controlHeight - 1.0f, valueW, 1.0f,
+             theme::buttonBorder.r, theme::buttonBorder.g, theme::buttonBorder.b, 0.75f);
 
     char text[32];
     std::snprintf(text, sizeof(text), "%.*f", decimals, value);
-    drawTextCentered(text, controlsX + buttonSize, y, valueW, height, 0.5f, 1.0f, 1.0f, 1.0f);
+    drawTextCentered(text, valueX, controlY, valueW, controlHeight,
+                     theme::metrics::labelTextScale,
+                     theme::text.r, theme::text.g, theme::text.b);
 
     return value != old;
 }
@@ -275,7 +318,7 @@ void UI::drawIcon(
 }
 
 bool UI::iconButton(
-    Icon icon,
+    const Texture &icon,
     const std::string &tooltip,
     float x, float y,
     float width, float height,
@@ -293,103 +336,83 @@ bool UI::iconButton(
         mx >= x && mx <= x + width &&
         my >= y && my <= y + height;
 
-    const Texture *texture = nullptr;
+    glm::vec3 color = selected ? theme::buttonPrimary : theme::iconButtonBackground;
 
-    switch (icon)
+    if (hovered && window->mouseDown(GLFW_MOUSE_BUTTON_LEFT))
     {
-    case Icon::Move:
-        texture = &moveIcon;
-        break;
-
-    case Icon::Rotate:
-        texture = &rotateIcon;
-        break;
-
-    case Icon::Scale:
-        texture = &scaleIcon;
-        break;
-    case Icon::Extrude:
-        texture = &extrudeIcon;
-        break;
+        color *= theme::iconPressedFactor;
     }
-
-    glm::vec3 color = selected
-        ? theme::buttonPrimary
-        : glm::vec3(0.13f, 0.16f, 0.22f);
-
-    if (hovered)
+    else if (hovered)
     {
-        color = glm::min(color * 1.25f + glm::vec3(0.03f), glm::vec3(1.0f));
+        color = glm::min(color * theme::iconHoverFactor + theme::iconHoverOffset, glm::vec3(1.0f));
     }
 
     drawRect(x, y, width, height, color.r, color.g, color.b);
     if (selected)
-        drawRect(x, y + height - 3.0f, width, 3.0f,
+        drawRect(x, y + height - theme::metrics::selectedIndicatorHeight,
+                 width, theme::metrics::selectedIndicatorHeight,
                  theme::accent.r, theme::accent.g, theme::accent.b);
 
-    const float iconSize = std::min(25.0f, std::min(width, height) * 0.58f);
+    const float iconSize = std::min(theme::metrics::iconMaxSize,
+                                    std::min(width, height) * theme::metrics::iconScale);
 
     drawIcon(
-        *texture,
+        icon,
         x + (width - iconSize) / 2.0f,
         y + (height - iconSize) / 2.0f,
         iconSize,
-        1.0f, 1.0f, 1.0f);
+        theme::text.r, theme::text.g, theme::text.b);
 
     // Mostra o nome da ferramenta ao passar o mouse.
     if (hovered)
     {
         const float tooltipWidth = std::max(
-            54.0f,
-            font.measure(tooltip, 0.45f) + 14.0f);
+            theme::metrics::iconTooltipMinWidth,
+            font.measure(tooltip, theme::metrics::tooltipTextScale) +
+                theme::metrics::iconTooltipPadding);
 
         const float tooltipX = x + (width - tooltipWidth) / 2.0f;
-        const float tooltipY = y + height + 6.0f;
+        const float tooltipY = y + height + theme::metrics::iconTooltipGap;
 
         drawRect(
             tooltipX, tooltipY,
-            tooltipWidth, 26.0f,
-            0.04f, 0.05f, 0.08f, 0.96f);
+            tooltipWidth, theme::metrics::iconTooltipHeight,
+            theme::tooltipBackground.r, theme::tooltipBackground.g,
+            theme::tooltipBackground.b, theme::panelOpacity);
 
         drawTextCentered(
             tooltip,
             tooltipX, tooltipY,
-            tooltipWidth, 26.0f,
-            0.45f,
-            1.0f, 1.0f, 1.0f);
+            tooltipWidth, theme::metrics::iconTooltipHeight,
+            theme::metrics::tooltipTextScale,
+            theme::text.r, theme::text.g, theme::text.b);
     }
 
     return hovered && window->mouseClicked(GLFW_MOUSE_BUTTON_LEFT);
 }
 
-namespace
-{
-    // Medidas do colorPicker, em pixels.
-    constexpr float kPickerPreviewH = 36.0f;
-    constexpr float kPickerSliderH = 28.0f;
-    constexpr float kPickerGap = 8.0f;
-}
-
 bool UI::slider(const std::string &label, float &value, float minValue, float maxValue,
                 float x, float y, float width, float height,
-                float r, float g, float b, int decimals, float displayScale)
+                float r, float g, float b, int decimals, float displayScale,
+                const std::string &widgetId)
 {
     if (!window)
         return false;
 
     addRegion(x, y, width, height);
 
-    const float labelW = 40.0f;
-    const float valueW = 70.0f;
+    const float labelW = theme::metrics::sliderLabelWidth;
+    const float valueW = theme::metrics::sliderValueWidth;
     const float trackX = x + labelW;
-    const float trackW = std::max(width - labelW - valueW, 1.0f);
-    const float handleW = 10.0f;
+    const float valueX = x + width - valueW;
+    const float trackW = std::max(valueX - theme::metrics::sliderValueInset - trackX, 1.0f);
+    const float handleW = theme::metrics::sliderHandleWidth;
     const float old = value;
 
-    // Identifica o slider entre os quadros para mantê-lo ativo enquanto é arrastado.
-    std::size_t id = std::hash<std::string>{}(label) ^
-                     (static_cast<std::size_t>(static_cast<int>(x)) * 73856093u) ^
-                     (static_cast<std::size_t>(static_cast<int>(y)) * 19349663u);
+    // A identidade não depende da posição: redimensionar ou reposicionar o painel
+    // não interrompe o arraste. Controles com rótulos repetidos devem informar um ID.
+    const std::string stableId = widgetId.empty() ? label : widgetId;
+    std::size_t id = std::hash<std::string>{}(stableId);
     if (id == 0)
         id = 1;
 
@@ -416,34 +439,57 @@ bool UI::slider(const std::string &label, float &value, float minValue, float ma
     const float t = range > 0.0f ? (value - minValue) / range : 0.0f;
 
     // Nome do canal à esquerda.
-    const float labelScale = 0.5f;
-    const float capHeight = font.getPixelHeight() * labelScale * 0.62f;
-    drawText(label, x, y + (height + capHeight) / 2.0f, labelScale, 1.0f, 1.0f, 1.0f);
+    const float labelScale = theme::metrics::labelTextScale;
+    const float capHeight = font.getPixelHeight() * labelScale * theme::metrics::textCapHeightFactor;
+    drawText(label, x, y + (height + capHeight) / 2.0f, labelScale,
+             theme::text.r, theme::text.g, theme::text.b);
 
     // Trilho, parte preenchida e marcador.
-    const float trackH = height * 0.35f;
+    const float trackH = std::min(theme::metrics::sliderTrackHeight,
+                                  height * theme::metrics::sliderTrackHeightFactor);
     const float trackY = y + (height - trackH) / 2.0f;
-    drawRect(trackX, trackY, trackW, trackH, 0.04f, 0.05f, 0.08f, 1.0f);
+    drawRect(trackX, trackY, trackW, trackH,
+             theme::sliderTrack.r, theme::sliderTrack.g, theme::sliderTrack.b, 1.0f);
     drawRect(trackX, trackY, trackW * t, trackH, r, g, b, 1.0f);
 
-    const float handleShade = (hovered || active) ? 1.0f : 0.80f;
-    drawRect(trackX + trackW * t - handleW / 2.0f, y, handleW, height,
+    const float handleShade = (hovered || active) ? 1.0f : theme::sliderHandle.r;
+    const float handleHeight = std::max(1.0f,
+                                        std::min(height - 4.0f, theme::metrics::sliderHandleHeight));
+    const float handleY = y + (height - handleHeight) * 0.5f;
+    drawRect(trackX + trackW * t - handleW / 2.0f, handleY, handleW, handleHeight,
              handleShade, handleShade, handleShade, 1.0f);
+    drawRect(trackX + trackW * t - 1.0f, handleY + 4.0f, 2.0f,
+             std::max(0.0f, handleHeight - 8.0f), r, g, b, 1.0f);
 
     // Valor à direita.
     char text[32];
     std::snprintf(text, sizeof(text), "%.*f", decimals, value * displayScale);
-    drawTextCentered(text, trackX + trackW, y, valueW, height, 0.5f, 1.0f, 1.0f, 1.0f);
+    const float valueY = y + 3.0f;
+    const float valueHeight = std::max(1.0f, height - 6.0f);
+    drawRect(valueX, valueY, valueW, valueHeight,
+             theme::fieldBackground.r, theme::fieldBackground.g, theme::fieldBackground.b, 1.0f);
+    drawRect(valueX, valueY, 2.0f, valueHeight,
+             theme::accentSoft.r, theme::accentSoft.g, theme::accentSoft.b, 1.0f);
+    drawRect(valueX, valueY, valueW, 1.0f,
+             theme::buttonBorder.r, theme::buttonBorder.g, theme::buttonBorder.b, 0.7f);
+    drawRect(valueX, valueY + valueHeight - 1.0f, valueW, 1.0f,
+             theme::buttonBorder.r, theme::buttonBorder.g, theme::buttonBorder.b, 0.7f);
+    drawTextCentered(text, valueX, y, valueW, height,
+                     theme::metrics::labelTextScale,
+                     theme::text.r, theme::text.g, theme::text.b);
 
     return value != old;
 }
 
 float UI::colorPickerHeight()
 {
-    return kPickerPreviewH + kPickerGap + 3.0f * kPickerSliderH + 2.0f * kPickerGap;
+    return theme::metrics::colorPreviewHeight + theme::metrics::colorPickerGap +
+           3.0f * theme::metrics::colorSliderHeight +
+           2.0f * theme::metrics::colorPickerGap;
 }
 
-bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y, float width)
+bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y, float width,
+                     const std::string &widgetId)
 {
     if (!window)
         return false;
@@ -454,14 +500,19 @@ bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y,
     rgb = glm::clamp(rgb, glm::vec3(0.0f), glm::vec3(1.0f));
 
     // Linha de cima: nome à esquerda e amostra com o código hexadecimal à direita.
-    const float labelScale = 0.5f;
-    const float capHeight = font.getPixelHeight() * labelScale * 0.62f;
-    drawText(label, x, y + (kPickerPreviewH + capHeight) / 2.0f, labelScale, 1.0f, 1.0f, 1.0f);
+    const float labelScale = theme::metrics::labelTextScale;
+    const float capHeight = font.getPixelHeight() * labelScale * theme::metrics::textCapHeightFactor;
+    drawText(label, x,
+             y + (theme::metrics::colorPreviewHeight + capHeight) / 2.0f,
+             labelScale, theme::text.r, theme::text.g, theme::text.b);
 
     const float swatchW = width * 0.5f;
     const float swatchX = x + width - swatchW;
-    drawRect(swatchX - 2.0f, y - 2.0f, swatchW + 4.0f, kPickerPreviewH + 4.0f, 0.85f, 0.85f, 0.90f, 1.0f);
-    drawRect(swatchX, y, swatchW, kPickerPreviewH, rgb.r, rgb.g, rgb.b, 1.0f);
+    drawRect(swatchX - 2.0f, y - 2.0f, swatchW + 4.0f,
+             theme::metrics::colorPreviewHeight + 4.0f,
+             theme::previewBorder.r, theme::previewBorder.g, theme::previewBorder.b, 1.0f);
+    drawRect(swatchX, y, swatchW, theme::metrics::colorPreviewHeight,
+             rgb.r, rgb.g, rgb.b, 1.0f);
 
     char hex[16];
     std::snprintf(hex, sizeof(hex), "#%02X%02X%02X",
@@ -472,17 +523,25 @@ bool UI::colorPicker(const std::string &label, glm::vec3 &rgb, float x, float y,
     // Texto escuro sobre cores claras e claro sobre cores escuras.
     const float luminance = 0.299f * rgb.r + 0.587f * rgb.g + 0.114f * rgb.b;
     const float textShade = luminance > 0.5f ? 0.05f : 1.0f;
-    drawTextCentered(hex, swatchX, y, swatchW, kPickerPreviewH, 0.5f, textShade, textShade, textShade);
+    drawTextCentered(hex, swatchX, y, swatchW, theme::metrics::colorPreviewHeight,
+                     theme::metrics::labelTextScale, textShade, textShade, textShade);
 
-    // Uma barra por canal, exibida de 0 a 255.
-    float sliderY = y + kPickerPreviewH + kPickerGap;
-    if (slider("R", rgb.r, 0.0f, 1.0f, x, sliderY, width, kPickerSliderH, 0.90f, 0.25f, 0.25f, 0, 255.0f))
+    // Uma barra por canal, exibida de 0 a 255. Cada canal recebe um ID próprio.
+    const std::string idPrefix = widgetId.empty() ? label : widgetId;
+    float sliderY = y + theme::metrics::colorPreviewHeight + theme::metrics::colorPickerGap;
+    if (slider("R", rgb.r, 0.0f, 1.0f, x, sliderY, width,
+               theme::metrics::colorSliderHeight, 0.90f, 0.25f, 0.25f,
+               0, 255.0f, idPrefix + "/R"))
         changed = true;
-    sliderY += kPickerSliderH + kPickerGap;
-    if (slider("G", rgb.g, 0.0f, 1.0f, x, sliderY, width, kPickerSliderH, 0.25f, 0.80f, 0.35f, 0, 255.0f))
+    sliderY += theme::metrics::colorSliderHeight + theme::metrics::colorPickerGap;
+    if (slider("G", rgb.g, 0.0f, 1.0f, x, sliderY, width,
+               theme::metrics::colorSliderHeight, 0.25f, 0.80f, 0.35f,
+               0, 255.0f, idPrefix + "/G"))
         changed = true;
-    sliderY += kPickerSliderH + kPickerGap;
-    if (slider("B", rgb.b, 0.0f, 1.0f, x, sliderY, width, kPickerSliderH, 0.30f, 0.45f, 0.95f, 0, 255.0f))
+    sliderY += theme::metrics::colorSliderHeight + theme::metrics::colorPickerGap;
+    if (slider("B", rgb.b, 0.0f, 1.0f, x, sliderY, width,
+               theme::metrics::colorSliderHeight, 0.30f, 0.45f, 0.95f,
+               0, 255.0f, idPrefix + "/B"))
         changed = true;
 
     return changed;

@@ -11,8 +11,11 @@ class Menu
 {
 private:
     enum class Page { Main, Options };
+    enum class OptionsCategory { Camera, Environment, Lighting };
+
     bool open = false;
     Page page = Page::Main;
+    OptionsCategory optionsCategory = OptionsCategory::Camera;
 
     void drawMain(const Window& window, UI& ui);
     void drawOptions(const Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light);

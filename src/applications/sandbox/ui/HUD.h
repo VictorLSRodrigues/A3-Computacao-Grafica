@@ -47,7 +47,7 @@ class HUD
 {
 public:
     void update(const Window &window, float deltaTime);
-    void draw(UI &ui, const EnvironmentInfo &info);
+    void draw(UI &ui, const Window &window, const EnvironmentInfo &info);
 
 private:
     bool visible = true;
@@ -56,5 +56,5 @@ private:
     float timeAccumulator = 0.0f;
     int frameCount = 0;
 
-    void drawPanel(UI &ui, const EnvironmentInfo &info) const;
+    void drawPanel(UI &ui, const Window &window, const EnvironmentInfo &info) const;
 };

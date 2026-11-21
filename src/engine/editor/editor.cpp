@@ -14,6 +14,14 @@ Editor::Editor(Window &window, Camera &camera, Scene &scene, Light &light,
 {
 }
 
+bool Editor::create()
+{
+    return moveIcon.load(ASSETS_DIR "editor/icons/move.png", false) &&
+           rotateIcon.load(ASSETS_DIR "editor/icons/rotate-3d.png", false) &&
+           scaleIcon.load(ASSETS_DIR "editor/icons/scaling.png", false) &&
+           extrudeIcon.load(ASSETS_DIR "editor/icons/extrude.png", false);
+}
+
 void Editor::handleModeToggle()
 {
     // Alterna entre o modo de navegação e o modo de edição.
@@ -668,10 +676,29 @@ void Editor::drawToolbar()
 
     const float x = std::max(margin, screenWidth - totalWidth - margin);
     const float y = margin;
+    const float panelPadding = 7.0f;
+    const float panelX = std::max(0.0f, x - panelPadding);
+    const float panelY = std::max(0.0f, y - panelPadding);
+    const float panelWidth = totalWidth + panelPadding * 2.0f;
+    const float panelHeight = buttonSize + panelPadding * 2.0f;
+
+    // Fundo discreto que agrupa as ferramentas como uma única toolbar.
+    ui.addRegion(panelX, panelY, panelWidth, panelHeight);
+    ui.drawRect(panelX, panelY, panelWidth, panelHeight,
+                theme::panelBackground.r, theme::panelBackground.g,
+                theme::panelBackground.b, theme::panelOpacity);
+    ui.drawRect(panelX, panelY, panelWidth, 2.0f,
+                theme::accent.r, theme::accent.g, theme::accent.b);
+    ui.drawRect(panelX, panelY + panelHeight - 1.0f, panelWidth, 1.0f,
+                theme::panelBorder.r, theme::panelBorder.g, theme::panelBorder.b);
+    ui.drawRect(panelX, panelY, 1.0f, panelHeight,
+                theme::panelBorder.r, theme::panelBorder.g, theme::panelBorder.b);
+    ui.drawRect(panelX + panelWidth - 1.0f, panelY, 1.0f, panelHeight,
+                theme::panelBorder.r, theme::panelBorder.g, theme::panelBorder.b);
 
     // Botão Mover.
     if (ui.iconButton(
-            UI::Icon::Move,
+            moveIcon,
             "Mover",
             x, y,
             buttonSize, buttonSize,
@@ -682,7 +709,7 @@ void Editor::drawToolbar()
 
     // Botão Rotacionar.
     if (ui.iconButton(
-            UI::Icon::Rotate,
+            rotateIcon,
             "Rotacionar",
             x + buttonSize + gap, y,
             buttonSize, buttonSize,
@@ -693,7 +720,7 @@ void Editor::drawToolbar()
 
     // Botão Escalar.
     if (ui.iconButton(
-            UI::Icon::Scale,
+            scaleIcon,
             "Escalar",
             x + (buttonSize + gap) * 2.0f, y,
             buttonSize, buttonSize,
@@ -704,7 +731,7 @@ void Editor::drawToolbar()
 
     // Botão Extrudar.
     if (ui.iconButton(
-            UI::Icon::Extrude,
+            extrudeIcon,
             "Extrusão",
             x + (buttonSize + gap) * 3.0f, y,
             buttonSize, buttonSize,

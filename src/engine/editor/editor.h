@@ -6,6 +6,7 @@
 #include "engine/platform/window.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
+#include "engine/graphics/resources/texture.h"
 #include "engine/ui/UI.h"
 
 // Editor da cena: seleção de objetos, faces e luz, e as ferramentas de transformação
@@ -29,6 +30,9 @@ public:
 
     Editor(const Editor &) = delete;
     Editor &operator=(const Editor &) = delete;
+
+    // Carrega os recursos visuais próprios da barra de ferramentas.
+    bool create();
 
     // Alterna entre o modo de navegação e o de edição quando TAB é pressionado.
     void handleModeToggle();
@@ -58,6 +62,12 @@ private:
     Scene &scene;
     Light &light;
     UI &ui;
+
+    // Ícones pertencem ao Editor, não ao núcleo genérico da UI.
+    Texture moveIcon;
+    Texture rotateIcon;
+    Texture scaleIcon;
+    Texture extrudeIcon;
 
     bool editingMode = false;
 
