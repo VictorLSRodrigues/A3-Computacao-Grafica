@@ -70,6 +70,7 @@ bool Renderer::loadShaders()
 void Renderer::resetSettings()
 {
     showSkybox = kDefaultShowSkybox;
+    showLightMarker = kDefaultShowLightMarker;
     ambientStrength = kDefaultAmbientStrength;
     environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
     rainScenario.enabled = false;
@@ -124,8 +125,9 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 
     drawScene(scene);
 
-    // O cubo que marca onde a luz está.
-    drawLightMarker(light, camera);
+    // O cubo que marca onde a luz está é opcional.
+    if (showLightMarker)
+        drawLightMarker(light, camera);
 
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (showSkybox)

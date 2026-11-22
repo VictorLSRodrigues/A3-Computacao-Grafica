@@ -1,4 +1,3 @@
-
 #include "application.h"
 
 #include <algorithm>
@@ -21,20 +20,24 @@
 
 namespace
 {
-    // Arquivo utilizado para persistir o estado da cena.
-    constexpr const char* SCENE_STATE_PATH =
-        "user_data/scene_state.json";
+    constexpr const char *SCENE_STATE_PATH = "user_data/scene_state.json";
+
+    WindowConfig createWindowConfig()
+    {
+        WindowConfig config;
+        config.title = "OpenGL - RotorGrafico";
+        config.mode = WindowMode::Fullscreen;
+        return config;
+    }
 }
 
-bool Application::init()
+SandboxApplication::SandboxApplication()
+    : rotor::Application(createWindowConfig())
 {
-    WindowConfig windowConfig;
-    windowConfig.title = "OpenGL - RotorGrafico";
-    windowConfig.mode = WindowMode::Fullscreen;
+}
 
-    if (!window.create(windowConfig))
-        return false;
-
+bool SandboxApplication::onInitialize()
+{
     if (!renderer.init())
         return false;
 
@@ -63,48 +66,11 @@ bool Application::init()
                   << std::endl;
     }
 
+    sceneReadyForPersistence = true;
     return true;
 }
 
-void Application::run()
-{
-    double lastFrame = glfwGetTime();
-
-    while (!window.shouldClose())
-    {
-        const double currentFrame = glfwGetTime();
-
-        // Evita um salto grande de movimento se um quadro demorar demais.
-        const float deltaTime =
-            static_cast<float>(std::min(currentFrame - lastFrame, 0.1));
-
-        lastFrame = currentFrame;
-
-        update(deltaTime);
-
-        if (doomActive)
-        {
-            doomGame.render(window.getWidth(), window.getHeight());
-        }
-        else
-        {
-            renderer.render(scene, light, camera);
-            renderUI();
-        }
-
-        window.swapBuffers();
-        window.pollEvents();
-    }
-
-    // Salva as transformações quando a aplicação encerra.
-    if (!scene.saveTransforms(SCENE_STATE_PATH))
-    {
-        std::cerr << "Falha ao salvar as transformacoes da cena!"
-                  << std::endl;
-    }
-}
-
-void Application::update(float deltaTime)
+void SandboxApplication::onUpdate(float deltaTime)
 {
     if (doomActive)
     {
@@ -149,7 +115,32 @@ void Application::update(float deltaTime)
     scene.update(deltaTime);
 }
 
-void Application::renderUI()
+void SandboxApplication::onRender()
+{
+    if (doomActive)
+    {
+        doomGame.render(window.getWidth(), window.getHeight());
+        return;
+    }
+
+    renderer.render(scene, light, camera);
+    renderUI();
+}
+
+void SandboxApplication::onShutdown()
+{
+    if (!sceneReadyForPersistence)
+        return;
+
+    // Salva as transformações quando a aplicação encerra.
+    if (!scene.saveTransforms(SCENE_STATE_PATH))
+    {
+        std::cerr << "Falha ao salvar as transformacoes da cena!"
+                  << std::endl;
+    }
+}
+
+void SandboxApplication::renderUI()
 {
     // Inicia a interface gráfica.
     ui.begin(window);
@@ -185,7 +176,7 @@ void Application::renderUI()
     ui.end();
 }
 
-void Application::startDoom()
+void SandboxApplication::startDoom()
 {
 #ifdef _WIN32
     std::vector<wchar_t> applicationPath(32768, L'\0');

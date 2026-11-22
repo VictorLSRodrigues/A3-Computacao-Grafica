@@ -111,6 +111,20 @@ add_executable(OpenGLProjeto
 
 target_link_libraries(OpenGLProjeto PRIVATE rotor_engine DoomCore)
 
+# Aplicativo independente para experimentos futuros, reutilizando o Rotor Engine.
+add_executable(Dynamis
+    src/applications/dynamis/main.cpp
+    src/applications/dynamis/dynamis_application.cpp
+)
+
+target_link_libraries(Dynamis PRIVATE rotor_engine)
+
+# O Launcher encontra o Dynamis pelo manifesto, sem registro manual no código.
+file(GENERATE
+    OUTPUT "$<TARGET_FILE_DIR:Dynamis>/dynamis.rotor-app.json"
+    CONTENT "{\n  \"manifest_version\": 1,\n  \"id\": \"rotor.dynamis\",\n  \"name\": \"Dynamis\",\n  \"description\": \"Ambiente simples de experimentacao com o Rotor Engine.\",\n  \"executable\": \"$<TARGET_FILE_NAME:Dynamis>\",\n  \"rotor_api_version\": 1\n}\n"
+)
+
 # Manifesto gerado junto ao executável: o Launcher descobre o Sandbox sem
 # precisar conhecer seu nome ou registrar a aplicação manualmente no código.
 file(GENERATE
@@ -136,4 +150,4 @@ else()
 endif()
 
 target_link_libraries(RotorLauncher PRIVATE rotor_engine)
-add_dependencies(RotorLauncher OpenGLProjeto)
+add_dependencies(RotorLauncher OpenGLProjeto Dynamis)

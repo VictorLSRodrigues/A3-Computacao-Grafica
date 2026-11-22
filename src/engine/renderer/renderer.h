@@ -16,6 +16,9 @@ public:
     // Mostra o céu ao redor da cena.
     bool showSkybox = kDefaultShowSkybox;
 
+    // Mostra o cubo que indica a posição da luz.
+    bool showLightMarker = kDefaultShowLightMarker;
+
     // Controla separadamente a contribuição difusa e as reflexões do cubemap.
     float ambientStrength = kDefaultAmbientStrength;
     float environmentReflectionStrength = kDefaultEnvironmentReflectionStrength;
@@ -24,7 +27,7 @@ public:
     // Exige a janela criada, pois usa OpenGL. Retorna false se algo falhar.
     bool init();
 
-    // Desenha um quadro: a cena iluminada, o marcador da luz e o céu.
+    // Desenha um quadro: a cena iluminada, os elementos auxiliares habilitados e o céu.
     // A Scene só é consultada; quem a desenha é o Renderer.
     void render(const Scene &scene, const Light &light, Camera &camera);
 
@@ -35,6 +38,7 @@ public:
 
 private:
     static constexpr bool kDefaultShowSkybox = true;
+    static constexpr bool kDefaultShowLightMarker = true;
     static constexpr float kDefaultAmbientStrength = 0.12f;
     static constexpr float kDefaultEnvironmentReflectionStrength = 0.35f;
 

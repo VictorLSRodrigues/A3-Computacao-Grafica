@@ -37,45 +37,42 @@ namespace
     }
 }
 
-bool LauncherApplication::init()
+namespace
 {
-    WindowConfig windowConfig;
-    windowConfig.title = "Rotor | Launcher";
-    windowConfig.mode = WindowMode::Windowed;
-    windowConfig.width = 1060;
-    windowConfig.height = 700;
-    windowConfig.minWidth = 900;
-    windowConfig.minHeight = 620;
-
-    if (!window.create(windowConfig))
-        return false;
-
-    if (!ui.create())
+    WindowConfig createWindowConfig()
     {
-        window.destroy();
-        return false;
+        WindowConfig config;
+        config.title = "Rotor | Launcher";
+        config.mode = WindowMode::Windowed;
+        config.width = 1060;
+        config.height = 700;
+        config.minWidth = 900;
+        config.minHeight = 620;
+        return config;
     }
+}
 
-    executableDirectory = launcher::executableDirectory();
+LauncherApplication::LauncherApplication()
+    : rotor::Application(createWindowConfig())
+{
+}
+
+bool LauncherApplication::onInitialize()
+{
+    if (!ui.create())
+        return false;
+
+    const std::filesystem::path executableDirectory = launcher::executableDirectory();
     applications = launcher::discoverCompatibleApplications(executableDirectory);
-
-    glViewport(0, 0, window.getWidth(), window.getHeight());
     return true;
 }
 
-void LauncherApplication::run()
+void LauncherApplication::onRender()
 {
-    while (!window.shouldClose())
-    {
-        glViewport(0, 0, window.getWidth(), window.getHeight());
-        glClearColor(0.035f, 0.050f, 0.075f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        draw();
-
-        window.swapBuffers();
-        window.pollEvents();
-    }
+    glViewport(0, 0, window.getWidth(), window.getHeight());
+    glClearColor(0.035f, 0.050f, 0.075f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    draw();
 }
 
 void LauncherApplication::draw()

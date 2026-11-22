@@ -14,10 +14,5 @@ int main()
 #endif
 {
     LauncherApplication app;
-
-    if (!app.init())
-        return 1;
-
-    app.run();
-    return 0;
+    return app.run();
 }

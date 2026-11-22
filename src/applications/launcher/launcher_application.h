@@ -1,24 +1,24 @@
 #pragma once
 
 #include <cstddef>
-#include <filesystem>
 #include <string>
 #include <vector>
 
+#include "engine/application/application.h"
 #include "application_discovery.h"
-#include "engine/platform/window.h"
 #include "engine/ui/UI.h"
 
-class LauncherApplication
+class LauncherApplication : public rotor::Application
 {
 public:
-    bool init();
-    void run();
+    LauncherApplication();
+
+protected:
+    bool onInitialize() override;
+    void onRender() override;
 
 private:
-    Window window;
     UI ui;
-    std::filesystem::path executableDirectory;
     std::vector<DiscoveredApplication> applications;
     std::size_t firstVisibleRow = 0;
     std::string errorMessage;

@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "engine/application/application.h"
 #include "engine/graphics/camera/camera.h"
 #include "engine/renderer/renderer.h"
 #include "engine/scene/light.h"
@@ -12,47 +13,38 @@
 #include "applications/sandbox/ui/menu.h"
 #include "applications/sandbox/doom/doom_game.h"
 #include "engine/editor/editor.h"
-#include "engine/platform/window.h"
 #include <glm/glm.hpp>
 
-// Dona de tudo o que vive durante a execução: janela, cena, luz e interface.
-// O main só cria a aplicação, chama init() e depois run().
-class Application
+// Aplicacao de demonstracao e ferramentas do Rotor.
+// A janela e o ciclo principal sao administrados por rotor::Application.
+class SandboxApplication : public rotor::Application
 {
 public:
-    Application() = default;
+    SandboxApplication();
 
-    Application(const Application &) = delete;
-    Application &operator=(const Application &) = delete;
+protected:
+    bool onInitialize() override;
+    void onUpdate(float deltaTime) override;
+    void onRender() override;
+    void onShutdown() override;
 
-    // Cria a janela, carrega os recursos e monta a cena. Retorna false se algo falhar.
-    bool init();
-
-    // Laço principal: roda até a janela ser fechada.
-    void run();
+    // O menu do Sandbox ja interpreta Escape: abre/fecha o menu em vez de
+    // encerrar a aplicacao diretamente.
+    void onEscapePressed() override {}
 
 private:
-    void update(float deltaTime);
     void renderUI();
     void startDoom();
-
-    // A janela é declarada primeiro para ser destruída por último,
-    // depois dos recursos OpenGL que dependem do contexto dela.
-    Window window;
 
     std::string selectedModelName = "Todos";
 
     Renderer renderer;
     Scene scene;
     Light light;
-
-    // O tamanho real do viewport é atualizado a cada quadro em update().
     Camera camera{1, 1, glm::vec3(0.0f, 0.0f, 2.0f)};
-
     UI ui;
 
-    // Usa a janela, a câmera, a cena, a luz, os ajustes e a UI acima;
-    // por isso é declarado depois deles.
+    // O Editor usa recursos declarados anteriormente e a janela da classe base.
     Editor editor{window, camera, scene, light, ui};
 
     Menu menu;
@@ -60,4 +52,5 @@ private:
     HUD hud;
     DoomGame doomGame;
     bool doomActive = false;
+    bool sceneReadyForPersistence = false;
 };
