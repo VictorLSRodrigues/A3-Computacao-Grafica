@@ -18,9 +18,14 @@
 #include "applications/sandbox/ui/environment_info.h"
 #include "world.h"
 
+#ifndef SANDBOX_DATA_DIR
+#define SANDBOX_DATA_DIR "."
+#endif
+
 namespace
 {
-    constexpr const char *SCENE_STATE_PATH = "user_data/scene_state.json";
+    constexpr const char *SCENE_STATE_PATH =
+        SANDBOX_DATA_DIR "/user_data/scene_state.json";
 
     WindowConfig createWindowConfig()
     {

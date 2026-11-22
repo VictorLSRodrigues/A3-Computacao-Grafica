@@ -112,6 +112,10 @@ add_executable(OpenGLProjeto
     src/applications/sandbox/ui/menu.cpp
 )
 
+target_compile_definitions(OpenGLProjeto PRIVATE
+    SANDBOX_DATA_DIR=\"${CMAKE_CURRENT_BINARY_DIR}\"
+)
+
 target_link_libraries(OpenGLProjeto PRIVATE rotor_engine DoomCore)
 
 # Aplicativo independente para experimentos futuros, reutilizando o Rotor Engine.
