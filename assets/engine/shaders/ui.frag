@@ -2,6 +2,7 @@
 out vec4 FragColor;
 
 uniform vec4 uCor;
+uniform bool uFramebufferSRGB;
 
 vec3 srgbToLinear(vec3 color)
 {
@@ -12,5 +13,5 @@ vec3 srgbToLinear(vec3 color)
 
 void main()
 {
-    FragColor = vec4(srgbToLinear(uCor.rgb), uCor.a);
+    FragColor = vec4(uFramebufferSRGB ? srgbToLinear(uCor.rgb) : uCor.rgb, uCor.a);
 }

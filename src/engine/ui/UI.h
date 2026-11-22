@@ -91,6 +91,7 @@ private:
     std::vector<Region> regions; // preenchida durante o quadro, zerada em begin()
     
     const Window *window = nullptr; // Válido apenas entre begin() e end().
+    bool framebufferSRGB = false;
     Shader rectShader;
     Shader textShader;
     Mesh quad;

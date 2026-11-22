@@ -18,7 +18,7 @@ public:
     bool init();
 
     // Desenha a chuva se o cenário estiver ativo.
-    void render(Camera &camera);
+    void render(Camera &camera, bool framebufferSRGB);
 
 private:
     VAO vao;

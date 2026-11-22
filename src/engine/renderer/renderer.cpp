@@ -1,21 +1,9 @@
 #include "renderer.h"
 
 #include <iostream>
-#include <cmath>
-
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "engine/graphics/geometry/shapes.h"
-
-namespace
-{
-    float srgbToLinear(float value)
-    {
-        return value <= 0.04045f
-            ? value / 12.92f
-            : std::pow((value + 0.055f) / 1.055f, 2.4f);
-    }
-}
 
 bool Renderer::init()
 {
@@ -106,6 +94,8 @@ void Renderer::drawLightMarker(const Light &light, Camera &camera)
     model = glm::scale(model, glm::vec3(0.2f));
 
     lightShader.use();
+    lightShader.setInt("uFramebufferSRGB",
+                       glIsEnabled(GL_FRAMEBUFFER_SRGB) == GL_TRUE ? 1 : 0);
     camera.setViewProjection(lightShader, "camMatrix");
     lightShader.setVec4("lightColor", light.color.x, light.color.y, light.color.z, 1.0f);
     lightShader.setMat4("model", model);
@@ -115,16 +105,19 @@ void Renderer::drawLightMarker(const Light &light, Camera &camera)
 
 void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 {
-    // As cores do fundo são definidas em sRGB, mas glClearColor recebe
-    // componentes lineares quando o framebuffer sRGB está habilitado.
+    // glClear não passa pela conversão automática de GL_FRAMEBUFFER_SRGB.
+    // As cores de fundo já estão definidas nos valores sRGB desejados.
     if (rainScenario.enabled)
-        glClearColor(srgbToLinear(0.035f), srgbToLinear(0.055f), srgbToLinear(0.075f), 1.0f);
+        glClearColor(0.035f, 0.055f, 0.075f, 1.0f);
     else
-        glClearColor(srgbToLinear(0.1f), srgbToLinear(0.2f), srgbToLinear(0.3f), 1.0f);
+        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // A cena, iluminada pela luz escolhida.
+    const bool framebufferSRGB = glIsEnabled(GL_FRAMEBUFFER_SRGB) == GL_TRUE;
+
     sceneShader.use();
+    sceneShader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
     sceneShader.setFloat("ambientStrength", ambientStrength);
     sceneShader.setFloat("environmentReflectionStrength", environmentReflectionStrength);
 
@@ -144,9 +137,9 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 
     // O céu vai por último: só ocupa o que nenhum objeto cobriu.
     if (showSkybox)
-        skybox.draw(camera);
+        skybox.draw(camera, framebufferSRGB);
 
-    rainScenario.render(camera);
+    rainScenario.render(camera, framebufferSRGB);
 }
 
 void Renderer::drawScene(const Scene &scene)

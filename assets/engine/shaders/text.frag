@@ -4,6 +4,7 @@ out vec4 FragColor;
 
 uniform sampler2D uAtlas; // O atlas é associado à unidade de textura 0.
 uniform vec4 uColor;
+uniform bool uFramebufferSRGB;
 
 vec3 srgbToLinear(vec3 color)
 {
@@ -15,5 +16,5 @@ vec3 srgbToLinear(vec3 color)
 void main()
 {
     float coverage = texture(uAtlas, vUV).r; // Intensidade do glifo no atlas, usada como transparência.
-    FragColor = vec4(srgbToLinear(uColor.rgb), uColor.a * coverage);
+    FragColor = vec4(uFramebufferSRGB ? srgbToLinear(uColor.rgb) : uColor.rgb, uColor.a * coverage);
 }

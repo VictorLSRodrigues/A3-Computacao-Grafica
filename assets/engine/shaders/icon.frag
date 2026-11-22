@@ -5,6 +5,7 @@ out vec4 FragColor;
 
 uniform sampler2D uIcon;
 uniform vec4 uColor;
+uniform bool uFramebufferSRGB;
 
 vec3 srgbToLinear(vec3 color)
 {
@@ -26,8 +27,6 @@ void main()
 
     float alpha = max(icon.a, brightness);
 
-    FragColor = vec4(
-        srgbToLinear(uColor.rgb),
-        uColor.a * alpha
-    );
+    vec3 outputColor = uFramebufferSRGB ? srgbToLinear(uColor.rgb) : uColor.rgb;
+    FragColor = vec4(outputColor, uColor.a * alpha);
 }

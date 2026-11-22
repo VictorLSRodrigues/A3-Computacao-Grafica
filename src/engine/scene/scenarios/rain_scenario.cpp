@@ -32,7 +32,7 @@ bool RainScenario::init()
     return true;
 }
 
-void RainScenario::render(Camera &camera)
+void RainScenario::render(Camera &camera, bool framebufferSRGB)
 {
     if (!enabled)
         return;
@@ -67,6 +67,7 @@ void RainScenario::render(Camera &camera)
     vbo.Unbind();
 
     shader.use();
+    shader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
     camera.setViewProjection(shader, "camMatrix");
 
     glEnable(GL_BLEND);

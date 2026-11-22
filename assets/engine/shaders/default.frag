@@ -49,8 +49,17 @@ vec3 srgbToLinear(vec3 color)
     return mix(high, low, lessThanEqual(color, vec3(0.04045)));
 }
 
+vec3 linearToSrgb(vec3 color)
+{
+    color = max(color, vec3(0.0));
+    vec3 low = color * 12.92;
+    vec3 high = 1.055 * pow(color, vec3(1.0 / 2.4)) - 0.055;
+    return mix(high, low, lessThanEqual(color, vec3(0.0031308)));
+}
+
 uniform float environmentReflectionStrength;
 uniform float ambientStrength;
+uniform bool uFramebufferSRGB;
 
 // Distribuição de microfacetas GGX.
 float distributionGGX(vec3 N, vec3 H, float roughness)
@@ -315,5 +324,6 @@ void main()
         directLighting +
         environmentReflection;
 
-    FragColor = vec4(finalColor, albedoSample.a);
+    vec3 outputColor = uFramebufferSRGB ? finalColor : linearToSrgb(finalColor);
+    FragColor = vec4(outputColor, albedoSample.a);
 }

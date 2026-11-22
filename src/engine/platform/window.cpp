@@ -154,17 +154,34 @@ bool Window::create(const WindowConfig &windowConfig)
         return false;
     }
 
-    // Solicita um framebuffer sRGB para que o OpenGL converta as saídas
-    // lineares dos shaders e faça blending no espaço de cor correto.
-    if (glfwGetWindowAttrib(windowHandle, GLFW_SRGB_CAPABLE) == GLFW_TRUE)
+    // GLFW_SRGB_CAPABLE é uma window hint, não um atributo consultável por
+    // glfwGetWindowAttrib. Verifica a codificação real do buffer traseiro
+    // diretamente no framebuffer padrão.
+    GLint framebufferColorEncoding = GL_LINEAR;
+    glGetFramebufferAttachmentParameteriv(
+        GL_FRAMEBUFFER,
+        GL_BACK_LEFT,
+        GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,
+        &framebufferColorEncoding);
+
+    if (framebufferColorEncoding == GL_SRGB)
     {
+        // O OpenGL converte as saídas lineares para sRGB e faz blending
+        // corretamente no framebuffer com codificação sRGB.
         glEnable(GL_FRAMEBUFFER_SRGB);
-        std::cout << "Framebuffer sRGB: habilitado." << std::endl;
+        std::cout << "Framebuffer sRGB: habilitado (GL_SRGB)." << std::endl;
+    }
+    else if (framebufferColorEncoding == GL_LINEAR)
+    {
+        glDisable(GL_FRAMEBUFFER_SRGB);
+        std::cout << "Aviso: framebuffer usa codificação linear; GL_FRAMEBUFFER_SRGB desabilitado."
+                  << std::endl;
     }
     else
     {
         glDisable(GL_FRAMEBUFFER_SRGB);
-        std::cout << "Aviso: framebuffer sRGB indisponível; a correção de cor não será aplicada." << std::endl;
+        std::cout << "Aviso: não foi possível identificar a codificação de cor do framebuffer ("
+                  << framebufferColorEncoding << ")." << std::endl;
     }
 
     // Guarda o estado convencional para permitir retornar de outros modos.

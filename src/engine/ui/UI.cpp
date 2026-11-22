@@ -47,6 +47,7 @@ void UI::begin(const Window &w)
     if (activeSliderId != 0 && !w.mouseDown(GLFW_MOUSE_BUTTON_LEFT))
         activeSliderId = 0;
     window = &w;
+    framebufferSRGB = glIsEnabled(GL_FRAMEBUFFER_SRGB) == GL_TRUE;
 
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
@@ -74,6 +75,7 @@ void UI::drawRect(float x, float y, float width, float height,
         return;
 
     rectShader.use();
+    rectShader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
     rectShader.setVec2("uTela", (float)window->getWidth(), (float)window->getHeight());
     rectShader.setVec2("uPos", x, y);
     rectShader.setVec2("uTamanho", width, height);
@@ -108,6 +110,7 @@ void UI::drawLine(
     const float centerY = (y1 + y2) * 0.5f;
 
     rectShader.use();
+    rectShader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
 
     rectShader.setVec2(
         "uTela",
@@ -136,6 +139,7 @@ void UI::drawText(const std::string &text, float x, float y, float scale,
         return;
 
     textShader.use();
+    textShader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
     textShader.setVec2("uScreen", (float)window->getWidth(), (float)window->getHeight());
     textShader.setVec4("uColor", r, g, b, a);
     font.getTexture().bind(0);
@@ -299,6 +303,7 @@ void UI::drawIcon(
         return;
 
     iconShader.use();
+    iconShader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
 
     iconShader.setVec2(
         "uScreen",

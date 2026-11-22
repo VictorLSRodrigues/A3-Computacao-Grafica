@@ -19,13 +19,6 @@ namespace
     constexpr float minimumCardWidth = 280.0f;
     constexpr std::size_t maximumColumns = 3;
 
-    float srgbToLinear(float value)
-    {
-        return value <= 0.04045f
-            ? value / 12.92f
-            : std::pow((value + 0.055f) / 1.055f, 2.4f);
-    }
-
     const glm::vec3 &textColor() { return theme::text; }
     const glm::vec3 &mutedColor() { return theme::textMuted; }
 
@@ -77,7 +70,7 @@ bool LauncherApplication::onInitialize()
 void LauncherApplication::onRender()
 {
     glViewport(0, 0, window.getWidth(), window.getHeight());
-    glClearColor(srgbToLinear(0.035f), srgbToLinear(0.050f), srgbToLinear(0.075f), 1.0f);
+    glClearColor(0.035f, 0.050f, 0.075f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     draw();
 }

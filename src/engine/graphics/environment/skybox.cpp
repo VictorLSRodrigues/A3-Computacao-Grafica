@@ -41,7 +41,7 @@ bool Skybox::load(const std::string& folder, const std::string& extension)
     return true;
 }
 
-void Skybox::draw(Camera& camera)
+void Skybox::draw(Camera& camera, bool framebufferSRGB)
 {
     if (!loaded)
         return;
@@ -53,6 +53,7 @@ void Skybox::draw(Camera& camera)
     glDisable(GL_CULL_FACE);
 
     shader.use();
+    shader.setInt("uFramebufferSRGB", framebufferSRGB ? 1 : 0);
     camera.setViewProjection(shader, "camMatrix", true);
     cubemap.bind(0);
     cube.draw();

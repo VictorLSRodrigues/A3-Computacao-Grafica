@@ -30,10 +30,19 @@ namespace
         #version 330 core
         in vec2 uv;
         uniform sampler2D doomFrame;
+        uniform bool uFramebufferSRGB;
         out vec4 fragmentColor;
+        vec3 srgbToLinear(vec3 color)
+        {
+            vec3 low = color / 12.92;
+            vec3 high = pow((color + 0.055) / 1.055, vec3(2.4));
+            return mix(high, low, lessThanEqual(color, vec3(0.04045)));
+        }
         void main()
         {
-            fragmentColor = vec4(texture(doomFrame, uv).rgb, 1.0);
+            vec3 sampledColor = texture(doomFrame, uv).rgb;
+            vec3 outputColor = uFramebufferSRGB ? srgbToLinear(sampledColor) : sampledColor;
+            fragmentColor = vec4(outputColor, 1.0);
         }
     )";
 }
@@ -210,6 +219,8 @@ void DoomGame::render(int width, int height)
                renderWidth, renderHeight);
 
     screenShader.use();
+    screenShader.setInt("uFramebufferSRGB",
+                        glIsEnabled(GL_FRAMEBUFFER_SRGB) == GL_TRUE ? 1 : 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, framebufferTexture);
     glBindVertexArray(vertexArray);
