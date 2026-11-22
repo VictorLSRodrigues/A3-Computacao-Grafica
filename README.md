@@ -155,11 +155,19 @@ Após copiar o arquivo, execute:
 
 Execute `OpenGLProjeto.exe`, pressione Esc e acesse **Configurações → DOOM → Iniciar DOOM**. O jogo roda dentro da mesma janela da engine. Durante o jogo, pressione **F10** para voltar ao Sandbox sem fechar a aplicação.
 
-### Metodos
+## 🛠️ Funcionalidades da Engine
 
-**### ↩️ Ctrl + Z (Desfazer)**
+### ↩️ Ctrl + Z — Sistema de desfazer
 
-A engine possui um sistema de histórico de ações que permite desfazer alterações realizadas na cena utilizando **Ctrl + Z**. É possível restaurar o estado anterior de qualquer objeto ou da luz, incluindo movimentação, rotação e escalonamento, sem precisar selecionar novamente o elemento.
+A engine possui um sistema de histórico de ações que permite desfazer alterações realizadas na cena utilizando **Ctrl + Z**.
+
+É possível restaurar o estado anterior de objetos e da luz, incluindo operações de:
+
+- Movimentação.
+- Rotação.
+- Escalonamento.
+
+O sistema permite desfazer alterações sem precisar selecionar novamente o elemento modificado.
 
 ## 📁 Estrutura do projeto
 
