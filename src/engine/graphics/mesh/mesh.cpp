@@ -263,6 +263,95 @@ void Mesh::cancelExtrusion()
         upload();
 }
 
+bool Mesh::restoreExtrudedGeometry(
+    const std::vector<Vertex>& vertices,
+    const std::vector<unsigned int>& indices)
+{
+    if (!geometry.restoreExtrudedGeometry(vertices, indices))
+        return false;
+
+    drawMode = GL_TRIANGLES;
+
+    upload();
+
+    return true;
+}
+
+bool Mesh::copyFrom(const Mesh& source)
+{
+    if (this == &source)
+        return true;
+
+    bool created = false;
+
+    const Geometry& sourceGeometry = source.geometry;
+
+    if (sourceGeometry.getVertexFormat() == VertexFormat::Structured)
+    {
+        if (sourceGeometry.isIndexed())
+        {
+            created = createIndexed(
+                sourceGeometry.getStructuredVertices(),
+                sourceGeometry.getIndexData(),
+                source.drawMode);
+        }
+        else
+        {
+            created = create(
+                sourceGeometry.getStructuredVertices(),
+                source.drawMode);
+        }
+    }
+    else if (sourceGeometry.getVertexFormat() == VertexFormat::Raw)
+    {
+        const auto& layout = sourceGeometry.getAttributeSizes();
+
+        if (sourceGeometry.isIndexed())
+        {
+            created = createIndexed(
+                sourceGeometry.getVertexData(),
+                sourceGeometry.getIndexData(),
+                3,
+                source.drawMode,
+                layout);
+        }
+        else
+        {
+            created = create(
+                sourceGeometry.getVertexData(),
+                3,
+                source.drawMode,
+                layout);
+        }
+    }
+
+    if (!created)
+        return false;
+
+    // Preserva o estado de uma geometria que já recebeu extrusão.
+    if (sourceGeometry.hasExtrusion())
+    {
+        if (sourceGeometry.getVertexFormat() != VertexFormat::Structured ||
+            !sourceGeometry.isIndexed())
+        {
+            return false;
+        }
+
+        if (!restoreExtrudedGeometry(
+                sourceGeometry.getStructuredVertices(),
+                sourceGeometry.getIndexData()))
+        {
+            return false;
+        }
+    }
+
+    material = source.material;
+    baseColor = source.baseColor;
+    textures = source.textures;
+
+    return true;
+}
+
 // Desenha a malha.
 void Mesh::draw() const
 {

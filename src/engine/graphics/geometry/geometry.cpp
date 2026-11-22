@@ -472,7 +472,7 @@ bool Geometry::beginExtrusion(unsigned int faceIndex)
 
     // Guarda qual face será extrudada.
     extrusionFaceIndex = faceIndex;
-
+    extrusionBaseHadExtrusion = extrusionApplied;
     extrusionInProgress = true;
 
     return true;
@@ -531,10 +531,17 @@ bool Geometry::updateExtrusion(float distance)
 
     // Distância zero restaura a geometria original.
     if (std::abs(distance) < 0.000001f)
-        return createIndexed(
+    {
+        const bool restored = createIndexed(
             extrusionBaseVertices,
             extrusionBaseIndices,
             PrimitiveTopology::Triangles);
+
+        if (restored)
+            extrusionApplied = extrusionBaseHadExtrusion;
+
+        return restored;
+    }
 
     // Serão adicionados 3 vértices da tampa e 12 das laterais.
     if (vertices.size() >
@@ -638,7 +645,15 @@ bool Geometry::updateExtrusion(float distance)
     }
 
     // Atualiza vértices, índices, faces e buffers da GPU.
-    return createIndexed(vertices, indices, PrimitiveTopology::Triangles);
+    const bool updated = createIndexed(
+        vertices,
+        indices,
+        PrimitiveTopology::Triangles);
+
+    if (updated)
+        extrusionApplied = true;
+
+    return updated;
 }
 
 void Geometry::finishExtrusion()
@@ -654,6 +669,20 @@ void Geometry::finishExtrusion()
     extrusionFaceIndex = 0;
 }
 
+bool Geometry::restoreExtrudedGeometry(
+    const std::vector<Vertex> &vertices,
+    const std::vector<unsigned int> &indices)
+{
+    if (!createIndexed(
+            vertices,
+            indices,
+            PrimitiveTopology::Triangles))
+        return false;
+
+    extrusionApplied = true;
+    return true;
+}
+
 bool Geometry::cancelExtrusion()
 {
     if (!extrusionInProgress)
@@ -667,6 +696,7 @@ bool Geometry::cancelExtrusion()
         return false;
 
     faces = extrusionBaseFaces;
+    extrusionApplied = extrusionBaseHadExtrusion;
 
     finishExtrusion();
 
@@ -692,6 +722,10 @@ void Geometry::clear()
     extrusionBaseFaces.clear();
     extrusionFaceIndex = 0;
     extrusionInProgress = false;
+
+    extrusionApplied = false;
+    extrusionBaseHadExtrusion = false;
+    extrusionResultFaceIndex = 0;
 }
 
 std::size_t Geometry::getVertexCount() const

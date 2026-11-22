@@ -10,6 +10,7 @@
 #include "engine/scene/scene.h"
 #include "engine/graphics/resources/texture.h"
 #include "engine/ui/UI.h"
+#include <memory>
 
 // Editor da cena: seleção de objetos, faces e luz, e as ferramentas de transformação
 // (mover, rotacionar, escalar e extrudar) com seus gizmos e a barra de ferramentas.
@@ -97,12 +98,28 @@ private:
     struct UndoEntry
     {
         Scene::Object *object = nullptr;
+
         Transform transform;
+
         bool isLight = false;
         Light lightState;
+
+        // Identifica uma operação de extrusão.
+        bool isExtrusion = false;
+
+        // Recursos anteriores à extrusão.
+        std::shared_ptr<Model> previousModel;
+        std::shared_ptr<Mesh> previousMesh;
+
+        // Face selecionada antes da extrusão.
+        Scene::FaceSelection previousFace;
     };
 
     std::vector<UndoEntry> undoHistory;
+
+    // Estado temporário da extrusão enquanto o usuário arrasta o gizmo.
+    UndoEntry pendingExtrusionUndo;
+    bool pendingExtrusionUndoValid = false;
 
     glm::vec2 dragStartMouse{0.0f};
     glm::vec2 dragScreenDirection{0.0f};
@@ -151,6 +168,7 @@ private:
 
     void finishTransformDrag();
     void undoLastTransform();
+    void restorePendingExtrusion();
 
     void drawMoveGizmo();
     void drawRotateGizmo();

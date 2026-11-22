@@ -24,9 +24,9 @@ enum class PrimitiveTopology
 // Como os vértices estão guardados.
 enum class VertexFormat
 {
-    None,       // Ainda sem dados.
-    Raw,        // Lista de números, com atributos descritos por getAttributeSizes().
-    Structured  // Estrutura Vertex: posição, cor, UV, normal e tangente.
+    None,      // Ainda sem dados.
+    Raw,       // Lista de números, com atributos descritos por getAttributeSizes().
+    Structured // Estrutura Vertex: posição, cor, UV, normal e tangente.
 };
 
 // Dados e informações espaciais de uma malha: vértices, índices, faces, limites e extrusão.
@@ -118,6 +118,17 @@ public:
 
     unsigned int getExtrudedFaceIndex() const { return extrusionResultFaceIndex; }
 
+    // Informa se a geometria possui extrusão confirmada.
+    bool hasExtrusion() const
+    {
+        return extrusionApplied;
+    }
+
+    // Restaura uma geometria extrudada a partir dos dados salvos.
+    bool restoreExtrudedGeometry(
+        const std::vector<Vertex> &vertices,
+        const std::vector<unsigned int> &indices);
+
 private:
     PrimitiveTopology topology = PrimitiveTopology::Triangles;
     VertexFormat vertexFormat = VertexFormat::None;
@@ -146,6 +157,9 @@ private:
     unsigned int extrusionFaceIndex = 0;
     bool extrusionInProgress = false;
     unsigned int extrusionResultFaceIndex = 0;
+
+    bool extrusionApplied = false;
+    bool extrusionBaseHadExtrusion = false;
 
     // Calcula quantos números compõem cada vértice.
     static int computeStride(

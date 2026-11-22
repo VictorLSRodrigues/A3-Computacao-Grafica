@@ -59,7 +59,7 @@ bool buildWorld(Scene &scene)
     }
 
     //
-    if (Scene::Object *multi = scene.addModel(ASSETS_DIR "sandbox/models/Caderno.glb"))
+    if (Scene::Object *multi = scene.addModel(ASSETS_DIR "sandbox/models/Caneta.glb"))
     {
         multi->name = "multi";
         const float multiScale = 0.1f; // ajuste aqui: menor = modelo menor

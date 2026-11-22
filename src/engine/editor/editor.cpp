@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <memory>
 
 #include "engine/editor/gizmo.h"
 #include "engine/scene/picking.h"
@@ -49,8 +50,11 @@ void Editor::update(bool inputEnabled)
         window.keyDown(GLFW_KEY_LEFT_CONTROL) ||
         window.keyDown(GLFW_KEY_RIGHT_CONTROL);
     if (inputEnabled && controlPressed &&
-        window.keyPressed(GLFW_KEY_Z) && !draggingGizmo &&
-        !draggingRotationGizmo && !draggingScaleGizmo)
+        window.keyPressed(GLFW_KEY_Z) &&
+        !draggingGizmo &&
+        !draggingRotationGizmo &&
+        !draggingScaleGizmo &&
+        !draggingExtrusionGizmo)
     {
         undoLastTransform();
     }
@@ -75,6 +79,7 @@ void Editor::update(bool inputEnabled)
         if (draggingExtrusionGizmo)
         {
             scene.cancelFaceExtrusion(selectedObject, selectedFace);
+            restorePendingExtrusion();
 
             draggingExtrusionGizmo = false;
             extrusionDistance = 0.0f;
@@ -116,8 +121,47 @@ void Editor::update(bool inputEnabled)
                             gizmo) &&
                         isMouseOverExtrudeGizmo(mouse, gizmo))
                     {
-                        if (scene.beginFaceExtrusion(selectedObject, selectedFace))
+                        // Captura o estado completo antes de iniciar a extrusao.
+                        UndoEntry extrusionUndo;
+                        extrusionUndo.object = selectedObject;
+                        extrusionUndo.isExtrusion = true;
+                        extrusionUndo.previousFace = selectedFace;
+
+                        bool snapshotReady = false;
+
+                        if (selectedObject && selectedObject->model)
                         {
+                            extrusionUndo.previousModel =
+                                selectedObject->model->clone();
+
+                            snapshotReady = static_cast<bool>(
+                                extrusionUndo.previousModel);
+                        }
+                        else if (selectedObject && selectedObject->mesh)
+                        {
+                            extrusionUndo.previousMesh =
+                                std::make_shared<Mesh>();
+
+                            snapshotReady =
+                                extrusionUndo.previousMesh->copyFrom(
+                                    *selectedObject->mesh);
+
+                            if (!snapshotReady)
+                                extrusionUndo.previousMesh.reset();
+                        }
+
+                        if (!snapshotReady)
+                        {
+                            std::cerr
+                                << "Falha ao salvar estado anterior da extrusao."
+                                << std::endl;
+                        }
+                        else if (scene.beginFaceExtrusion(
+                                     selectedObject, selectedFace))
+                        {
+                            pendingExtrusionUndo = extrusionUndo;
+                            pendingExtrusionUndoValid = true;
+
                             draggingGizmo = false;
                             draggedAxis = -1;
 
@@ -657,6 +701,14 @@ void Editor::update(bool inputEnabled)
             {
                 scene.finishFaceExtrusion(selectedObject, selectedFace);
 
+                // Registra no Undo somente depois de confirmar a extrusao.
+                if (pendingExtrusionUndoValid)
+                {
+                    undoHistory.push_back(pendingExtrusionUndo);
+                    pendingExtrusionUndo = UndoEntry{};
+                    pendingExtrusionUndoValid = false;
+                }
+
                 std::cout
                     << "[EXTRUDE] Extrusao confirmada: "
                     << extrusionDistance
@@ -665,6 +717,7 @@ void Editor::update(bool inputEnabled)
             else
             {
                 scene.cancelFaceExtrusion(selectedObject, selectedFace);
+                restorePendingExtrusion();
 
                 std::cout
                     << "[EXTRUDE] Extrusao cancelada."
@@ -731,10 +784,40 @@ void Editor::undoLastTransform()
     {
         light = entry.lightState;
     }
+    else if (entry.isExtrusion && entry.object)
+    {
+        // Restaura os recursos anteriores a extrusao.
+        entry.object->model = entry.previousModel;
+        entry.object->mesh = entry.previousMesh;
+
+        if (selectedObject == entry.object)
+            selectedFace = entry.previousFace;
+    }
     else if (entry.object)
     {
+        // Mantem o Undo existente de movimentacao, rotacao e escala.
         entry.object->transform = entry.transform;
     }
+}
+
+void Editor::restorePendingExtrusion()
+{
+    if (!pendingExtrusionUndoValid)
+        return;
+
+    Scene::Object* object = pendingExtrusionUndo.object;
+
+    if (object)
+    {
+        object->model = pendingExtrusionUndo.previousModel;
+        object->mesh = pendingExtrusionUndo.previousMesh;
+
+        if (selectedObject == object)
+            selectedFace = pendingExtrusionUndo.previousFace;
+    }
+
+    pendingExtrusionUndo = UndoEntry{};
+    pendingExtrusionUndoValid = false;
 }
 
 void Editor::drawGizmos()

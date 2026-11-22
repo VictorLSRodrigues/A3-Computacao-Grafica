@@ -55,6 +55,14 @@ public:
     // Dados e consultas espaciais da malha (faces, limites, raio de picking).
     const Geometry &getGeometry() const { return geometry; }
 
+    // Restaura uma geometria extrudada e atualiza os buffers da GPU.
+    bool restoreExtrudedGeometry(
+        const std::vector<Vertex> &vertices,
+        const std::vector<unsigned int> &indices);
+
+    // Copia os dados de outra malha.
+    bool copyFrom(const Mesh& source);
+     
     // Extrusão: a Geometry altera os dados e a Mesh os reenvia à GPU.
 
     // Inicia uma operação de extrusão.
@@ -72,12 +80,12 @@ public:
     // Gerenciamento de texturas compartilhadas.
     void addTexture(std::shared_ptr<Texture> texture);
     void setTexture(std::shared_ptr<Texture> texture);
-    
+
     // Compatibilidade temporária com o Model atual.
     void addTexture(Texture &&texture);
     void setTexture(Texture &&texture); // Substitui uma textura do mesmo tipo.
 
-    const std::vector<std::shared_ptr<Texture>>& getTextures() const;
+    const std::vector<std::shared_ptr<Texture>> &getTextures() const;
 
     void setMaterial(const Material &material)
     {
@@ -90,7 +98,7 @@ public:
         material.baseColorFactor = color;
     }
 
-    const Material &getMaterial() const { return material; }    
+    const Material &getMaterial() const { return material; }
 
     void draw() const;
 

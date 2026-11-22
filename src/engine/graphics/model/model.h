@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <deque>
 #include <vector>
+#include <memory>
 
 #include <glm/glm.hpp>
 
@@ -16,6 +17,12 @@ class Texture;
 class Model
 {
 public:
+    // Construtor para criar uma cópia independente.
+    Model() = default;
+
+    // Cria uma cópia independente do modelo.
+    std::shared_ptr<Model> clone() const;
+
     // Carrega um modelo glTF (.gltf) ou GLB (.glb) e prepara suas partes para desenho.
     Model(const char *path);
 
@@ -61,6 +68,27 @@ public:
     unsigned int getExtrudedFaceIndex(
         std::size_t meshIndex) const;
 
+    // Retorna a quantidade de malhas do modelo.
+    std::size_t getMeshCount() const
+    {
+        return meshes.size();
+    }
+
+    // Permite consultar a geometria de uma malha específica.
+    const Geometry *getMeshGeometry(std::size_t meshIndex) const
+    {
+        if (meshIndex >= meshes.size())
+            return nullptr;
+
+        return &meshes[meshIndex].getGeometry();
+    }
+
+    // Restaura a geometria extrudada de uma malha específica.
+    bool restoreExtrudedGeometry(
+        std::size_t meshIndex,
+        const std::vector<Vertex> &vertices,
+        const std::vector<unsigned int> &indices);
+
     // Total de faces de todas as partes do modelo.
     std::size_t getFaceCount() const
     {
@@ -84,6 +112,9 @@ private:
     std::vector<glm::mat4> matricesMeshes;
     float boundingRadius = 0.0f;
     BoundingBox boundingBox;
+
+    // Recalcula os limites espaciais após modificar uma malha.
+    void recalculateBounds();
 };
 
 #endif

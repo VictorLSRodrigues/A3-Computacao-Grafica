@@ -8,6 +8,7 @@
 #include <limits>
 #include <stdexcept>
 #include <utility>
+#include <algorithm>
 
 #include <glm/gtc/matrix_inverse.hpp>
 
@@ -206,4 +207,69 @@ unsigned int Model::getExtrudedFaceIndex(
 		return std::numeric_limits<unsigned int>::max();
 
 	return meshes[meshIndex].getGeometry().getExtrudedFaceIndex();
+}
+
+bool Model::restoreExtrudedGeometry(
+    std::size_t meshIndex,
+    const std::vector<Vertex>& vertices,
+    const std::vector<unsigned int>& indices)
+{
+    if (meshIndex >= meshes.size())
+        return false;
+
+    if (!meshes[meshIndex].restoreExtrudedGeometry(
+            vertices, indices))
+        return false;
+
+    recalculateBounds();
+
+    return true;
+}
+
+void Model::recalculateBounds()
+{
+    boundingBox = BoundingBox{};
+    boundingRadius = 0.0f;
+
+    const std::size_t count =
+        std::min(meshes.size(), matricesMeshes.size());
+
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        const Geometry& geometry = meshes[i].getGeometry();
+
+        for (const Vertex& vertex :
+             geometry.getStructuredVertices())
+        {
+            const glm::vec3 transformedPosition =
+                glm::vec3(
+                    matricesMeshes[i] *
+                    glm::vec4(vertex.position, 1.0f));
+
+            boundingBox.expand(transformedPosition);
+
+            boundingRadius = std::max(
+                boundingRadius,
+                glm::length(transformedPosition));
+        }
+    }
+}
+
+std::shared_ptr<Model> Model::clone() const
+{
+    auto copy = std::make_shared<Model>();
+
+    copy->matricesMeshes = matricesMeshes;
+    copy->boundingRadius = boundingRadius;
+    copy->boundingBox = boundingBox;
+
+    for (const Mesh& sourceMesh : meshes)
+    {
+        copy->meshes.emplace_back();
+
+        if (!copy->meshes.back().copyFrom(sourceMesh))
+            return nullptr;
+    }
+
+    return copy;
 }
