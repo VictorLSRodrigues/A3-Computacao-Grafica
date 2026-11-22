@@ -4,6 +4,7 @@
 #include "engine/editor/editor.h"
 #include "engine/graphics/camera/camera.h"
 #include "engine/renderer/renderer.h"
+#include "engine/physics/physics_world.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
 #include "engine/ui/UI.h"
@@ -21,6 +22,7 @@ protected:
 private:
     Renderer renderer;
     Scene scene;
+    PhysicsWorld physics;
     Light light;
     Camera camera{1280, 800, glm::vec3(8.0f, 8.0f, 10.0f)};
     UI ui;

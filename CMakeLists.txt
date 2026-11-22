@@ -63,6 +63,9 @@ set(ROTOR_ENGINE_SOURCES
     # Engine: Renderer
     src/engine/renderer/renderer.cpp
 
+    # Engine: Physics
+    src/engine/physics/physics_world.cpp
+
     # Engine: Scene
     src/engine/scene/light.cpp
     src/engine/scene/picking.cpp

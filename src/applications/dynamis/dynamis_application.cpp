@@ -48,7 +48,7 @@ std::shared_ptr<Mesh> createGroundPlane()
     mesh->setTexture(std::move(whiteTexture));
 
     Material material;
-    material.baseColorFactor = glm::vec4(0.96f, 0.98f, 1.0f, 1.0f);
+    material.baseColorFactor = glm::vec4(1.0f);
     material.metallicFactor = 0.0f;
     material.roughnessFactor = 0.96f;
     mesh->setMaterial(material);
@@ -97,10 +97,10 @@ bool DynamisApplication::onInitialize()
     light.type = LightType::Directional;
     light.position = glm::vec3(5.0f, 10.0f, 5.0f);
     light.target = glm::vec3(0.0f, 0.0f, 0.0f);
-    light.intensity = 1.40f;
+    light.intensity = 0.85f;
 
     // Um pouco mais de iluminação ambiente suaviza as faces menos iluminadas.
-    renderer.ambientStrength = 0.42f;
+    renderer.ambientStrength = 0.20f;
 
     // Mantém a iluminação ativa, mas oculta o marcador da luz.
     renderer.showLightMarker = false;
@@ -129,14 +129,19 @@ bool DynamisApplication::onInitialize()
 
     auto testSphere = createTestSphere();
     Transform sphereTransform;
-    sphereTransform.move({0.0f, 0.5f, 0.0f});
+    sphereTransform.move({0.0f, 3.0f, 0.0f});
 
-    if (!testSphere || !scene.addMesh(
-            std::move(testSphere), "Dynamis Sphere", sphereTransform))
+    Scene::Object* sphereObject = nullptr;
+    if (!testSphere || !(sphereObject = scene.addMesh(
+            std::move(testSphere), "Dynamis Sphere", sphereTransform)))
     {
         std::cout << "Falha ao criar a esfera de teste do Dynamis." << std::endl;
         return false;
     }
+
+    // Primeiro experimento de fisica: queda livre, sem colisao com o piso.
+    physics.addBody(sphereObject->transform);
+
 
     const glm::vec3 cameraTarget(0.0f, 0.5f, 0.0f);
     camera.orientation = glm::normalize(cameraTarget - camera.position);
@@ -155,6 +160,7 @@ void DynamisApplication::onUpdate(float deltaTime)
 
     editor.update(true);
     scene.update(deltaTime);
+    physics.update(deltaTime);
 }
 
 void DynamisApplication::onRender()
