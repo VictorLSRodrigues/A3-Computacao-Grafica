@@ -2,11 +2,15 @@
 #include <utility>
 #include <iostream>
 #include <algorithm>
+#include <limits>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-bool Texture::load(const std::string& path, bool flipVertically)
+bool Texture::load(
+    const std::string& path,
+    bool flipVertically,
+    TextureColorSpace colorSpace)
 {
     // Ajusta a origem vertical da imagem para a convenção de coordenadas do OpenGL.
     stbi_set_flip_vertically_on_load(flipVertically);
@@ -21,13 +25,18 @@ bool Texture::load(const std::string& path, bool flipVertically)
         return false;
     }
 
-    bool ok = create(w, h, channels, data);
+    bool ok = create(w, h, channels, data, colorSpace);
     stbi_image_free(data); // Os pixels já foram enviados para a textura OpenGL.
 
     return ok;
 }
 
-bool Texture::create(int newWidth, int newHeight, int channels, const unsigned char* data)
+bool Texture::create(
+    int newWidth,
+    int newHeight,
+    int channels,
+    const unsigned char* data,
+    TextureColorSpace colorSpace)
 {
     destroy(); // Substitui com segurança qualquer textura já armazenada neste objeto.
 
@@ -38,9 +47,23 @@ bool Texture::create(int newWidth, int newHeight, int channels, const unsigned c
     }
 
     GLenum format;
-    if (channels == 1)      format = GL_RED;
-    else if (channels == 3) format = GL_RGB;
-    else if (channels == 4) format = GL_RGBA;
+    GLenum internalFormat;
+    if (channels == 1)
+    {
+        // Texturas de um canal são usadas como máscaras/dados, não como cor RGB.
+        format = GL_RED;
+        internalFormat = GL_R8;
+    }
+    else if (channels == 3)
+    {
+        format = GL_RGB;
+        internalFormat = colorSpace == TextureColorSpace::SRGB ? GL_SRGB8 : GL_RGB8;
+    }
+    else if (channels == 4)
+    {
+        format = GL_RGBA;
+        internalFormat = colorSpace == TextureColorSpace::SRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8;
+    }
     else
     {
         std::cout << "Textura com " << channels << " canais não é suportada." << std::endl;
@@ -56,7 +79,7 @@ bool Texture::create(int newWidth, int newHeight, int channels, const unsigned c
     // Permite ler linhas cujo tamanho em bytes não seja múltiplo de quatro.
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D); // Gera versões menores para amostragem à distância.
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -124,7 +147,10 @@ const std::string& Texture::getType() const
     return type;
 }
 
-bool Texture::loadFromMemory(const unsigned char* bytes, std::size_t size)
+bool Texture::loadFromMemory(
+    const unsigned char* bytes,
+    std::size_t size,
+    TextureColorSpace colorSpace)
 {
     if (!bytes || size == 0 || size > static_cast<std::size_t>(std::numeric_limits<int>::max()))
         return false;
@@ -141,7 +167,7 @@ bool Texture::loadFromMemory(const unsigned char* bytes, std::size_t size)
         return false;
     }
 
-    bool ok = create(w, h, channels, pixels);
+    bool ok = create(w, h, channels, pixels, colorSpace);
     stbi_image_free(pixels);
     return ok;
 }

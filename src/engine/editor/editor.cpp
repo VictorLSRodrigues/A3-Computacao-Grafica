@@ -16,10 +16,10 @@ Editor::Editor(Window &window, Camera &camera, Scene &scene, Light &light,
 
 bool Editor::create()
 {
-    return moveIcon.load(ASSETS_DIR "editor/icons/move.png", false) &&
-           rotateIcon.load(ASSETS_DIR "editor/icons/rotate-3d.png", false) &&
-           scaleIcon.load(ASSETS_DIR "editor/icons/scaling.png", false) &&
-           extrudeIcon.load(ASSETS_DIR "editor/icons/extrude.png", false);
+    return moveIcon.load(ASSETS_DIR "editor/icons/move.png", false, TextureColorSpace::Linear) &&
+           rotateIcon.load(ASSETS_DIR "editor/icons/rotate-3d.png", false, TextureColorSpace::Linear) &&
+           scaleIcon.load(ASSETS_DIR "editor/icons/scaling.png", false, TextureColorSpace::Linear) &&
+           extrudeIcon.load(ASSETS_DIR "editor/icons/extrude.png", false, TextureColorSpace::Linear);
 }
 
 void Editor::handleModeToggle()

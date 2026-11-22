@@ -1,10 +1,21 @@
 #include "renderer.h"
 
 #include <iostream>
+#include <cmath>
 
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "engine/graphics/geometry/shapes.h"
+
+namespace
+{
+    float srgbToLinear(float value)
+    {
+        return value <= 0.04045f
+            ? value / 12.92f
+            : std::pow((value + 0.055f) / 1.055f, 2.4f);
+    }
+}
 
 bool Renderer::init()
 {
@@ -104,10 +115,12 @@ void Renderer::drawLightMarker(const Light &light, Camera &camera)
 
 void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
 {
+    // As cores do fundo são definidas em sRGB, mas glClearColor recebe
+    // componentes lineares quando o framebuffer sRGB está habilitado.
     if (rainScenario.enabled)
-        glClearColor(0.035f, 0.055f, 0.075f, 1.0f);
+        glClearColor(srgbToLinear(0.035f), srgbToLinear(0.055f), srgbToLinear(0.075f), 1.0f);
     else
-        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+        glClearColor(srgbToLinear(0.1f), srgbToLinear(0.2f), srgbToLinear(0.3f), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // A cena, iluminada pela luz escolhida.

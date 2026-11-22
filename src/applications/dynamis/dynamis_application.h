@@ -22,7 +22,7 @@ private:
     Renderer renderer;
     Scene scene;
     Light light;
-    Camera camera{1280, 800, glm::vec3(0.0f, 0.0f, 5.0f)};
+    Camera camera{1280, 800, glm::vec3(8.0f, 8.0f, 10.0f)};
     UI ui;
     Editor editor{window, camera, scene, light, ui};
 };

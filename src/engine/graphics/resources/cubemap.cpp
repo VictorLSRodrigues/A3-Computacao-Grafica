@@ -58,7 +58,7 @@ bool Cubemap::load(const std::array<std::string, 6>& facePaths)
         }
 
         size = width;
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0,
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB8, width, height, 0,
                      GL_RGB, GL_UNSIGNED_BYTE, data);
         stbi_image_free(data); // Os pixels já foram enviados para a textura OpenGL.
     }

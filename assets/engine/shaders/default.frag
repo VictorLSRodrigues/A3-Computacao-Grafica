@@ -41,6 +41,14 @@ uniform vec3 camPos;
 uniform float lightIntensity;
 
 const float PI = 3.14159265359;
+
+vec3 srgbToLinear(vec3 color)
+{
+    vec3 low = color / 12.92;
+    vec3 high = pow((color + 0.055) / 1.055, vec3(2.4));
+    return mix(high, low, lessThanEqual(color, vec3(0.04045)));
+}
+
 uniform float environmentReflectionStrength;
 uniform float ambientStrength;
 
@@ -214,7 +222,7 @@ void main()
     vec3 V = normalize(camPos - crntPos);
 
     vec3 L = vec3(0.0);
-    vec3 radiance = lightColor.rgb *
+    vec3 radiance = srgbToLinear(lightColor.rgb) *
                     max(lightIntensity, 0.0);
 
     float attenuation = 1.0;

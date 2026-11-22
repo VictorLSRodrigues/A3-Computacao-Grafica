@@ -28,7 +28,7 @@ bool buildWorld(Scene &scene)
     Texture specular;
 
     if (!diffuse.load(ASSETS_DIR "sandbox/textures/terra.png") ||
-        !specular.load(ASSETS_DIR "sandbox/textures/terraSpecular.png"))
+        !specular.load(ASSETS_DIR "sandbox/textures/terraSpecular.png", true, TextureColorSpace::Linear))
         return false;
 
     diffuse.setType("diffuse");

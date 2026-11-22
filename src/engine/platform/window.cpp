@@ -128,6 +128,7 @@ bool Window::create(const WindowConfig &windowConfig)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_SAMPLES, std::max(0, config.samples));
+    glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, config.resizable ? GLFW_TRUE : GLFW_FALSE);
@@ -151,6 +152,19 @@ bool Window::create(const WindowConfig &windowConfig)
         std::cout << "Erro ao inicializar o GLAD!" << std::endl;
         destroy();
         return false;
+    }
+
+    // Solicita um framebuffer sRGB para que o OpenGL converta as saídas
+    // lineares dos shaders e faça blending no espaço de cor correto.
+    if (glfwGetWindowAttrib(windowHandle, GLFW_SRGB_CAPABLE) == GLFW_TRUE)
+    {
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        std::cout << "Framebuffer sRGB: habilitado." << std::endl;
+    }
+    else
+    {
+        glDisable(GL_FRAMEBUFFER_SRGB);
+        std::cout << "Aviso: framebuffer sRGB indisponível; a correção de cor não será aplicada." << std::endl;
     }
 
     // Guarda o estado convencional para permitir retornar de outros modos.

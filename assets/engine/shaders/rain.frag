@@ -1,7 +1,14 @@
 #version 330 core
 out vec4 FragColor;
 
+vec3 srgbToLinear(vec3 color)
+{
+    vec3 low = color / 12.92;
+    vec3 high = pow((color + 0.055) / 1.055, vec3(2.4));
+    return mix(high, low, lessThanEqual(color, vec3(0.04045)));
+}
+
 void main()
 {
-    FragColor = vec4(0.65, 0.82, 1.0, 0.65);
+    FragColor = vec4(srgbToLinear(vec3(0.65, 0.82, 1.0)), 0.65);
 }

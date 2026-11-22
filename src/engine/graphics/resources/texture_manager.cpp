@@ -19,6 +19,15 @@ namespace
     {
         return std::to_string(path.size()) + ":" + path;
     }
+
+    // Mapas de cor-base são imagens sRGB; mapas que armazenam propriedades
+    // (normal, roughness, metallic, specular etc.) são dados lineares.
+    TextureColorSpace colorSpaceForType(const std::string& type)
+    {
+        return (type == "diffuse" || type == "fallback")
+            ? TextureColorSpace::SRGB
+            : TextureColorSpace::Linear;
+    }
 }
 
 std::unordered_map<
@@ -51,7 +60,7 @@ std::shared_ptr<Texture> TextureManager::load(
     // Cria uma nova textura.
     auto texture = std::make_shared<Texture>();
 
-    if (!texture->load(path))
+    if (!texture->load(path, true, colorSpaceForType(type)))
     {
         std::cerr
             << "TextureManager: falha ao carregar "
@@ -91,7 +100,7 @@ std::shared_ptr<Texture> TextureManager::loadFromMemory(
 
     auto texture = std::make_shared<Texture>();
 
-    if (!texture->loadFromMemory(data, size))
+    if (!texture->loadFromMemory(data, size, colorSpaceForType(type)))
     {
         std::cerr << "TextureManager: falha ao carregar imagem da memória: "
                   << cacheKey << std::endl;

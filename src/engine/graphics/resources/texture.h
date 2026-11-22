@@ -4,6 +4,13 @@
 #include <glad/glad.h>
 #include <string>
 
+// SRGB is for display colors (albedo/UI images); Linear is for data maps and raw pixels.
+enum class TextureColorSpace
+{
+    Linear,
+    SRGB
+};
+
 class Texture
 {
 private:
@@ -25,8 +32,16 @@ public:
     Texture(Texture&& other) noexcept;
     Texture& operator=(Texture&& other) noexcept;
 
-    bool load(const std::string &path, bool flipVertically = true);
-    bool loadFromMemory(const unsigned char* bytes, std::size_t size);
+    // Arquivos de imagem são tratados como cores sRGB por padrão; mapas de dados usam Linear.
+    bool load(
+        const std::string &path,
+        bool flipVertically = true,
+        TextureColorSpace colorSpace = TextureColorSpace::SRGB);
+    // Dados em memória são lineares por padrão; TextureManager seleciona pelo tipo do mapa.
+    bool loadFromMemory(
+        const unsigned char* bytes,
+        std::size_t size,
+        TextureColorSpace colorSpace = TextureColorSpace::Linear);
     void bind(unsigned int unit = 0) const; // Ativa a unidade e associa a textura a ela.
     void destroy();
 
@@ -37,6 +52,11 @@ public:
     void setType(const std::string& newType);
     const std::string& getType() const;
 
-    // Cria uma textura a partir de pixels em memória (1 canal, RGB ou RGBA).
-    bool create(int newWidth, int newHeight, int channels, const unsigned char *data);
+    // Cria uma textura a partir de pixels em memória; o padrão é Linear.
+    bool create(
+        int newWidth,
+        int newHeight,
+        int channels,
+        const unsigned char *data,
+        TextureColorSpace colorSpace = TextureColorSpace::Linear);
 };

@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "vertex.h"
+
 namespace shapes
 {
     // Triângulo equilátero centrado na origem. Retorna três posições XYZ.
@@ -18,6 +20,37 @@ namespace shapes
     // O formato de cada vértice é {3, 3, 2, 3}; faces laterais têm vértices próprios.
     std::vector<float> pyramid();
     std::vector<unsigned int> pyramidIndices();
+
+    // Gera um plano no eixo XZ, centrado na origem e com normais voltadas para +Y.
+    // Cada subdivisão forma uma célula quadrilateral composta por dois triângulos.
+    // Retorna false para dimensões ou subdivisões inválidas.
+    bool gridPlane(
+        float width,
+        float depth,
+        unsigned int segmentsX,
+        unsigned int segmentsZ,
+        std::vector<Vertex> &vertices,
+        std::vector<unsigned int> &indices);
+
+    // Gera uma caixa centrada na origem, com UVs, normais e tangentes por face.
+    // Cada face possui seus próprios vértices para preservar os atributos das arestas.
+    // Retorna false para dimensões inválidas.
+    bool box(
+        float width,
+        float height,
+        float depth,
+        std::vector<Vertex> &vertices,
+        std::vector<unsigned int> &indices);
+
+    // Gera uma esfera UV centrada na origem, com normais suaves, UVs e tangentes.
+    // sectors controla os segmentos ao redor do eixo Y; stacks, os segmentos verticais.
+    // Retorna false para raio ou subdivisões inválidas.
+    bool sphere(
+        float radius,
+        unsigned int sectors,
+        unsigned int stacks,
+        std::vector<Vertex> &vertices,
+        std::vector<unsigned int> &indices);
 
     // Cubo com oito posições XYZ; índices definem as seis faces.
     std::vector<float> cube();

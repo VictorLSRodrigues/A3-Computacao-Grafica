@@ -1,6 +1,7 @@
 #include "dynamis_application.h"
 
-#include <array>
+#include "engine/graphics/geometry/shapes.h"
+
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -17,69 +18,65 @@ WindowConfig createWindowConfig()
     return config;
 }
 
-// Malha simples e editável para testar a integração do Editor no Dynamis.
-std::shared_ptr<Mesh> createTestCube()
+// Plano procedural que serve como chão inicial do ambiente Dynamis.
+std::shared_ptr<Mesh> createGroundPlane()
 {
-    struct CubeFace
-    {
-        glm::vec3 center;
-        glm::vec3 normal;
-        glm::vec3 tangent;
-        glm::vec3 bitangent;
-    };
-
-    const std::array<CubeFace, 6> faces{{
-        {{0.0f, 0.0f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.0f, 0.0f, -0.5f}, {0.0f, 0.0f, -1.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}},
-        {{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
-    }};
-
-    const std::array<glm::vec2, 4> uvCoordinates{{
-        {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}
-    }};
-    const std::array<glm::vec2, 4> corners{{
-        {-0.5f, -0.5f}, {0.5f, -0.5f}, {0.5f, 0.5f}, {-0.5f, 0.5f}
-    }};
+    constexpr float width = 12.0f;
+    constexpr float depth = 12.0f;
+    constexpr unsigned int segmentsX = 24;
+    constexpr unsigned int segmentsZ = 24;
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    vertices.reserve(24);
-    indices.reserve(36);
 
-    for (const CubeFace &face : faces)
-    {
-        const unsigned int firstVertex = static_cast<unsigned int>(vertices.size());
+    if (!shapes::gridPlane(
+            width, depth, segmentsX, segmentsZ, vertices, indices))
+        return nullptr;
 
-        for (std::size_t i = 0; i < corners.size(); ++i)
-        {
-            const glm::vec2 &corner = corners[i];
-            const glm::vec3 position = face.center +
-                face.tangent * corner.x + face.bitangent * corner.y;
+    auto mesh = std::make_shared<Mesh>();
+    if (!mesh->createIndexed(vertices, indices))
+        return nullptr;
 
-            vertices.push_back({
-                position,
-                glm::vec3(1.0f),
-                uvCoordinates[i],
-                face.normal,
-                glm::vec4(face.tangent, 1.0f)
-            });
-        }
+    // A textura branca evita o fallback azul do Renderer; o material mantém
+    // o piso em branco neutro.
+    const unsigned char whitePixel[] = {255, 255, 255, 255};
+    auto whiteTexture = std::make_shared<Texture>();
+    if (!whiteTexture->create(1, 1, 4, whitePixel))
+        return nullptr;
 
-        indices.insert(indices.end(), {
-            firstVertex, firstVertex + 1, firstVertex + 2,
-            firstVertex, firstVertex + 2, firstVertex + 3
-        });
-    }
+    whiteTexture->setType("diffuse");
+    mesh->setTexture(std::move(whiteTexture));
+
+    Material material;
+    material.baseColorFactor = glm::vec4(0.96f, 0.98f, 1.0f, 1.0f);
+    material.metallicFactor = 0.0f;
+    material.roughnessFactor = 0.96f;
+    mesh->setMaterial(material);
+
+    return mesh;
+}
+
+// Malha de teste criada com a nova primitiva esférica do Engine.
+std::shared_ptr<Mesh> createTestSphere()
+{
+    constexpr float radius = 0.5f;
+    constexpr unsigned int sectors = 32;
+    constexpr unsigned int stacks = 16;
+
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    if (!shapes::sphere(radius, sectors, stacks, vertices, indices))
+        return nullptr;
 
     auto mesh = std::make_shared<Mesh>();
     if (!mesh->createIndexed(vertices, indices))
         return nullptr;
 
     Material material;
-    material.baseColorFactor = glm::vec4(0.20f, 0.68f, 0.86f, 1.0f);
+    // O Renderer fornece default.png como textura fallback para malhas sem diffuse.
+    // Branco evita tingir a textura com a cor do material.
+    material.baseColorFactor = glm::vec4(1.0f);
     material.metallicFactor = 0.0f;
     material.roughnessFactor = 0.72f;
     mesh->setMaterial(material);
@@ -95,7 +92,17 @@ DynamisApplication::DynamisApplication()
 
 bool DynamisApplication::onInitialize()
 {
-    // Mantém a iluminação ativa, mas oculta o cubo indicador da luz.
+    // Iluminação de laboratório: a luz direcional ilumina o piso de forma
+    // uniforme, sem perder intensidade com a distância.
+    light.type = LightType::Directional;
+    light.position = glm::vec3(5.0f, 10.0f, 5.0f);
+    light.target = glm::vec3(0.0f, 0.0f, 0.0f);
+    light.intensity = 1.40f;
+
+    // Um pouco mais de iluminação ambiente suaviza as faces menos iluminadas.
+    renderer.ambientStrength = 0.42f;
+
+    // Mantém a iluminação ativa, mas oculta o marcador da luz.
     renderer.showLightMarker = false;
 
     if (!renderer.init())
@@ -113,13 +120,26 @@ bool DynamisApplication::onInitialize()
         return false;
     }
 
-    auto testCube = createTestCube();
-    if (!testCube || !scene.addMesh(std::move(testCube), "Dynamis Cube"))
+    auto ground = createGroundPlane();
+    if (!ground || !scene.addMesh(std::move(ground), "Dynamis Ground"))
     {
-        std::cout << "Falha ao criar o objeto de teste do Dynamis." << std::endl;
+        std::cout << "Falha ao criar o chão procedural do Dynamis." << std::endl;
         return false;
     }
 
+    auto testSphere = createTestSphere();
+    Transform sphereTransform;
+    sphereTransform.move({0.0f, 0.5f, 0.0f});
+
+    if (!testSphere || !scene.addMesh(
+            std::move(testSphere), "Dynamis Sphere", sphereTransform))
+    {
+        std::cout << "Falha ao criar a esfera de teste do Dynamis." << std::endl;
+        return false;
+    }
+
+    const glm::vec3 cameraTarget(0.0f, 0.5f, 0.0f);
+    camera.orientation = glm::normalize(cameraTarget - camera.position);
     camera.setViewportSize(window.getWidth(), window.getHeight());
     return true;
 }
