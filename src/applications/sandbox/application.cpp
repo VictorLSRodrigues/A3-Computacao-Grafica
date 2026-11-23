@@ -161,62 +161,55 @@ void SandboxApplication::renderUI()
     hud.draw(
         ui,
         window,
-        makeEnvironmentInfo(scene, camera, light, editor, selectedModelName)
-    );
+        makeEnvironmentInfo(scene, camera, light, editor, selectedModelName));
 
     // Desenha o menu.
     menu.draw(
-    window,
-    ui,
-    renderer,
-    camera,
-    light,
+        window,
+        ui,
+        renderer,
+        camera,
+        light,
 
-    // Inicialização do DOOM.
-    [this]()
-    {
-        startDoom();
-    },
-
-    // Exportação manual da cena para a pasta data.
-    [this](const std::string &sceneName)
-    {
-        const std::filesystem::path scenePath =
-            std::filesystem::path(SCENE_EXPORT_DIR) / (sceneName + ".json");
-        if (!scene.saveTransforms(scenePath.string(), light))
+        // Inicialização do DOOM.
+        [this]()
         {
-            std::cerr << "Falha ao exportar a cena para "
-                      << scenePath.string() << "."
-                      << std::endl;
-            return false;
-        }
+            startDoom();
+        },
 
-        return true;
-    },
-
-    // Restauração completa da cena.
-    [this]()
-    {
-        if (!scene.resetToDefaults())
+        // Salvar uma cena com nome próprio.
+        [this](const std::string &name)
         {
-            std::cerr << "Falha ao restaurar os objetos da cena."
-                      << std::endl;
-            return;
-        }
+            const std::filesystem::path sceneDirectory =
+                std::filesystem::path(SCENE_STATE_PATH).parent_path();
 
-        editor.resetForSceneDefaults();
-        light.resetProperties();
+            const std::filesystem::path sceneFile =
+                sceneDirectory / (name + ".json");
 
-        selectedModelName = "Todos";
+            return scene.saveTransforms(sceneFile.string(), light);
+        },
 
-        // Salva imediatamente o estado restaurado no computador.
-        if (!scene.saveTransforms(SCENE_STATE_PATH, light))
+        // Restauração completa da cena.
+        [this]()
         {
-            std::cerr << "Falha ao salvar o estado restaurado."
-                      << std::endl;
-        }
-    }
-);
+            if (!scene.resetToDefaults())
+            {
+                std::cerr << "Falha ao restaurar os objetos da cena."
+                          << std::endl;
+                return;
+            }
+
+            editor.resetForSceneDefaults();
+            light.resetProperties();
+
+            selectedModelName = "Todos";
+
+            if (!scene.saveTransforms(SCENE_STATE_PATH, light))
+            {
+                std::cerr << "Falha ao salvar o estado restaurado."
+                          << std::endl;
+            }
+        });
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.
