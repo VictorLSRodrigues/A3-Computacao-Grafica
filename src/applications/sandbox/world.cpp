@@ -1,10 +1,13 @@
+
 #include "world.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/geometry/shapes.h"
@@ -12,8 +15,9 @@
 
 bool buildWorld(Scene &scene)
 {
-    // Cria a pirâmide que já fazia parte da cena de demonstração.
+    // Cria a pirâmide original da cena.
     auto pyramidMesh = std::make_shared<Mesh>();
+
     if (!pyramidMesh->createIndexed(
             shapes::pyramid(),
             shapes::pyramidIndices(),
@@ -45,46 +49,48 @@ bool buildWorld(Scene &scene)
     pyramidMesh->addTexture(std::move(diffuse));
     pyramidMesh->addTexture(std::move(specular));
 
-    // Grid Plane procedural.
-auto gridMesh = std::make_shared<Mesh>();
+    // =========================================================
+    // GRID PLANE
+    // =========================================================
 
-std::vector<Vertex> gridVertices;
-std::vector<unsigned int> gridIndices;
+    auto gridMesh = std::make_shared<Mesh>();
 
-// Cria um plano de 20x20 unidades, subdividido em 40x40 segmentos.
-if (!shapes::gridPlane(
-        20.0f,
-        20.0f,
-        40,
-        40,
-        gridVertices,
-        gridIndices))
-{
-    std::cerr << "Falha ao gerar o Grid Plane!" << std::endl;
-    return false;
-}
+    std::vector<Vertex> gridVertices;
+    std::vector<unsigned int> gridIndices;
 
-// Cria a malha indexada utilizando os vértices estruturados.
-if (!gridMesh->createIndexed(
-        gridVertices,
-        gridIndices,
-        GL_TRIANGLES))
-{
-    std::cerr << "Falha ao criar a malha do Grid Plane!" << std::endl;
-    return false;
-}
+    if (!shapes::gridPlane(
+            20.0f,
+            20.0f,
+            40,
+            40,
+            gridVertices,
+            gridIndices))
+    {
+        std::cerr << "Falha ao gerar o Grid Plane!" << std::endl;
+        return false;
+    }
 
-// Adiciona o plano à cena.
-Scene::Object* grid = scene.addMesh(gridMesh, "grid_plane");
+    if (!gridMesh->createIndexed(
+            gridVertices,
+            gridIndices,
+            GL_TRIANGLES))
+    {
+        std::cerr << "Falha ao criar a malha do Grid Plane!"
+                  << std::endl;
+        return false;
+    }
 
-if (!grid)
-    return false;
+    Scene::Object *grid = scene.addMesh(gridMesh, "grid_plane");
 
-// Posiciona o plano abaixo dos objetos.
-grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
+    if (!grid)
+        return false;
 
-    // Atalho para carregar cada GLB com nome, posição e escala definidos.
-    // Os caminhos são relativos à pasta assets/ do projeto.
+    grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
+
+    // =========================================================
+    // FUNÇÃO PARA ADICIONAR MODELOS GLB
+    // =========================================================
+
     const auto addModel = [&scene](
         const std::string &fileName,
         const std::string &objectName,
@@ -92,9 +98,12 @@ grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
         float scale) -> bool
     {
         const std::string modelPath =
-            std::string(ASSETS_DIR) + "sandbox/models/" + fileName;
+            std::string(ASSETS_DIR) +
+            "sandbox/models/" +
+            fileName;
 
         Scene::Object *object = scene.addModel(modelPath);
+
         if (!object)
         {
             std::cerr << "Falha ao adicionar o modelo: "
@@ -105,11 +114,17 @@ grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
         object->name = objectName;
         object->transform.move(position);
         object->transform.setScale(glm::vec3(scale));
+
+        std::cout << "[WORLD] Modelo carregado: "
+                  << objectName << std::endl;
+
         return true;
     };
 
-    // Uma única instância de cada modelo solicitado.
-    // As posições e escalas iniciais distribuem os objetos diante da câmera.
+    // =========================================================
+    // OBJETOS DA MESA - PRIMEIRA FILEIRA
+    // =========================================================
+
     if (!addModel(
             "Tablet_Vdd.glb",
             "tablet",
@@ -159,8 +174,38 @@ grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
             0.25f))
         return false;
 
-    // Mantém a pirâmide original da cena como objeto de demonstração.
-    Scene::Object *pyramid = scene.addMesh(pyramidMesh, "pyramid");
+    // =========================================================
+    // NOVOS OBJETOS - SEGUNDA FILEIRA
+    // =========================================================
+
+    if (!addModel(
+            "Foto.glb",
+            "foto",
+            glm::vec3(-1.35f, 0.10f, -3.25f),
+            0.20f))
+        return false;
+
+    if (!addModel(
+            "Porta caneta.glb",
+            "porta_caneta",
+            glm::vec3(-0.30f, 0.10f, -3.25f),
+            0.20f))
+        return false;
+
+    if (!addModel(
+            "Suculenta_2.glb",
+            "suculenta",
+            glm::vec3(0.75f, 0.10f, -3.25f),
+            0.20f))
+        return false;
+
+    // =========================================================
+    // PIRÂMIDE ORIGINAL
+    // =========================================================
+
+    Scene::Object *pyramid =
+        scene.addMesh(pyramidMesh, "pyramid");
+
     if (!pyramid)
     {
         std::cout << "Falha ao adicionar a piramide na cena!"
@@ -171,7 +216,7 @@ grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
     pyramid->transform.move(glm::vec3(1.8f, -0.55f, -3.0f));
     pyramid->transform.setScale(glm::vec3(0.35f));
 
-    // A pirâmide gira em torno do eixo Y, 90 graus por segundo.
+    // A pirâmide gira em torno do eixo Y.
     pyramid->update = [](Transform &transform, float deltaTime)
     {
         glm::vec3 newRotation = transform.rotation();
@@ -186,6 +231,10 @@ grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
     return true;
 }
 
+// =============================================================
+// ATALHOS PARA VISUALIZAR OS MODELOS
+// =============================================================
+
 void handleModelShortcuts(
     const Window &window,
     Scene &scene,
@@ -196,49 +245,70 @@ void handleModelShortcuts(
         if (scene.showOnly("tablet"))
             viewedModel = "tablet";
         else
-            std::cout << "Objeto tablet nao encontrado na cena." << std::endl;
+            std::cout << "Objeto tablet nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_2))
     {
         if (scene.showOnly("mesa"))
             viewedModel = "mesa";
         else
-            std::cout << "Objeto mesa nao encontrado na cena." << std::endl;
+            std::cout << "Objeto mesa nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_3))
     {
         if (scene.showOnly("caderno"))
             viewedModel = "caderno";
         else
-            std::cout << "Objeto caderno nao encontrado na cena." << std::endl;
+            std::cout << "Objeto caderno nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_4))
     {
         if (scene.showOnly("caneca"))
             viewedModel = "caneca";
         else
-            std::cout << "Objeto caneca nao encontrado na cena." << std::endl;
+            std::cout << "Objeto caneca nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_5))
     {
         if (scene.showOnly("celular"))
             viewedModel = "celular";
         else
-            std::cout << "Objeto celular nao encontrado na cena." << std::endl;
+            std::cout << "Objeto celular nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_6))
     {
         if (scene.showOnly("lapis"))
             viewedModel = "lapis";
         else
-            std::cout << "Objeto lapis nao encontrado na cena." << std::endl;
+            std::cout << "Objeto lapis nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_7))
     {
         if (scene.showOnly("lampada"))
             viewedModel = "lampada";
         else
-            std::cout << "Objeto lampada nao encontrado na cena." << std::endl;
+            std::cout << "Objeto lampada nao encontrado." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_F8))
+    {
+        if (scene.showOnly("foto"))
+            viewedModel = "foto";
+        else
+            std::cout << "Objeto foto nao encontrado." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_F9))
+    {
+        if (scene.showOnly("porta_caneta"))
+            viewedModel = "porta_caneta";
+        else
+            std::cout << "Objeto porta-caneta nao encontrado." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_F10))
+    {
+        if (scene.showOnly("suculenta"))
+            viewedModel = "suculenta";
+        else
+            std::cout << "Objeto suculenta nao encontrado." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_0))
     {
