@@ -316,6 +316,61 @@ Scene::Object *Scene::addMesh(
     return &objects.back();
 }
 
+void Scene::captureDefaults()
+{
+    defaultStates.clear();
+    defaultStates.reserve(objects.size());
+
+    for (const Object& object : objects)
+    {
+        defaultStates.push_back({
+            object.model,
+            object.mesh,
+            object.transform,
+            object.visible
+        });
+    }
+
+    std::cout << "Estado original da cena capturado: "
+              << defaultStates.size()
+              << " objetos." << std::endl;
+}
+
+bool Scene::resetToDefaults()
+{
+    if (defaultStates.size() != objects.size())
+    {
+        std::cerr
+            << "Nao foi possivel restaurar a cena: "
+            << "quantidade de objetos diferente do estado original."
+            << std::endl;
+        return false;
+    }
+
+    std::size_t index = 0;
+
+    for (Object& object : objects)
+    {
+        const ObjectDefaultState& original =
+            defaultStates[index++];
+
+        // Recupera os recursos originais, sem extrusões.
+        object.model = original.model;
+        object.mesh = original.mesh;
+
+        // Recupera as transformações iniciais.
+        object.transform = original.transform;
+
+        // Recupera a visibilidade original.
+        object.visible = original.visible;
+    }
+
+    std::cout << "Cena restaurada para os padroes originais."
+              << std::endl;
+
+    return true;
+}
+
 void Scene::update(float deltaTime)
 {
     for (Object &object : objects)

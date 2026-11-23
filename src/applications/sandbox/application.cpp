@@ -63,6 +63,9 @@ bool SandboxApplication::onInitialize()
     if (!buildWorld(scene))
         return false;
 
+        // Registra a cena original antes de carregar os dados locais.
+        scene.captureDefaults();
+
     // Depois recupera as transformações salvas anteriormente.
     if (!scene.loadTransforms(SCENE_STATE_PATH))
     {
@@ -158,7 +161,41 @@ void SandboxApplication::renderUI()
     );
 
     // Desenha o menu.
-    menu.draw(window, ui, renderer, camera, light, [this]() { startDoom(); });
+    menu.draw(
+    window,
+    ui,
+    renderer,
+    camera,
+    light,
+
+    // Inicialização do DOOM.
+    [this]()
+    {
+        startDoom();
+    },
+
+    // Restauração completa da cena.
+    [this]()
+    {
+        if (!scene.resetToDefaults())
+        {
+            std::cerr << "Falha ao restaurar os objetos da cena."
+                      << std::endl;
+            return;
+        }
+
+        editor.resetForSceneDefaults();
+
+        selectedModelName = "Todos";
+
+        // Salva imediatamente o estado restaurado no computador.
+        if (!scene.saveTransforms(SCENE_STATE_PATH))
+        {
+            std::cerr << "Falha ao salvar o estado restaurado."
+                      << std::endl;
+        }
+    }
+);
 
     // Exibe as ferramentas somente no modo de edição
     // e quando o menu estiver fechado.

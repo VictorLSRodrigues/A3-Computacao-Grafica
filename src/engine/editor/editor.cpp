@@ -820,6 +820,37 @@ void Editor::restorePendingExtrusion()
     pendingExtrusionUndoValid = false;
 }
 
+void Editor::resetForSceneDefaults()
+{
+    // Descarta operações antigas do Ctrl + Z.
+    undoHistory.clear();
+
+    pendingExtrusionUndo = UndoEntry{};
+    pendingExtrusionUndoValid = false;
+
+    // Limpa a seleção.
+    selectedObject = nullptr;
+    selectedFace = Scene::FaceSelection{};
+    lightSelected = false;
+
+    // Cancela os estados dos gizmos.
+    draggingGizmo = false;
+    draggedAxis = -1;
+
+    draggingRotationGizmo = false;
+    rotatingAxis = -1;
+
+    draggingScaleGizmo = false;
+    scalingAxis = -1;
+
+    draggingExtrusionGizmo = false;
+    extrusionDistance = 0.0f;
+    extrusionChanged = false;
+
+    draggedObject = nullptr;
+    draggedLight = false;
+}
+
 void Editor::drawGizmos()
 {
     // Desenha a ferramenta de transformação selecionada.

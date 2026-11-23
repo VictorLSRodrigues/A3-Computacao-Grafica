@@ -23,14 +23,15 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
-                const std::function<void()>& launchDoom)
+void Menu::draw(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light, const std::function<void()> &launchDoom, const std::function<void()> &restoreDefaults)
 {
     if (!open)
         return;
 
     if (page == Page::Options)
-        drawOptions(window, ui, renderer, camera, light, launchDoom);
+        drawOptions(
+            window, ui, renderer, camera, light,
+            launchDoom, restoreDefaults);
     else
         drawMain(window, ui);
 }
@@ -74,8 +75,7 @@ void Menu::drawMain(const Window &window, UI &ui)
         window.close();
 }
 
-void Menu::drawOptions(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light,
-                       const std::function<void()>& launchDoom)
+void Menu::drawOptions(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light, const std::function<void()> &launchDoom, const std::function<void()> &restoreDefaults)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -278,15 +278,19 @@ void Menu::drawOptions(Window &window, UI &ui, Renderer &renderer, Camera &camer
     const float backX = x + panelW - 28.0f - backW;
     const float restoreX = backX - actionGap - restoreW;
 
-    if (sandbox_ui::button(ui, "Restaurar padrões", restoreX, footerY - 2.0f,
-                           restoreW, 36.0f, ButtonTone::Neutral))
+    if (sandbox_ui::button(
+            ui, "Restaurar padrões",
+            restoreX, footerY - 2.0f,
+            restoreW, 36.0f, ButtonTone::Neutral))
     {
         renderer.resetSettings();
         camera.resetSettings();
         light.resetProperties();
-        windowModeChangeFailed = !window.setMode(WindowMode::Fullscreen);
+
+        windowModeChangeFailed =
+            !window.setMode(WindowMode::Fullscreen);
+
+        if (restoreDefaults)
+            restoreDefaults();
     }
-    if (sandbox_ui::button(ui, "Voltar", backX, footerY - 2.0f,
-                           backW, 36.0f, ButtonTone::Primary))
-        page = Page::Main;
 }

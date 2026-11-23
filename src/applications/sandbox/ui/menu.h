@@ -21,12 +21,19 @@ private:
     bool windowModeChangeFailed = false;
 
     void drawMain(const Window& window, UI& ui);
-    void drawOptions(Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light,
-                     const std::function<void()>& launchDoom);
+    void drawOptions(Window& window,UI& ui,Renderer& renderer,Camera& camera,Light& light,const std::function<void()>& launchDoom,const std::function<void()>& restoreDefaults);
 
 public:
-    void update(const Window& window); // ESC abre, fecha ou retorna à página anterior.
-    void draw(Window& window, UI& ui, Renderer& renderer, Camera& camera, Light& light,
-              const std::function<void()>& launchDoom);
+    void update(const Window& window);
+
+    void draw(
+        Window& window,
+        UI& ui,
+        Renderer& renderer,
+        Camera& camera,
+        Light& light,
+        const std::function<void()>& launchDoom,
+        const std::function<void()>& restoreDefaults);
+
     bool isOpen() const { return open; }
 };

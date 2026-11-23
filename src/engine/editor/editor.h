@@ -53,6 +53,9 @@ public:
     // Registra alterações da luz feitas diretamente pela interface.
     void recordLightChange(const Light &previousState);
 
+    // Descarta seleção e histórico após restaurar os padrões da cena.
+    void resetForSceneDefaults();
+
     bool isEditing() const { return editingMode; }
     bool isLightSelected() const { return lightSelected; }
 

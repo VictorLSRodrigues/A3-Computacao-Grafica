@@ -63,6 +63,12 @@ public:
     Object *addMesh(std::shared_ptr<Mesh> mesh, const std::string &name = "",
                     const Transform &transform = Transform{});
 
+    // Captura o estado original dos objetos após a construção da cena.
+    void captureDefaults();
+
+    // Restaura modelos, malhas, visibilidade e transformações originais.
+    bool resetToDefaults();
+
     // Retorna o objeto mais próximo atingido pelo raio, ou nullptr se nenhum for atingido.
     Object *pickObject(
         const glm::vec3 &rayOrigin,
@@ -109,6 +115,16 @@ public:
     bool loadTransforms(const std::string &filePath);
 
 private:
+    struct ObjectDefaultState
+    {
+        std::shared_ptr<Model> model;
+        std::shared_ptr<Mesh> mesh;
+        Transform transform;
+        bool visible = true;
+    };
+
     std::map<std::string, std::shared_ptr<Model>> modelCache;
-    std::deque<Object> objects; // Mantém válidos os ponteiros retornados ao adicionar objetos.
+    std::deque<Object> objects;
+
+    std::vector<ObjectDefaultState> defaultStates;
 };

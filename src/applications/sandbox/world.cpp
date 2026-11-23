@@ -4,7 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <utility>
-
+#include <vector>
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/geometry/shapes.h"
 #include "engine/graphics/resources/texture.h"
