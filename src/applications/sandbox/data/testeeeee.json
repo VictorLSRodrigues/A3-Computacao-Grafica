@@ -57,7 +57,7 @@
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Tablet_Vdd.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/Tablet_Vdd.glb",
             "visible": true
         },
         {
@@ -65,7 +65,7 @@
             "object_index": 2,
             "position": [
                 0.0,
-                -0.8500000238418579,
+                0.6178160905838013,
                 -3.0
             ],
             "rotation": [
@@ -78,7 +78,7 @@
                 0.3499999940395355,
                 0.3499999940395355
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Mesa.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/Mesa.glb",
             "visible": true
         },
         {
@@ -99,7 +99,7 @@
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Caderno.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/Caderno.glb",
             "visible": true
         },
         {
@@ -120,7 +120,7 @@
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Caneca.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/Caneca.glb",
             "visible": true
         },
         {
@@ -141,7 +141,7 @@
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/celular.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/celular.glb",
             "visible": true
         },
         {
@@ -162,7 +162,7 @@
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Lapis.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/Lapis.glb",
             "visible": true
         },
         {
@@ -183,7 +183,7 @@
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Lampada.glb",
+            "source_path": "C:/Users/user/Documents/A3/A3-Computacao-Grafica/assets/sandbox/models/Lampada.glb",
             "visible": true
         },
         {
@@ -196,7 +196,7 @@
             ],
             "rotation": [
                 0.0,
-                70.60658264160156,
+                306.97137451171875,
                 0.0
             ],
             "scale": [

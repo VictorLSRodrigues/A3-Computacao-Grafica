@@ -165,6 +165,13 @@ namespace
         return true;
     }
 
+    std::string modelFileName(const std::string& path)
+    {
+        std::string portablePath = path;
+        std::replace(portablePath.begin(), portablePath.end(), '\\', '/');
+        return std::filesystem::path(portablePath).filename().string();
+    }
+
     // Gera o registro JSON de uma geometria que já recebeu extrusão.
     bool appendExtrusionJson(
         json& extrusions,
@@ -481,7 +488,9 @@ bool Scene::loadTransforms(const std::string& filePath)
             {
                 targetObject = &objects[objectIndex];
                 if (!sourcePath.empty() &&
-                    targetObject->sourcePath != sourcePath)
+                    targetObject->sourcePath != sourcePath &&
+                    modelFileName(targetObject->sourcePath) !=
+                        modelFileName(sourcePath))
                     targetObject = nullptr;
             }
 
@@ -496,10 +505,28 @@ bool Scene::loadTransforms(const std::string& filePath)
             }
 
             // Instancia dinamica de modelo: carrega o recurso e preserva o nome
-            // personalizado da instancia gravada no arquivo.
+            // personalizado da instancia gravada no arquivo. Caminhos absolutos
+            // de outros computadores sao resolvidos contra os assets do projeto.
             if (!targetObject && !sourcePath.empty())
             {
-                targetObject = addModel(sourcePath);
+                std::string resolvedSourcePath = sourcePath;
+                std::error_code fileError;
+                if (!std::filesystem::is_regular_file(
+                        resolvedSourcePath, fileError) ||
+                    fileError)
+                {
+                    fileError.clear();
+                    const std::filesystem::path assetPath =
+                        std::filesystem::path(
+                            std::string(ASSETS_DIR) + "sandbox/models") /
+                        modelFileName(sourcePath);
+                    if (std::filesystem::is_regular_file(
+                            assetPath, fileError) &&
+                        !fileError)
+                        resolvedSourcePath = assetPath.string();
+                }
+
+                targetObject = addModel(resolvedSourcePath);
                 if (targetObject)
                     targetObject->name = name;
             }

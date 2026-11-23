@@ -181,7 +181,7 @@ void SandboxApplication::renderUI()
         [this](const std::string &name)
         {
             const std::filesystem::path sceneDirectory =
-                std::filesystem::path(SCENE_STATE_PATH).parent_path();
+                std::filesystem::path(SCENE_EXPORT_DIR);
 
             const std::filesystem::path sceneFile =
                 sceneDirectory / (name + ".json");

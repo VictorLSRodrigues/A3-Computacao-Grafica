@@ -11,6 +11,9 @@
 #ifndef SANDBOX_DATA_DIR
 #define SANDBOX_DATA_DIR "."
 #endif
+#ifndef SANDBOX_SCENE_DATA_DIR
+#define SANDBOX_SCENE_DATA_DIR "src/applications/sandbox/data"
+#endif
 
 using sandbox_ui::ButtonTone;
 
@@ -422,11 +425,11 @@ void Menu::drawScenes(
         innerW,
         "ROTOR / SANDBOX",
         "Carregar cena",
-        "Cenários encontrados na pasta user_data");
+        "Cenários encontrados na pasta data");
 
     // Diretório de dados que também é utilizado pelo application.cpp.
     const std::filesystem::path sceneDirectory =
-        std::filesystem::path(SANDBOX_DATA_DIR);
+        std::filesystem::path(SANDBOX_SCENE_DATA_DIR);
     std::vector<std::filesystem::path> sceneFiles;
 
     std::error_code directoryError;
@@ -497,8 +500,8 @@ void Menu::drawScenes(
     if (sceneFiles.empty())
     {
         const std::string message = directoryError
-                                        ? "Não foi possível ler a pasta user_data."
-                                        : "Nenhum cenário .json encontrado em user_data.";
+                                        ? "Não foi possível ler a pasta data."
+                                        : "Nenhum cenário .json encontrado em data.";
 
         sandbox_ui::drawCenteredText(
             ui,
