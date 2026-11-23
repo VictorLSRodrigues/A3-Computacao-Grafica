@@ -45,6 +45,44 @@ bool buildWorld(Scene &scene)
     pyramidMesh->addTexture(std::move(diffuse));
     pyramidMesh->addTexture(std::move(specular));
 
+    // Grid Plane procedural.
+auto gridMesh = std::make_shared<Mesh>();
+
+std::vector<Vertex> gridVertices;
+std::vector<unsigned int> gridIndices;
+
+// Cria um plano de 20x20 unidades, subdividido em 40x40 segmentos.
+if (!shapes::gridPlane(
+        20.0f,
+        20.0f,
+        40,
+        40,
+        gridVertices,
+        gridIndices))
+{
+    std::cerr << "Falha ao gerar o Grid Plane!" << std::endl;
+    return false;
+}
+
+// Cria a malha indexada utilizando os vértices estruturados.
+if (!gridMesh->createIndexed(
+        gridVertices,
+        gridIndices,
+        GL_TRIANGLES))
+{
+    std::cerr << "Falha ao criar a malha do Grid Plane!" << std::endl;
+    return false;
+}
+
+// Adiciona o plano à cena.
+Scene::Object* grid = scene.addMesh(gridMesh, "grid_plane");
+
+if (!grid)
+    return false;
+
+// Posiciona o plano abaixo dos objetos.
+grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
+
     // Atalho para carregar cada GLB com nome, posição e escala definidos.
     // Os caminhos são relativos à pasta assets/ do projeto.
     const auto addModel = [&scene](
