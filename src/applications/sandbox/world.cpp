@@ -3,15 +3,16 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <utility>
-#include <vector>
+
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/geometry/shapes.h"
 #include "engine/graphics/resources/texture.h"
 
 bool buildWorld(Scene &scene)
 {
-    // Cada vértice guarda posição (3), cor (3), coordenadas da textura (2) e normal (3).
+    // Cria a pirâmide que já fazia parte da cena de demonstração.
     auto pyramidMesh = std::make_shared<Mesh>();
     if (!pyramidMesh->createIndexed(
             shapes::pyramid(),
@@ -28,8 +29,15 @@ bool buildWorld(Scene &scene)
     Texture specular;
 
     if (!diffuse.load(ASSETS_DIR "sandbox/textures/terra.png") ||
-        !specular.load(ASSETS_DIR "sandbox/textures/terraSpecular.png", true, TextureColorSpace::Linear))
+        !specular.load(
+            ASSETS_DIR "sandbox/textures/terraSpecular.png",
+            true,
+            TextureColorSpace::Linear))
+    {
+        std::cout << "Falha ao carregar as texturas da piramide!"
+                  << std::endl;
         return false;
+    }
 
     diffuse.setType("diffuse");
     specular.setType("specular");
@@ -37,80 +45,162 @@ bool buildWorld(Scene &scene)
     pyramidMesh->addTexture(std::move(diffuse));
     pyramidMesh->addTexture(std::move(specular));
 
-    // Os modelos são opcionais: se algum falhar, a cena continua sem ele.
-    if (Scene::Object *sacredMonkey = scene.addModel(ASSETS_DIR "sandbox/models/macaco_sagrado.glb"))
+    // Atalho para carregar cada GLB com nome, posição e escala definidos.
+    // Os caminhos são relativos à pasta assets/ do projeto.
+    const auto addModel = [&scene](
+        const std::string &fileName,
+        const std::string &objectName,
+        const glm::vec3 &position,
+        float scale) -> bool
     {
-        sacredMonkey->name = "macaco_sagrado";
-        sacredMonkey->transform.move(
-            glm::vec3(0.75f, 0.6f, -1.5f));
+        const std::string modelPath =
+            std::string(ASSETS_DIR) + "sandbox/models/" + fileName;
 
-        sacredMonkey->transform.setScale(
-            glm::vec3(0.5f));
-    }
+        Scene::Object *object = scene.addModel(modelPath);
+        if (!object)
+        {
+            std::cerr << "Falha ao adicionar o modelo: "
+                      << modelPath << std::endl;
+            return false;
+        }
 
-    if (Scene::Object *lampada = scene.addModel(ASSETS_DIR "sandbox/models/lampada.glb"))
-    {
-        lampada->name = "lampada";
-        lampada->transform.move(
-            glm::vec3(-0.75f, -1.48f, -1.5f));
+        object->name = objectName;
+        object->transform.move(position);
+        object->transform.setScale(glm::vec3(scale));
+        return true;
+    };
 
-        lampada->transform.setScale(
-            glm::vec3(0.5f));
-    }
-
-    //
-    if (Scene::Object *multi = scene.addModel(ASSETS_DIR "sandbox/models/Caneta.glb"))
-    {
-        multi->name = "multi";
-        const float multiScale = 0.1f; // ajuste aqui: menor = modelo menor
-        multi->transform.move(
-            glm::vec3(-1.5f, 0.0f, 0.0f));
-
-        multi->transform.setScale(
-            glm::vec3(multiScale));
-    }
-
-    Scene::Object *pyramid = scene.addMesh(pyramidMesh, "pyramid");
-    if (!pyramid)
+    // Uma única instância de cada modelo solicitado.
+    // As posições e escalas iniciais distribuem os objetos diante da câmera.
+    if (!addModel(
+            "Tablet Vdd.glb",
+            "tablet",
+            glm::vec3(-1.50f, 0.15f, -2.5f),
+            0.25f))
         return false;
 
+    if (!addModel(
+            "Mesa.glb",
+            "mesa",
+            glm::vec3(0.0f, -0.85f, -3.0f),
+            0.35f))
+        return false;
+
+    if (!addModel(
+            "Caderno.glb",
+            "caderno",
+            glm::vec3(-0.95f, -0.10f, -2.5f),
+            0.25f))
+        return false;
+
+    if (!addModel(
+            "Caneca.glb",
+            "caneca",
+            glm::vec3(-0.35f, 0.10f, -2.5f),
+            0.20f))
+        return false;
+
+    if (!addModel(
+            "celular.glb",
+            "celular",
+            glm::vec3(0.30f, 0.10f, -2.5f),
+            0.20f))
+        return false;
+
+    if (!addModel(
+            "Lapis.glb",
+            "lapis",
+            glm::vec3(0.85f, 0.10f, -2.5f),
+            0.20f))
+        return false;
+
+    if (!addModel(
+            "Lampada.glb",
+            "lampada",
+            glm::vec3(1.45f, 0.20f, -2.5f),
+            0.25f))
+        return false;
+
+    // Mantém a pirâmide original da cena como objeto de demonstração.
+    Scene::Object *pyramid = scene.addMesh(pyramidMesh, "pyramid");
+    if (!pyramid)
+    {
+        std::cout << "Falha ao adicionar a piramide na cena!"
+                  << std::endl;
+        return false;
+    }
+
+    pyramid->transform.move(glm::vec3(1.8f, -0.55f, -3.0f));
+    pyramid->transform.setScale(glm::vec3(0.35f));
+
     // A pirâmide gira em torno do eixo Y, 90 graus por segundo.
-    pyramid->update = [](Transform& transform, float deltaTime)
-{
-    glm::vec3 newRotation = transform.rotation();
+    pyramid->update = [](Transform &transform, float deltaTime)
+    {
+        glm::vec3 newRotation = transform.rotation();
 
-    newRotation.y = std::fmod(
-        newRotation.y + 90.0f * deltaTime,
-        360.0f
-    );
+        newRotation.y = std::fmod(
+            newRotation.y + 90.0f * deltaTime,
+            360.0f);
 
-    transform.setRotation(newRotation);
-};
+        transform.setRotation(newRotation);
+    };
+
     return true;
 }
 
-void handleModelShortcuts(const Window &window, Scene &scene, std::string &viewedModel)
+void handleModelShortcuts(
+    const Window &window,
+    Scene &scene,
+    std::string &viewedModel)
 {
     if (window.keyPressed(GLFW_KEY_1))
     {
-        if (scene.showOnly("macaco_sagrado"))
-            viewedModel = "macaco";
+        if (scene.showOnly("tablet"))
+            viewedModel = "tablet";
         else
-            std::cout << "Objeto macaco nao encontrado na cena." << std::endl;
+            std::cout << "Objeto tablet nao encontrado na cena." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_2))
     {
-        if (scene.showOnly("multi"))
-            viewedModel = "multi";
+        if (scene.showOnly("mesa"))
+            viewedModel = "mesa";
         else
-            std::cout << "Objeto multi nao encontrado na cena." << std::endl;
+            std::cout << "Objeto mesa nao encontrado na cena." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_3))
     {
-        if (scene.showOnly("pyramid"))
-            viewedModel = "pyramid";
+        if (scene.showOnly("caderno"))
+            viewedModel = "caderno";
         else
-            std::cout << "Objeto pyramid nao encontrado na cena." << std::endl;
+            std::cout << "Objeto caderno nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_4))
+    {
+        if (scene.showOnly("caneca"))
+            viewedModel = "caneca";
+        else
+            std::cout << "Objeto caneca nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_5))
+    {
+        if (scene.showOnly("celular"))
+            viewedModel = "celular";
+        else
+            std::cout << "Objeto celular nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_6))
+    {
+        if (scene.showOnly("lapis"))
+            viewedModel = "lapis";
+        else
+            std::cout << "Objeto lapis nao encontrado na cena." << std::endl;
+    }
+    else if (window.keyPressed(GLFW_KEY_7))
+    {
+        if (scene.showOnly("lampada"))
+            viewedModel = "lampada";
+        else
+            std::cout << "Objeto lampada nao encontrado na cena." << std::endl;
     }
     else if (window.keyPressed(GLFW_KEY_0))
     {
