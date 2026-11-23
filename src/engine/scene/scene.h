@@ -42,6 +42,21 @@ public:
 
             return nullptr;
         }
+
+        // Centro visual em coordenadas de mundo; não presume que a origem do Blender
+        // esteja no centro da geometria.
+        glm::vec3 visualCenter() const
+        {
+            const BoundingBox *bounds = boundingBox();
+            if (!bounds || !bounds->valid)
+                return transform.position();
+
+            const glm::vec3 localCenter =
+                (bounds->min + bounds->max) * 0.5f;
+
+            return glm::vec3(
+                transform.matrix() * glm::vec4(localCenter, 1.0f));
+        }
     };
 
     // Identifica uma face dentro de uma malha de um objeto (resultado de pickFace).

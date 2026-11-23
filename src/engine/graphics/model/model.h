@@ -106,6 +106,14 @@ public:
         return boundingBox;
     }
 
+    // Centro da geometria no espaço local do objeto, considerando os nós do glTF/GLB.
+    glm::vec3 getBoundingCenter() const
+    {
+        return boundingBox.valid
+            ? (boundingBox.min + boundingBox.max) * 0.5f
+            : glm::vec3(0.0f);
+    }
+
 private:
     // Malhas e transformações internas prontas para renderização.
     std::deque<Mesh> meshes;

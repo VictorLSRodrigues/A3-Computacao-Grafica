@@ -406,28 +406,35 @@ Scene::Object *Scene::pickObject(
         if (!object.visible)
             continue;
 
-        float localRadius = 0.0f;
-
-        if (object.model)
-            localRadius = object.model->getBoundingRadius();
-        else if (object.mesh)
-            localRadius = object.mesh->getGeometry().getBoundingRadius();
-
-        if (localRadius <= 0.0f)
+        const BoundingBox *bounds = object.boundingBox();
+        if (!bounds || !bounds->valid)
             continue;
 
-        // Considera a maior escala aplicada ao objeto.
+        const glm::vec3 localCenter =
+            (bounds->min + bounds->max) * 0.5f;
+
+        // Calcula o raio a partir do centro real da geometria, não da origem
+        // arbitrária que veio do Blender.
+        float localRadius = 0.0f;
+        for (int x = 0; x < 2; ++x)
+            for (int y = 0; y < 2; ++y)
+                for (int z = 0; z < 2; ++z)
+                {
+                    const glm::vec3 corner(
+                        x ? bounds->max.x : bounds->min.x,
+                        y ? bounds->max.y : bounds->min.y,
+                        z ? bounds->max.z : bounds->min.z);
+                    localRadius = std::max(
+                        localRadius, glm::length(corner - localCenter));
+                }
+
         const glm::vec3 scale = glm::abs(object.transform.scale());
-
         const float maxScale = std::max(
-            scale.x,
-            std::max(scale.y, scale.z));
-
+            scale.x, std::max(scale.y, scale.z));
         const float worldRadius = localRadius * maxScale;
 
-        // Teste de interseção entre o raio e a esfera do objeto.
-        const glm::vec3 offset =
-            rayOrigin - object.transform.position();
+        const glm::vec3 worldCenter = object.visualCenter();
+        const glm::vec3 offset = rayOrigin - worldCenter;
 
         const float b = glm::dot(offset, direction);
 

@@ -245,7 +245,7 @@ void Editor::update(bool inputEnabled)
                 case TransformTool::Move:
                 {
                     const glm::vec3 &selectedPosition =
-                        lightSelected ? light.position : selected->transform.position();
+                        lightSelected ? light.position : selected->visualCenter();
 
                     // Primeiro verifica se o clique atingiu uma seta do gizmo.
                     MoveGizmoProjection gizmo;
@@ -278,8 +278,10 @@ void Editor::update(bool inputEnabled)
                             else if (draggedLight)
                                 dragStartLight = light;
 
-                            dragStartPosition =
-                                selectedPosition;
+                            // O deslocamento altera a origem do objeto; o gizmo usa o centro visual.
+                            dragStartPosition = lightSelected
+                                ? light.position
+                                : selected->transform.position();
 
                             draggedWorldAxis =
                                 selectedAxis.worldDirection;
@@ -334,13 +336,13 @@ void Editor::update(bool inputEnabled)
                             if (intersectRayPlane(
                                     camera.position,
                                     rayDirection,
-                                    selected->transform.position(),
+                                    selected->visualCenter(),
                                     selectedRing.worldAxis,
                                     intersection))
                             {
                                 // Guarda a direção inicial do mouse no plano do anel.
                                 rotationStartVector = glm::normalize(
-                                    intersection - selected->transform.position());
+                                    intersection - selected->visualCenter());
 
                                 // Guarda a rotação original do objeto.
                                 rotationStart = selected->transform.rotation();
@@ -449,9 +451,6 @@ void Editor::update(bool inputEnabled)
 
                     break;
                 }
-
-                case TransformTool::Extrude:
-                    break;
                 }
             }
 
@@ -568,12 +567,12 @@ void Editor::update(bool inputEnabled)
                 if (intersectRayPlane(
                         camera.position,
                         rayDirection,
-                        selected->transform.position(),
+                        selected->visualCenter(),
                         rotatingWorldAxis,
                         intersection))
                 {
                     glm::vec3 currentVector =
-                        intersection - selected->transform.position();
+                        intersection - selected->visualCenter();
 
                     if (glm::length(currentVector) > 0.0001f)
                     {
@@ -966,7 +965,7 @@ void Editor::drawMoveGizmo()
         return;
 
     const glm::vec3 &selectedPosition =
-        lightSelected ? light.position : selected->transform.position();
+        lightSelected ? light.position : selected->visualCenter();
 
     MoveGizmoProjection gizmo;
 

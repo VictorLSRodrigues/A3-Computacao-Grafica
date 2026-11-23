@@ -111,7 +111,7 @@ grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
     // Uma única instância de cada modelo solicitado.
     // As posições e escalas iniciais distribuem os objetos diante da câmera.
     if (!addModel(
-            "Tablet Vdd.glb",
+            "Tablet_Vdd.glb",
             "tablet",
             glm::vec3(-1.50f, 0.15f, -2.5f),
             0.25f))

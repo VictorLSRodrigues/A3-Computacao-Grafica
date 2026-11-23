@@ -393,7 +393,7 @@ bool buildRotateGizmo(
     const glm::vec3 forward = glm::normalize(camera.orientation);
 
     const float depth = glm::dot(
-        object.transform.position() - camera.position,
+        object.visualCenter() - camera.position,
         forward);
 
     // Não desenha o gizmo atrás da câmera.
@@ -403,7 +403,7 @@ bool buildRotateGizmo(
     const glm::mat4 viewProjection = camera.viewProjectionMatrix();
 
     if (!projectWorldToScreen(
-            object.transform.position(),
+            object.visualCenter(),
             viewProjection,
             width,
             height,
@@ -469,7 +469,7 @@ bool buildRotateGizmo(
                 twoPi * static_cast<float>(j) / ringSegments;
 
             const glm::vec3 worldPoint =
-                object.transform.position() +
+                object.visualCenter() +
                 worldRadius * (ring.basisU * std::cos(angle) +
                                ring.basisV * std::sin(angle));
 
