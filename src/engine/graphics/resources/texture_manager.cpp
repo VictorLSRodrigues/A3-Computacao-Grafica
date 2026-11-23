@@ -14,12 +14,6 @@ namespace
         return std::to_string(path.size()) + ":" + path + type;
     }
 
-    // Prefixo que identifica todas as variações de um caminho.
-    std::string makePathPrefix(const std::string& path)
-    {
-        return std::to_string(path.size()) + ":" + path;
-    }
-
     // Mapas de cor-base são imagens sRGB; mapas que armazenam propriedades
     // (normal, roughness, metallic, specular etc.) são dados lineares.
     TextureColorSpace colorSpaceForType(const std::string& type)

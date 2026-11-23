@@ -63,8 +63,8 @@ bool SandboxApplication::onInitialize()
     if (!buildWorld(scene))
         return false;
 
-        // Registra a cena original antes de carregar os dados locais.
-        scene.captureDefaults();
+    // Registra a cena original antes de carregar os dados locais.
+    scene.captureDefaults();
 
     // Depois recupera as transformações salvas anteriormente.
     if (!scene.loadTransforms(SCENE_STATE_PATH, light))

@@ -449,6 +449,9 @@ void Editor::update(bool inputEnabled)
 
                     break;
                 }
+
+                case TransformTool::Extrude:
+                    break;
                 }
             }
 
