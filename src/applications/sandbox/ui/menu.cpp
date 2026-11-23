@@ -37,6 +37,7 @@ void Menu::draw(
     Light &light,
     const std::function<void()> &launchDoom,
     const std::function<bool(const std::string &)> &saveScene,
+    const std::function<bool(const std::string &)> &loadScene,
     const std::function<void()> &restoreDefaults)
 {
     if (!open)
@@ -64,7 +65,7 @@ void Menu::draw(
         break;
 
     case Page::Scenes:
-        drawScenes(window, ui);
+        drawScenes(window, ui, loadScene);
         break;
     }
 }
@@ -391,7 +392,10 @@ void Menu::drawSaveScene(
     }
 }
 
-void Menu::drawScenes(const Window &window, UI &ui)
+void Menu::drawScenes(
+    const Window &window,
+    UI &ui,
+    const std::function<bool(const std::string &)> &loadScene)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -597,6 +601,19 @@ void Menu::drawScenes(const Window &window, UI &ui)
                 cardSize - 24.0f,
                 0.40f,
                 sandbox_ui::palette::text);
+
+            if (window.mouseClicked(GLFW_MOUSE_BUTTON_LEFT) &&
+                window.getMouseX() >= cardX &&
+                window.getMouseX() <= cardX + cardSize &&
+                window.getMouseY() >= cardY &&
+                window.getMouseY() <= cardY + cardSize)
+            {
+                if (loadScene && loadScene(sceneFiles[i].string()))
+                {
+                    page = Page::Main;
+                    open = false;
+                }
+            }
         }
     }
 

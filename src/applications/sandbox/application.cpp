@@ -28,7 +28,7 @@
 namespace
 {
     constexpr const char *SCENE_STATE_PATH =
-    SANDBOX_DATA_DIR "/scene_state.json";
+        SANDBOX_DATA_DIR "/scene_state.json";
     constexpr const char *SCENE_EXPORT_DIR = SANDBOX_SCENE_DATA_DIR;
 
     WindowConfig createWindowConfig()
@@ -188,7 +188,29 @@ void SandboxApplication::renderUI()
 
             return scene.saveTransforms(sceneFile.string(), light);
         },
+        // Carregar a cena selecionada.
+        [this](const std::string &filePath)
+        {
+            if (!scene.resetToDefaults())
+            {
+                std::cerr << "Falha ao restaurar a cena antes do carregamento."
+                          << std::endl;
+                return false;
+            }
 
+            editor.resetForSceneDefaults();
+            light.resetProperties();
+
+            if (!scene.loadTransforms(filePath, light))
+            {
+                std::cerr << "Falha ao carregar a cena: "
+                          << filePath << std::endl;
+                return false;
+            }
+
+            selectedModelName = "Todos";
+            return true;
+        },
         // Restauração completa da cena.
         [this]()
         {

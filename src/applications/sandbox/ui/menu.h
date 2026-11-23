@@ -44,39 +44,40 @@ private:
     // Paginação da lista de cenas.
     std::size_t scenePage = 0;
 
-    void drawMain(const Window& window, UI& ui);
+    void drawMain(const Window &window, UI &ui);
 
     void drawSaveScene(
-        Window& window,
-        UI& ui,
-        const std::function<bool(const std::string&)>& saveScene
-    );
+        Window &window,
+        UI &ui,
+        const std::function<bool(const std::string &)> &saveScene);
 
-    void drawScenes(const Window& window, UI& ui);
+    void drawScenes(
+        const Window &window,
+        UI &ui,
+        const std::function<bool(const std::string &)> &loadScene);
 
     void drawOptions(
-        Window& window,
-        UI& ui,
-        Renderer& renderer,
-        Camera& camera,
-        Light& light,
-        const std::function<void()>& launchDoom,
-        const std::function<void()>& restoreDefaults
-    );
+        Window &window,
+        UI &ui,
+        Renderer &renderer,
+        Camera &camera,
+        Light &light,
+        const std::function<void()> &launchDoom,
+        const std::function<void()> &restoreDefaults);
 
 public:
-    void update(const Window& window);
+    void update(const Window &window);
 
     void draw(
-        Window& window,
-        UI& ui,
-        Renderer& renderer,
-        Camera& camera,
-        Light& light,
-        const std::function<void()>& launchDoom,
-        const std::function<bool(const std::string&)>& saveScene,
-        const std::function<void()>& restoreDefaults
-    );
+        Window &window,
+        UI &ui,
+        Renderer &renderer,
+        Camera &camera,
+        Light &light,
+        const std::function<void()> &launchDoom,
+        const std::function<bool(const std::string &)> &saveScene,
+        const std::function<bool(const std::string &)> &loadScene,
+        const std::function<void()> &restoreDefaults);
 
     bool isOpen() const
     {
