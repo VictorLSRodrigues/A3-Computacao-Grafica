@@ -28,7 +28,7 @@
 namespace
 {
     constexpr const char *SCENE_STATE_PATH =
-        SANDBOX_DATA_DIR "/user_data/scene_state.json";
+    SANDBOX_DATA_DIR "/scene_state.json";
     constexpr const char *SCENE_EXPORT_DIR = SANDBOX_SCENE_DATA_DIR;
 
     WindowConfig createWindowConfig()

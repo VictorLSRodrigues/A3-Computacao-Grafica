@@ -115,7 +115,7 @@ add_executable(OpenGLProjeto
 )
 
 target_compile_definitions(OpenGLProjeto PRIVATE
-    SANDBOX_DATA_DIR=\"${CMAKE_CURRENT_BINARY_DIR}\"
+    SANDBOX_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/src/applications/sandbox/data\"
     SANDBOX_SCENE_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/src/applications/sandbox/data\"
 )
 

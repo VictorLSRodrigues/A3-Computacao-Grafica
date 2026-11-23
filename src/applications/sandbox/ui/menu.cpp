@@ -14,8 +14,7 @@
 
 using sandbox_ui::ButtonTone;
 
-
-void Menu::update(const Window& window)
+void Menu::update(const Window &window)
 {
     if (!window.keyPressed(GLFW_KEY_ESCAPE))
         return;
@@ -30,17 +29,15 @@ void Menu::update(const Window& window)
     page = Page::Main;
 }
 
-
-
 void Menu::draw(
-    Window& window,
-    UI& ui,
-    Renderer& renderer,
-    Camera& camera,
-    Light& light,
-    const std::function<void()>& launchDoom,
-    const std::function<bool(const std::string&)>& saveScene,
-    const std::function<void()>& restoreDefaults)
+    Window &window,
+    UI &ui,
+    Renderer &renderer,
+    Camera &camera,
+    Light &light,
+    const std::function<void()> &launchDoom,
+    const std::function<bool(const std::string &)> &saveScene,
+    const std::function<void()> &restoreDefaults)
 {
     if (!open)
         return;
@@ -59,8 +56,7 @@ void Menu::draw(
             camera,
             light,
             launchDoom,
-            restoreDefaults
-        );
+            restoreDefaults);
         break;
 
     case Page::SaveScene:
@@ -73,10 +69,7 @@ void Menu::draw(
     }
 }
 
-
-
-
-void Menu::drawMain(const Window& window, UI& ui)
+void Menu::drawMain(const Window &window, UI &ui)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -91,8 +84,7 @@ void Menu::drawMain(const Window& window, UI& ui)
     const float y = (screenH - panelH) * 0.5f;
 
     sandbox_ui::drawPanel(
-        ui, window, x, y, panelW, panelH, true
-    );
+        ui, window, x, y, panelW, panelH, true);
 
     const float innerX = x + 28.0f;
     const float innerW = panelW - 56.0f;
@@ -104,8 +96,7 @@ void Menu::drawMain(const Window& window, UI& ui)
         innerW,
         "ROTOR / SANDBOX",
         "Menu principal",
-        "Cena 3D e ferramentas de experimentação"
-    );
+        "Cena 3D e ferramentas de experimentação");
 
     const float buttonH = 40.0f;
     const float gap = 8.0f;
@@ -202,18 +193,14 @@ void Menu::drawMain(const Window& window, UI& ui)
             0.32f,
             saveSucceeded
                 ? sandbox_ui::palette::positive
-                : sandbox_ui::palette::danger
-        );
+                : sandbox_ui::palette::danger);
     }
 }
 
-
-
-
 void Menu::drawSaveScene(
-    Window& window,
-    UI& ui,
-    const std::function<bool(const std::string&)>& saveScene)
+    Window &window,
+    UI &ui,
+    const std::function<bool(const std::string &)> &saveScene)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -231,8 +218,7 @@ void Menu::drawSaveScene(
     const float innerW = panelW - 56.0f;
 
     sandbox_ui::drawPanel(
-        ui, window, x, y, panelW, panelH, true
-    );
+        ui, window, x, y, panelW, panelH, true);
 
     sandbox_ui::drawHeader(
         ui,
@@ -241,8 +227,7 @@ void Menu::drawSaveScene(
         innerW,
         "ROTOR / SANDBOX",
         "Salvar cena",
-        "Informe o nome do arquivo da cena"
-    );
+        "Informe o nome do arquivo da cena");
 
     constexpr std::size_t maxNameLength = 48;
 
@@ -263,8 +248,7 @@ void Menu::drawSaveScene(
             const char base = shiftDown ? 'A' : 'a';
 
             sceneName.push_back(
-                static_cast<char>(base + (key - GLFW_KEY_A))
-            );
+                static_cast<char>(base + (key - GLFW_KEY_A)));
         }
     }
 
@@ -274,8 +258,7 @@ void Menu::drawSaveScene(
             sceneName.size() < maxNameLength)
         {
             sceneName.push_back(
-                static_cast<char>('0' + (key - GLFW_KEY_0))
-            );
+                static_cast<char>('0' + (key - GLFW_KEY_0)));
         }
     }
 
@@ -300,22 +283,19 @@ void Menu::drawSaveScene(
         innerX, inputY, innerW, inputH,
         sandbox_ui::palette::backdrop.r,
         sandbox_ui::palette::backdrop.g,
-        sandbox_ui::palette::backdrop.b
-    );
+        sandbox_ui::palette::backdrop.b);
 
     ui.drawRect(
         innerX, inputY, innerW, 1.0f,
         sandbox_ui::palette::border.r,
         sandbox_ui::palette::border.g,
-        sandbox_ui::palette::border.b
-    );
+        sandbox_ui::palette::border.b);
 
     ui.drawRect(
         innerX, inputY + inputH - 1.0f, innerW, 1.0f,
         sandbox_ui::palette::border.r,
         sandbox_ui::palette::border.g,
-        sandbox_ui::palette::border.b
-    );
+        sandbox_ui::palette::border.b);
 
     sandbox_ui::drawTextFit(
         ui,
@@ -328,8 +308,7 @@ void Menu::drawSaveScene(
         0.43f,
         sceneName.empty()
             ? sandbox_ui::palette::muted
-            : sandbox_ui::palette::text
-    );
+            : sandbox_ui::palette::text);
 
     sandbox_ui::drawTextFit(
         ui,
@@ -338,8 +317,7 @@ void Menu::drawSaveScene(
         inputY + 66.0f,
         innerW,
         0.34f,
-        sandbox_ui::palette::muted
-    );
+        sandbox_ui::palette::muted);
 
     if (!saveStatus.empty())
     {
@@ -352,8 +330,7 @@ void Menu::drawSaveScene(
             0.34f,
             saveSucceeded
                 ? sandbox_ui::palette::positive
-                : sandbox_ui::palette::danger
-        );
+                : sandbox_ui::palette::danger);
     }
 
     const float buttonY = y + panelH - 52.0f;
@@ -391,8 +368,8 @@ void Menu::drawSaveScene(
                 saveScene && saveScene(normalizedName);
 
             saveStatus = saveSucceeded
-                ? "Cena salva como " + normalizedName + ".json"
-                : "Falha ao salvar a cena.";
+                             ? "Cena salva como " + normalizedName + ".json"
+                             : "Falha ao salvar a cena.";
 
             if (saveSucceeded)
                 page = Page::Main;
@@ -414,10 +391,7 @@ void Menu::drawSaveScene(
     }
 }
 
-
-
-
-void Menu::drawScenes(const Window& window, UI& ui)
+void Menu::drawScenes(const Window &window, UI &ui)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -435,8 +409,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
     const float innerW = panelW - 56.0f;
 
     sandbox_ui::drawPanel(
-        ui, window, x, y, panelW, panelH, true
-    );
+        ui, window, x, y, panelW, panelH, true);
 
     sandbox_ui::drawHeader(
         ui,
@@ -445,13 +418,11 @@ void Menu::drawScenes(const Window& window, UI& ui)
         innerW,
         "ROTOR / SANDBOX",
         "Carregar cena",
-        "Cenários encontrados na pasta user_data"
-    );
+        "Cenários encontrados na pasta user_data");
 
     // Diretório de dados que também é utilizado pelo application.cpp.
     const std::filesystem::path sceneDirectory =
-        std::filesystem::path(SANDBOX_DATA_DIR) / "user_data";
-
+        std::filesystem::path(SANDBOX_DATA_DIR);
     std::vector<std::filesystem::path> sceneFiles;
 
     std::error_code directoryError;
@@ -484,13 +455,12 @@ void Menu::drawScenes(const Window& window, UI& ui)
     std::sort(
         sceneFiles.begin(),
         sceneFiles.end(),
-        [](const std::filesystem::path& a,
-           const std::filesystem::path& b)
+        [](const std::filesystem::path &a,
+           const std::filesystem::path &b)
         {
             return a.filename().string() <
                    b.filename().string();
-        }
-    );
+        });
 
     constexpr std::size_t columns = 4;
     constexpr std::size_t rows = 3;
@@ -499,8 +469,8 @@ void Menu::drawScenes(const Window& window, UI& ui)
     constexpr float cardGap = 12.0f;
 
     const std::size_t pageCount = sceneFiles.empty()
-        ? 1
-        : (sceneFiles.size() + pageSize - 1) / pageSize;
+                                      ? 1
+                                      : (sceneFiles.size() + pageSize - 1) / pageSize;
 
     if (scenePage >= pageCount)
         scenePage = pageCount - 1;
@@ -523,8 +493,8 @@ void Menu::drawScenes(const Window& window, UI& ui)
     if (sceneFiles.empty())
     {
         const std::string message = directoryError
-            ? "Não foi possível ler a pasta user_data."
-            : "Nenhum cenário .json encontrado em user_data.";
+                                        ? "Não foi possível ler a pasta user_data."
+                                        : "Nenhum cenário .json encontrado em user_data.";
 
         sandbox_ui::drawCenteredText(
             ui,
@@ -534,8 +504,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
             innerW,
             72.0f,
             0.42f,
-            sandbox_ui::palette::muted
-        );
+            sandbox_ui::palette::muted);
     }
     else
     {
@@ -558,11 +527,11 @@ void Menu::drawScenes(const Window& window, UI& ui)
 
             const float cellX =
                 innerX + static_cast<float>(column) *
-                (cellW + cardGap);
+                             (cellW + cardGap);
 
             const float cellY =
                 gridTop + static_cast<float>(row) *
-                (cellH + cardGap);
+                              (cellH + cardGap);
 
             const float cardX =
                 cellX + (cellW - cardSize) * 0.5f;
@@ -579,30 +548,26 @@ void Menu::drawScenes(const Window& window, UI& ui)
                 sandbox_ui::palette::surface.r,
                 sandbox_ui::palette::surface.g,
                 sandbox_ui::palette::surface.b,
-                0.98f
-            );
+                0.98f);
 
             ui.drawRect(
                 cardX, cardY, cardSize, 2.0f,
                 sandbox_ui::palette::accent.r,
                 sandbox_ui::palette::accent.g,
-                sandbox_ui::palette::accent.b
-            );
+                sandbox_ui::palette::accent.b);
 
             ui.drawRect(
                 cardX, cardY + cardSize - 1.0f,
                 cardSize, 1.0f,
                 sandbox_ui::palette::border.r,
                 sandbox_ui::palette::border.g,
-                sandbox_ui::palette::border.b
-            );
+                sandbox_ui::palette::border.b);
 
             ui.drawRect(
                 cardX, cardY, 1.0f, cardSize,
                 sandbox_ui::palette::border.r,
                 sandbox_ui::palette::border.g,
-                sandbox_ui::palette::border.b
-            );
+                sandbox_ui::palette::border.b);
 
             ui.drawRect(
                 cardX + cardSize - 1.0f,
@@ -611,8 +576,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
                 cardSize,
                 sandbox_ui::palette::border.r,
                 sandbox_ui::palette::border.g,
-                sandbox_ui::palette::border.b
-            );
+                sandbox_ui::palette::border.b);
 
             const std::string sceneName =
                 sceneFiles[i].stem().string();
@@ -622,8 +586,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
                     ui,
                     sceneName,
                     cardSize - 16.0f,
-                    0.40f
-                );
+                    0.40f);
 
             sandbox_ui::drawCenteredText(
                 ui,
@@ -633,8 +596,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
                 cardSize - 16.0f,
                 cardSize - 24.0f,
                 0.40f,
-                sandbox_ui::palette::text
-            );
+                sandbox_ui::palette::text);
         }
     }
 
@@ -643,8 +605,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
         ui,
         innerX,
         footerY - 12.0f,
-        innerW
-    );
+        innerW);
 
     if (sandbox_ui::button(
             ui,
@@ -668,8 +629,7 @@ void Menu::drawScenes(const Window& window, UI& ui)
         footerY + 21.0f,
         190.0f,
         0.34f,
-        sandbox_ui::palette::muted
-    );
+        sandbox_ui::palette::muted);
 
     const float nextX = innerX + innerW - 100.0f;
     const float previousX = nextX - 108.0f;
@@ -702,13 +662,13 @@ void Menu::drawScenes(const Window& window, UI& ui)
 }
 
 void Menu::drawOptions(
-    Window& window,
-    UI& ui,
-    Renderer& renderer,
-    Camera& camera,
-    Light& light,
-    const std::function<void()>& launchDoom,
-    const std::function<void()>& restoreDefaults)
+    Window &window,
+    UI &ui,
+    Renderer &renderer,
+    Camera &camera,
+    Light &light,
+    const std::function<void()> &launchDoom,
+    const std::function<void()> &restoreDefaults)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
@@ -723,8 +683,7 @@ void Menu::drawOptions(
     const float y = (screenH - panelH) * 0.5f;
 
     sandbox_ui::drawPanel(
-        ui, window, x, y, panelW, panelH, true
-    );
+        ui, window, x, y, panelW, panelH, true);
 
     const float innerX = x + 28.0f;
     const float innerW = panelW - 56.0f;
@@ -736,8 +695,7 @@ void Menu::drawOptions(
         innerW,
         "ROTOR / PREFERÊNCIAS",
         "Configurações",
-        "Ajustes da sessão atual"
-    );
+        "Ajustes da sessão atual");
 
     const float tabsY = y + 112.0f;
     const float tabGap = 8.0f;
@@ -747,7 +705,7 @@ void Menu::drawOptions(
     struct CategoryTab
     {
         OptionsCategory category;
-        const char* label;
+        const char *label;
     };
 
     const CategoryTab tabs[] = {
@@ -755,8 +713,7 @@ void Menu::drawOptions(
         {OptionsCategory::Environment, "Ambiente"},
         {OptionsCategory::Lighting, "Iluminação"},
         {OptionsCategory::Window, "Janela"},
-        {OptionsCategory::Doom, "DOOM"}
-    };
+        {OptionsCategory::Doom, "DOOM"}};
 
     for (int i = 0; i < 5; ++i)
     {
@@ -784,8 +741,7 @@ void Menu::drawOptions(
         ui,
         innerX,
         tabsY + tabH + 14.0f,
-        innerW
-    );
+        innerW);
 
     const float contentY = tabsY + tabH + 28.0f;
 
@@ -794,8 +750,7 @@ void Menu::drawOptions(
     case OptionsCategory::Camera:
     {
         sandbox_ui::drawSection(
-            ui, innerX, contentY, innerW, "CÂMERA"
-        );
+            ui, innerX, contentY, innerW, "CÂMERA");
 
         const bool compactRows = innerW < 430.0f;
         const float rowHeight = compactRows ? 54.0f : 36.0f;
@@ -806,32 +761,28 @@ void Menu::drawOptions(
         sandbox_ui::stepper(
             ui, "Campo de visão", camera.fov,
             5.0f, 30.0f, 110.0f, 0,
-            innerX, rowY, innerW, rowHeight
-        );
+            innerX, rowY, innerW, rowHeight);
 
         rowY += rowHeight + rowGap;
 
         sandbox_ui::stepper(
             ui, "Velocidade de caminhada", camera.walkSpeed,
             0.5f, 0.5f, 10.0f, 1,
-            innerX, rowY, innerW, rowHeight
-        );
+            innerX, rowY, innerW, rowHeight);
 
         rowY += rowHeight + rowGap;
 
         sandbox_ui::stepper(
             ui, "Velocidade com Shift", camera.sprintSpeed,
             0.5f, 1.0f, 20.0f, 1,
-            innerX, rowY, innerW, rowHeight
-        );
+            innerX, rowY, innerW, rowHeight);
 
         rowY += rowHeight + rowGap;
 
         sandbox_ui::stepper(
             ui, "Sensibilidade do mouse", camera.sensitivity,
             10.0f, 10.0f, 300.0f, 0,
-            innerX, rowY, innerW, rowHeight
-        );
+            innerX, rowY, innerW, rowHeight);
 
         break;
     }
@@ -839,8 +790,7 @@ void Menu::drawOptions(
     case OptionsCategory::Environment:
     {
         sandbox_ui::drawSection(
-            ui, innerX, contentY, innerW, "AMBIENTE"
-        );
+            ui, innerX, contentY, innerW, "AMBIENTE");
 
         if (sandbox_ui::toggleRow(
                 ui, innerX, contentY + 24.0f, innerW, 62.0f,
@@ -868,8 +818,7 @@ void Menu::drawOptions(
     {
         sandbox_ui::drawSection(
             ui, innerX, contentY, innerW,
-            "ILUMINAÇÃO AMBIENTAL"
-        );
+            "ILUMINAÇÃO AMBIENTAL");
 
         const bool compactRows = innerW < 430.0f;
         const float rowHeight = compactRows ? 54.0f : 36.0f;
@@ -880,16 +829,14 @@ void Menu::drawOptions(
             renderer.ambientStrength,
             0.02f, 0.0f, 1.0f, 2,
             innerX, contentY + 34.0f,
-            innerW, rowHeight
-        );
+            innerW, rowHeight);
 
         sandbox_ui::stepper(
             ui, "Reflexão ambiental",
             renderer.environmentReflectionStrength,
             0.05f, 0.0f, 2.0f, 2,
             innerX, contentY + 34.0f + rowHeight + rowGap,
-            innerW, rowHeight
-        );
+            innerW, rowHeight);
 
         break;
     }
@@ -897,8 +844,7 @@ void Menu::drawOptions(
     case OptionsCategory::Window:
     {
         sandbox_ui::drawSection(
-            ui, innerX, contentY, innerW, "MODO DA JANELA"
-        );
+            ui, innerX, contentY, innerW, "MODO DA JANELA");
 
         sandbox_ui::drawTextFit(
             ui,
@@ -907,21 +853,19 @@ void Menu::drawOptions(
             contentY + 39.0f,
             innerW,
             0.40f,
-            sandbox_ui::palette::muted
-        );
+            sandbox_ui::palette::muted);
 
         struct ModeOption
         {
             WindowMode mode;
-            const char* label;
+            const char *label;
         };
 
         const ModeOption modes[] = {
             {WindowMode::Windowed, "Janela normal"},
             {WindowMode::Maximized, "Maximizada"},
             {WindowMode::Borderless, "Sem bordas"},
-            {WindowMode::Fullscreen, "Tela cheia"}
-        };
+            {WindowMode::Fullscreen, "Tela cheia"}};
 
         const float modeGap = 10.0f;
         const float modeButtonWidth =
@@ -960,9 +904,9 @@ void Menu::drawOptions(
             }
         }
 
-        const char* currentModeName = "Janela normal";
+        const char *currentModeName = "Janela normal";
 
-        const char* currentModeDescription =
+        const char *currentModeDescription =
             "Janela com bordas, barra de título e tamanho ajustável.";
 
         switch (window.getMode())
@@ -996,8 +940,7 @@ void Menu::drawOptions(
             contentY + 178.0f,
             innerW,
             0.43f,
-            sandbox_ui::palette::text
-        );
+            sandbox_ui::palette::text);
 
         sandbox_ui::drawTextFit(
             ui,
@@ -1006,8 +949,7 @@ void Menu::drawOptions(
             contentY + 205.0f,
             innerW,
             0.37f,
-            sandbox_ui::palette::muted
-        );
+            sandbox_ui::palette::muted);
 
         if (windowModeChangeFailed)
         {
@@ -1018,8 +960,7 @@ void Menu::drawOptions(
                 contentY + 232.0f,
                 innerW,
                 0.37f,
-                sandbox_ui::palette::danger
-            );
+                sandbox_ui::palette::danger);
         }
 
         break;
@@ -1028,8 +969,7 @@ void Menu::drawOptions(
     case OptionsCategory::Doom:
     {
         sandbox_ui::drawSection(
-            ui, innerX, contentY, innerW, "JOGAR DOOM"
-        );
+            ui, innerX, contentY, innerW, "JOGAR DOOM");
 
         sandbox_ui::drawTextFit(
             ui,
@@ -1038,8 +978,7 @@ void Menu::drawOptions(
             contentY + 48.0f,
             innerW,
             0.38f,
-            sandbox_ui::palette::text
-        );
+            sandbox_ui::palette::text);
 
         sandbox_ui::drawTextFit(
             ui,
@@ -1048,8 +987,7 @@ void Menu::drawOptions(
             contentY + 76.0f,
             innerW,
             0.36f,
-            sandbox_ui::palette::muted
-        );
+            sandbox_ui::palette::muted);
 
         if (sandbox_ui::button(
                 ui,
@@ -1071,8 +1009,7 @@ void Menu::drawOptions(
     const float footerY = y + panelH - 58.0f;
 
     sandbox_ui::drawDivider(
-        ui, innerX, footerY - 12.0f, innerW
-    );
+        ui, innerX, footerY - 12.0f, innerW);
 
     sandbox_ui::drawTextFit(
         ui,
@@ -1081,8 +1018,7 @@ void Menu::drawOptions(
         footerY + 22.0f,
         std::max(0.0f, innerW - 230.0f),
         0.34f,
-        sandbox_ui::palette::muted
-    );
+        sandbox_ui::palette::muted);
 
     const float actionGap = 8.0f;
 
