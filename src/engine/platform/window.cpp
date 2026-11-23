@@ -33,6 +33,13 @@ void Window::onKey(GLFWwindow *window, int key, int /*scancode*/, int action, in
     }
 }
 
+void Window::onCharacter(GLFWwindow *window, unsigned int codepoint)
+{
+    Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
+    if (self)
+        self->charactersTypedThisFrame.push_back(codepoint);
+}
+
 void Window::onMouseMove(GLFWwindow *window, double x, double y)
 {
     Window *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
@@ -191,6 +198,7 @@ bool Window::create(const WindowConfig &windowConfig)
     glfwSetWindowUserPointer(windowHandle, this);
     glfwSetFramebufferSizeCallback(windowHandle, onFramebufferResize);
     glfwSetKeyCallback(windowHandle, onKey);
+    glfwSetCharCallback(windowHandle, onCharacter);
     glfwSetCursorPosCallback(windowHandle, onMouseMove);
     glfwSetMouseButtonCallback(windowHandle, onMouseButton);
     glfwSetScrollCallback(windowHandle, onScroll);
@@ -337,6 +345,7 @@ void Window::pollEvents()
     // Limpa os eventos de um quadro e registra os novos recebidos do GLFW.
     std::fill(std::begin(keysPressedThisFrame), std::end(keysPressedThisFrame), false);
     std::fill(std::begin(mouseClicksThisFrame), std::end(mouseClicksThisFrame), false);
+    charactersTypedThisFrame.clear();
 
     scrollY = 0.0;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -49,11 +50,13 @@ private:
     bool keysPressedThisFrame[GLFW_KEY_LAST + 1] = {};  // true no quadro em que a tecla foi pressionada
     bool mouseClicksThisFrame[GLFW_MOUSE_BUTTON_LAST + 1] = {};
     bool mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {}; // true enquanto o botão estiver pressionado
+    std::vector<unsigned int> charactersTypedThisFrame;
     double mouseX = 0.0;
     double mouseY = 0.0;
     double scrollY = 0.0;
 
     static void onKey(GLFWwindow *window, int key, int scancode, int action, int mods);
+    static void onCharacter(GLFWwindow *window, unsigned int codepoint);
     static void onMouseMove(GLFWwindow *window, double x, double y);
     static void onMouseButton(GLFWwindow *window, int button, int action, int mods);
     static void onScroll(GLFWwindow *window, double xOffset, double yOffset);
@@ -88,6 +91,7 @@ public:
     // keyPressed detecta o evento de pressionar; keyDown indica que a tecla continua pressionada.
     bool keyPressed(int key) const { return key >= 0 && key <= GLFW_KEY_LAST && keysPressedThisFrame[key]; }
     bool keyDown(int key) const { return key >= 0 && key <= GLFW_KEY_LAST && keyStates[key]; }
+    const std::vector<unsigned int> &getTypedCharacters() const { return charactersTypedThisFrame; }
     bool mouseClicked(int button) const { return button >= 0 && button <= GLFW_MOUSE_BUTTON_LAST && mouseClicksThisFrame[button]; }
     double getMouseX() const { return mouseX; }
     double getMouseY() const { return mouseY; }

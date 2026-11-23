@@ -21,11 +21,15 @@
 #ifndef SANDBOX_DATA_DIR
 #define SANDBOX_DATA_DIR "."
 #endif
+#ifndef SANDBOX_SCENE_DATA_DIR
+#define SANDBOX_SCENE_DATA_DIR "src/applications/sandbox/data"
+#endif
 
 namespace
 {
     constexpr const char *SCENE_STATE_PATH =
         SANDBOX_DATA_DIR "/user_data/scene_state.json";
+    constexpr const char *SCENE_EXPORT_DIR = SANDBOX_SCENE_DATA_DIR;
 
     WindowConfig createWindowConfig()
     {
@@ -172,6 +176,22 @@ void SandboxApplication::renderUI()
     [this]()
     {
         startDoom();
+    },
+
+    // Exportação manual da cena para a pasta data.
+    [this](const std::string &sceneName)
+    {
+        const std::filesystem::path scenePath =
+            std::filesystem::path(SCENE_EXPORT_DIR) / (sceneName + ".json");
+        if (!scene.saveTransforms(scenePath.string(), light))
+        {
+            std::cerr << "Falha ao exportar a cena para "
+                      << scenePath.string() << "."
+                      << std::endl;
+            return false;
+        }
+
+        return true;
     },
 
     // Restauração completa da cena.

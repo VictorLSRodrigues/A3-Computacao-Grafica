@@ -23,7 +23,7 @@ void Menu::update(const Window &window)
     }
 }
 
-void Menu::draw(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light, const std::function<void()> &launchDoom, const std::function<void()> &restoreDefaults)
+void Menu::draw(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light, const std::function<void()> &launchDoom, const std::function<bool(const std::string&)> &saveScene, const std::function<void()> &restoreDefaults)
 {
     if (!open)
         return;
@@ -32,16 +32,21 @@ void Menu::draw(Window &window, UI &ui, Renderer &renderer, Camera &camera, Ligh
         drawOptions(
             window, ui, renderer, camera, light,
             launchDoom, restoreDefaults);
+    else if (page == Page::SaveScene)
+        drawSaveScene(window, ui, saveScene);
     else
-        drawMain(window, ui);
+        drawMain(window, ui, saveScene);
 }
 
-void Menu::drawMain(const Window &window, UI &ui)
+void Menu::drawMain(
+    const Window &window,
+    UI &ui,
+    const std::function<bool(const std::string&)> &saveScene)
 {
     const float screenW = static_cast<float>(window.getWidth());
     const float screenH = static_cast<float>(window.getHeight());
     const float panelW = std::min(440.0f, std::max(1.0f, screenW - 32.0f));
-    const float panelH = std::min(330.0f, std::max(250.0f, screenH - 32.0f));
+    const float panelH = std::min(390.0f, std::max(250.0f, screenH - 32.0f));
     const float x = (screenW - panelW) * 0.5f;
     const float y = (screenH - panelH) * 0.5f;
 
@@ -70,9 +75,128 @@ void Menu::drawMain(const Window &window, UI &ui)
     }
 
     buttonY += buttonH + gap;
+    if (sandbox_ui::button(ui, "Salvar cena...", innerX, buttonY,
+                           innerW, buttonH, ButtonTone::Neutral))
+    {
+        sceneName.clear();
+        saveStatus.clear();
+        page = Page::SaveScene;
+    }
+
+    if (!saveStatus.empty())
+    {
+        sandbox_ui::drawTextFit(
+            ui, saveStatus, innerX, y + panelH - 18.0f, innerW, 0.34f,
+            saveSucceeded ? sandbox_ui::palette::positive
+                          : sandbox_ui::palette::danger);
+    }
+
+    buttonY += buttonH + gap;
     if (sandbox_ui::button(ui, "Sair", innerX, buttonY,
                            innerW, buttonH, ButtonTone::Danger))
         window.close();
+}
+
+void Menu::drawSaveScene(
+    Window &window,
+    UI &ui,
+    const std::function<bool(const std::string&)> &saveScene)
+{
+    const float screenW = static_cast<float>(window.getWidth());
+    const float screenH = static_cast<float>(window.getHeight());
+    const float panelW = std::min(500.0f, std::max(1.0f, screenW - 32.0f));
+    const float panelH = std::min(300.0f, std::max(250.0f, screenH - 32.0f));
+    const float x = (screenW - panelW) * 0.5f;
+    const float y = (screenH - panelH) * 0.5f;
+    const float innerX = x + 28.0f;
+    const float innerW = panelW - 56.0f;
+
+    sandbox_ui::drawPanel(ui, window, x, y, panelW, panelH, true);
+    sandbox_ui::drawHeader(ui, innerX, y + 18.0f, innerW,
+                           "ROTOR / SANDBOX", "Salvar cena",
+                           "Informe o nome do arquivo da cena");
+
+    constexpr std::size_t maxNameLength = 48;
+    if (window.keyPressed(GLFW_KEY_BACKSPACE) && !sceneName.empty())
+        sceneName.pop_back();
+
+    for (unsigned int codepoint : window.getTypedCharacters())
+    {
+        const bool allowed =
+            (codepoint >= 'a' && codepoint <= 'z') ||
+            (codepoint >= 'A' && codepoint <= 'Z') ||
+            (codepoint >= '0' && codepoint <= '9') ||
+            codepoint == ' ' || codepoint == '_' || codepoint == '-';
+        if (allowed && sceneName.size() < maxNameLength)
+            sceneName.push_back(static_cast<char>(codepoint));
+    }
+
+    const float inputY = y + 126.0f;
+    const float inputH = 44.0f;
+    ui.addRegion(innerX, inputY, innerW, inputH);
+    ui.drawRect(innerX, inputY, innerW, inputH,
+                sandbox_ui::palette::backdrop.r,
+                sandbox_ui::palette::backdrop.g,
+                sandbox_ui::palette::backdrop.b);
+    ui.drawRect(innerX, inputY, innerW, 1.0f,
+                sandbox_ui::palette::border.r,
+                sandbox_ui::palette::border.g,
+                sandbox_ui::palette::border.b);
+    ui.drawRect(innerX, inputY + inputH - 1.0f, innerW, 1.0f,
+                sandbox_ui::palette::border.r,
+                sandbox_ui::palette::border.g,
+                sandbox_ui::palette::border.b);
+    sandbox_ui::drawTextFit(
+        ui, sceneName.empty() ? "Digite o nome da cena..." : sceneName,
+        innerX + 12.0f, inputY + 27.0f, innerW - 24.0f, 0.43f,
+        sceneName.empty() ? sandbox_ui::palette::muted
+                          : sandbox_ui::palette::text);
+    sandbox_ui::drawTextFit(
+        ui, "Use letras sem acento, números, espaços, _ ou -.",
+        innerX, inputY + 66.0f, innerW, 0.34f,
+        sandbox_ui::palette::muted);
+
+    if (!saveStatus.empty())
+    {
+        sandbox_ui::drawTextFit(
+            ui, saveStatus, innerX, inputY + 94.0f, innerW, 0.34f,
+            saveSucceeded ? sandbox_ui::palette::positive
+                          : sandbox_ui::palette::danger);
+    }
+
+    const float buttonY = y + panelH - 52.0f;
+    const float buttonH = 36.0f;
+    const float buttonGap = 10.0f;
+    const float saveW = (innerW - buttonGap) * 0.5f;
+    if (sandbox_ui::button(ui, "Salvar", innerX, buttonY,
+                           saveW, buttonH, ButtonTone::Primary))
+    {
+        const std::size_t first = sceneName.find_first_not_of(' ');
+        const std::size_t last = sceneName.find_last_not_of(' ');
+        if (first == std::string::npos)
+        {
+            saveSucceeded = false;
+            saveStatus = "Digite um nome para salvar.";
+        }
+        else
+        {
+            const std::string normalizedName =
+                sceneName.substr(first, last - first + 1);
+            saveSucceeded = saveScene && saveScene(normalizedName);
+            saveStatus = saveSucceeded
+                ? "Cena salva como " + normalizedName + ".json"
+                : "Falha ao salvar a cena.";
+            if (saveSucceeded)
+                page = Page::Main;
+        }
+    }
+
+    if (sandbox_ui::button(ui, "Cancelar", innerX + saveW + buttonGap,
+                           buttonY, saveW, buttonH, ButtonTone::Neutral))
+    {
+        saveStatus.clear();
+        page = Page::Main;
+    }
 }
 
 void Menu::drawOptions(Window &window, UI &ui, Renderer &renderer, Camera &camera, Light &light, const std::function<void()> &launchDoom, const std::function<void()> &restoreDefaults)
