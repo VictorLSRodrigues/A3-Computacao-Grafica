@@ -71,6 +71,7 @@ set(ROTOR_ENGINE_SOURCES
     src/engine/scene/light.cpp
     src/engine/scene/picking.cpp
     src/engine/scene/scene.cpp
+    src/engine/scene/scene_persistence.cpp
     src/engine/scene/scenarios/rain_scenario.cpp
 
     # Engine: UI
