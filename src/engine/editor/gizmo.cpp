@@ -216,12 +216,15 @@ bool buildScaleGizmo(
     const glm::vec3 localCenter =
         (bounds->min + bounds->max) * 0.5f;
 
-    const glm::mat4 objectMatrix = object.transform.matrix();
+    const glm::mat4 objectMatrix =
+        object.transform.matrix();
 
-    const glm::vec3 worldCenter = glm::vec3(
-        objectMatrix * glm::vec4(localCenter, 1.0f));
+    // Utiliza o mesmo centro visual das outras ferramentas.
+    const glm::vec3 worldCenter =
+        object.visualCenter();
 
-    const glm::vec3 forward = glm::normalize(camera.orientation);
+    const glm::vec3 forward =
+        glm::normalize(camera.orientation);
 
     const float depth = glm::dot(
         worldCenter - camera.position,

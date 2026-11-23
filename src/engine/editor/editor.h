@@ -149,10 +149,10 @@ private:
 
     bool extrusionChanged = false;
 
-    glm::vec3 scalePivotLocal{0.0f};
+    // Centro visual fixo durante a operação de escala.
     glm::vec3 scalePivotWorld{0.0f};
 
-    glm::vec3 scaleStart{1.0f};
+    glm::vec3 scaleStart{1.0f};glm::vec3 rotationStartVector{0.0f};
 
     float scaleFactorPerPixel = 0.0f;
 
@@ -160,7 +160,7 @@ private:
     glm::vec3 rotationStart{0.0f};
 
     // Guarda o vetor inicial do mouse no plano de rotação.
-    glm::vec3 rotationStartVector{0.0f};
+    glm::vec3 rotationPivotWorld{0.0f};
 
     // Guarda o eixo 3D escolhido.
     glm::vec3 rotatingWorldAxis{0.0f};

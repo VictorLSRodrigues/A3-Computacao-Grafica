@@ -280,8 +280,8 @@ void Editor::update(bool inputEnabled)
 
                             // O deslocamento altera a origem do objeto; o gizmo usa o centro visual.
                             dragStartPosition = lightSelected
-                                ? light.position
-                                : selected->transform.position();
+                                                    ? light.position
+                                                    : selected->transform.position();
 
                             draggedWorldAxis =
                                 selectedAxis.worldDirection;
@@ -332,6 +332,53 @@ void Editor::update(bool inputEnabled)
                                 createMouseRay(window, camera);
 
                             glm::vec3 intersection;
+
+                            // Captura o centro visual uma única vez.
+                            // Não devemos recalcular esse pivô durante o arraste.
+                            rotationPivotWorld = selected->visualCenter();
+
+                            if (intersectRayPlane(
+                                    camera.position,
+                                    rayDirection,
+                                    rotationPivotWorld,
+                                    selectedRing.worldAxis,
+                                    intersection))
+                            {
+                                const glm::vec3 initialVector =
+                                    intersection - rotationPivotWorld;
+
+                                if (glm::length(initialVector) > 0.0001f)
+                                {
+                                    rotationStartVector =
+                                        glm::normalize(initialVector);
+
+                                    rotationStart = selected->transform.rotation();
+
+                                    draggedObject = selected;
+                                    draggedLight = false;
+
+                                    dragStartTransform = selected->transform;
+
+                                    rotatingWorldAxis = selectedRing.worldAxis;
+                                    rotatingAxis = ringIndex;
+
+                                    rotationAccumulatedAngle = 0.0f;
+
+                                    draggingGizmo = false;
+                                    draggedAxis = -1;
+
+                                    draggingScaleGizmo = false;
+                                    scalingAxis = -1;
+
+                                    draggingRotationGizmo = true;
+                                    startedDragging = true;
+
+                                    std::cout
+                                        << "Rotacionando no eixo "
+                                        << selectedRing.label
+                                        << std::endl;
+                                }
+                            }
 
                             if (intersectRayPlane(
                                     camera.position,
@@ -413,16 +460,10 @@ void Editor::update(bool inputEnabled)
                                 draggedLight = false;
                                 dragStartTransform = selected->transform;
 
-                                const BoundingBox *bounds = selected->boundingBox();
+                                // Captura o centro visual antes de começar a escala.
+                                scalePivotWorld = selected->visualCenter();
 
-                                if (bounds && bounds->valid)
-                                {
-                                    scalePivotLocal = (bounds->min + bounds->max) * 0.5f;
-
-                                    scalePivotWorld = glm::vec3(
-                                        selected->transform.matrix() *
-                                        glm::vec4(scalePivotLocal, 1.0f));
-                                }
+                                
 
                                 // Guarda a posição inicial do mouse.
                                 scaleStartMouse = mouse;
@@ -564,32 +605,37 @@ void Editor::update(bool inputEnabled)
 
                 glm::vec3 intersection;
 
+                // O plano de rotação sempre passa pelo mesmo centro visual.
                 if (intersectRayPlane(
                         camera.position,
                         rayDirection,
-                        selected->visualCenter(),
+                        rotationPivotWorld,
                         rotatingWorldAxis,
                         intersection))
                 {
                     glm::vec3 currentVector =
-                        intersection - selected->visualCenter();
+                        intersection - rotationPivotWorld;
 
                     if (glm::length(currentVector) > 0.0001f)
                     {
                         currentVector = glm::normalize(currentVector);
 
-                        // Calcula o ângulo entre a posição anterior e a atual.
                         const float deltaAngle = std::atan2(
                             glm::dot(
                                 rotatingWorldAxis,
-                                glm::cross(rotationStartVector, currentVector)),
-                            glm::dot(rotationStartVector, currentVector));
+                                glm::cross(
+                                    rotationStartVector,
+                                    currentVector)),
+                            glm::dot(
+                                rotationStartVector,
+                                currentVector));
 
                         rotationAccumulatedAngle +=
                             glm::degrees(deltaAngle);
 
-                        // Aplica a rotação ao eixo selecionado.
-                        glm::vec3 newRotation = selected->transform.rotation();
+                        // Parte sempre da transformação inicial.
+                        glm::vec3 newRotation =
+                            dragStartTransform.rotation();
 
                         newRotation[rotatingAxis] =
                             rotationStart[rotatingAxis] +
@@ -597,7 +643,16 @@ void Editor::update(bool inputEnabled)
 
                         selected->transform.setRotation(newRotation);
 
-                        // Atualiza o vetor para o próximo quadro.
+                        // Calcula a distância entre a origem e o centro visual
+                        // depois da rotação.
+                        const glm::vec3 visualOffset =
+                            selected->visualCenter() -
+                            selected->transform.position();
+
+                        // Reposiciona a origem para manter o centro imóvel.
+                        selected->transform.move(
+                            rotationPivotWorld - visualOffset);
+
                         rotationStartVector = currentVector;
                     }
                 }
@@ -611,7 +666,6 @@ void Editor::update(bool inputEnabled)
         }
         else
         {
-            // Soltar o botão encerra a rotação.
             finishTransformDrag();
             draggingRotationGizmo = false;
             rotatingAxis = -1;
@@ -646,12 +700,23 @@ void Editor::update(bool inputEnabled)
                     std::max(0.001f, 1.0f + scaleDelta);
 
                 // Aplica a escala somente no eixo selecionado.
-                glm::vec3 newScale = selected->transform.scale();
+                // Reconstrói a escala usando o estado original do arraste.
+                glm::vec3 newScale = scaleStart;
 
                 newScale[scalingAxis] =
                     scaleStart[scalingAxis] * scaleMultiplier;
 
                 selected->transform.setScale(newScale);
+
+                // Calcula o deslocamento atual entre a origem
+                // e o centro visual após a mudança de escala.
+                const glm::vec3 visualOffset =
+                    selected->visualCenter() -
+                    selected->transform.position();
+
+                // Mantém o centro visual no ponto original.
+                selected->transform.move(
+                    scalePivotWorld - visualOffset);
             }
             else
             {
@@ -807,7 +872,7 @@ void Editor::restorePendingExtrusion()
     if (!pendingExtrusionUndoValid)
         return;
 
-    Scene::Object* object = pendingExtrusionUndo.object;
+    Scene::Object *object = pendingExtrusionUndo.object;
 
     if (object)
     {
