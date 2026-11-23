@@ -10,6 +10,7 @@
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/model/model.h"
 #include "transform.h"
+#include "light.h"
 #include <cstddef>
 
 // Mantém os objetos da cena, responde às consultas de picking e executa operações
@@ -27,6 +28,8 @@ public:
         // Opcional: chamada a cada quadro para animar o objeto.
         std::function<void(Transform &, float)> update;
         bool visible = true;
+        // Caminho de origem do modelo; permite reconstruir instancias dinamicas.
+        std::string sourcePath;
 
         // Caixa envolvente do modelo ou da malha; nullptr se o objeto não tiver nenhum dos dois.
         const BoundingBox *boundingBox() const
@@ -110,9 +113,13 @@ public:
 
     // Salva as transformações das instâncias em arquivo JSON.
     bool saveTransforms(const std::string &filePath) const;
+    // Salva também todas as propriedades editáveis da fonte de luz.
+    bool saveTransforms(const std::string &filePath, const Light &light) const;
 
     // Restaura as transformações das instâncias a partir de arquivo JSON.
     bool loadTransforms(const std::string &filePath);
+    // Restaura objetos e fonte de luz a partir do mesmo arquivo.
+    bool loadTransforms(const std::string &filePath, Light &light);
 
 private:
     struct ObjectDefaultState

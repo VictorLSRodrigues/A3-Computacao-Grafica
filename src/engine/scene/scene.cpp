@@ -285,7 +285,7 @@ Scene::Object *Scene::addModel(const std::string &path, const Transform &transfo
         modelCache[path] = model;
     }
 
-    objects.push_back({path, model, nullptr, transform, {}});
+    objects.push_back({path, model, nullptr, transform, {}, true, path});
     return &objects.back();
 }
 
@@ -312,7 +312,7 @@ Scene::Object *Scene::addMesh(
     if (!mesh)
         return nullptr;
 
-    objects.push_back({name, nullptr, std::move(mesh), transform, {}});
+    objects.push_back({name, nullptr, std::move(mesh), transform, {}, true, {}});
     return &objects.back();
 }
 
@@ -797,7 +797,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
             std::filesystem::create_directories(path.parent_path());
 
         json data;
-        data["version"] = 2;
+        data["version"] = 3;
         data["objects"] = json::array();
 
         for (std::size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex)
@@ -810,10 +810,15 @@ bool Scene::saveTransforms(const std::string& filePath) const
             json savedObject = {
                 {"object_index", objectIndex},
                 {"name", object.name},
+                {"visible", object.visible},
                 {"position", vectorToJson(object.transform.position())},
                 {"rotation", vectorToJson(object.transform.rotation())},
                 {"scale", vectorToJson(object.transform.scale())}
             };
+
+            // A origem permite recriar modelos adicionados depois da inicializacao.
+            if (object.model && !object.sourcePath.empty())
+                savedObject["source_path"] = object.sourcePath;
 
             json extrusions = json::array();
 
@@ -868,6 +873,67 @@ bool Scene::saveTransforms(const std::string& filePath) const
     }
 }
 
+// Persiste a fonte de luz junto com os objetos da cena. Mantem o formato
+// principal de objetos e acrescenta um bloco independente chamado "light".
+bool Scene::saveTransforms(const std::string& filePath, const Light& light) const
+{
+    if (!saveTransforms(filePath))
+        return false;
+
+    try
+    {
+        std::ifstream input(filePath);
+        if (!input.is_open())
+            return false;
+
+        json data;
+        input >> data;
+        input.close();
+
+        data["light"] = {
+            {"type", static_cast<int>(light.type)},
+            {"color", vectorToJson(light.color)},
+            {"intensity", light.intensity},
+            {"position", vectorToJson(light.position)},
+            {"target", vectorToJson(light.target)}
+        };
+
+        const std::filesystem::path path(filePath);
+        const std::filesystem::path temporaryPath = path.string() + ".tmp";
+        std::ofstream output(temporaryPath, std::ios::out | std::ios::trunc);
+        if (!output.is_open())
+            return false;
+
+        output << std::setw(4) << data << '\n';
+        output.close();
+        if (!output.good())
+            return false;
+
+        std::error_code error;
+        std::filesystem::rename(temporaryPath, path, error);
+        if (error)
+        {
+            // No Windows, rename nao substitui um destino existente.
+            std::filesystem::remove(path, error);
+            error.clear();
+            std::filesystem::rename(temporaryPath, path, error);
+        }
+        if (error)
+        {
+            std::filesystem::remove(temporaryPath);
+            std::cerr << "Falha ao finalizar arquivo de estado da luz: "
+                      << error.message() << std::endl;
+            return false;
+        }
+        return true;
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "Erro ao salvar fonte de luz: " << error.what() << std::endl;
+        return false;
+    }
+}
+
 bool Scene::loadTransforms(const std::string& filePath)
 {
     try
@@ -892,7 +958,7 @@ bool Scene::loadTransforms(const std::string& filePath)
         }
 
         const int version = data["version"].get<int>();
-        if (version != 1 && version != 2)
+        if (version != 1 && version != 2 && version != 3)
         {
             std::cerr << "Versao do arquivo de estado nao suportada: "
                       << version << std::endl;
@@ -927,36 +993,52 @@ bool Scene::loadTransforms(const std::string& filePath)
                 continue;
             }
 
-            // Na versao 2, o indice distingue objetos que possuem o mesmo nome.
+            // O indice identifica instancias repetidas; source_path permite
+            // reconstruir modelos que nao existiam quando a cena foi iniciada.
             Object* targetObject = nullptr;
-            if (version >= 2 && savedObject.contains("object_index"))
+            std::size_t objectIndex = objects.size();
+            if (savedObject.contains("object_index"))
+                jsonToSize(savedObject["object_index"], objectIndex);
+
+            const std::string sourcePath =
+                (version >= 3 && savedObject.contains("source_path") &&
+                 savedObject["source_path"].is_string())
+                    ? savedObject["source_path"].get<std::string>()
+                    : std::string{};
+
+            if (objectIndex < objects.size() && objects[objectIndex].name == name)
             {
-                std::size_t objectIndex = 0;
-                if (jsonToSize(savedObject["object_index"], objectIndex) &&
-                    objectIndex < objects.size() &&
-                    objects[objectIndex].name == name)
-                {
-                    targetObject = &objects[objectIndex];
-                }
+                targetObject = &objects[objectIndex];
+                if (!sourcePath.empty() &&
+                    targetObject->sourcePath != sourcePath)
+                    targetObject = nullptr;
             }
 
-            // Compatibilidade com arquivos antigos e fallback pelo nome.
-            if (!targetObject)
+            // Arquivos antigos nao possuem source_path: mantem o fallback por nome.
+            if (!targetObject && sourcePath.empty())
             {
                 auto object = std::find_if(
-                    objects.begin(),
-                    objects.end(),
-                    [&name](const Object& candidate)
-                    {
-                        return candidate.name == name;
-                    }
-                );
-
-                if (object == objects.end())
-                    continue;
-
-                targetObject = &(*object);
+                    objects.begin(), objects.end(),
+                    [&name](const Object& candidate) { return candidate.name == name; });
+                if (object != objects.end())
+                    targetObject = &(*object);
             }
+
+            // Instancia dinamica de modelo: carrega o recurso e preserva o nome
+            // personalizado da instancia gravada no arquivo.
+            if (!targetObject && !sourcePath.empty())
+            {
+                targetObject = addModel(sourcePath);
+                if (targetObject)
+                    targetObject->name = name;
+            }
+
+            if (!targetObject)
+                continue;
+
+            if (version >= 3 && savedObject.contains("visible") &&
+                savedObject["visible"].is_boolean())
+                targetObject->visible = savedObject["visible"].get<bool>();
 
             targetObject->transform.move(position);
             targetObject->transform.setRotation(rotation);
@@ -1066,3 +1148,68 @@ bool Scene::loadTransforms(const std::string& filePath)
         return false;
     }
 }
+
+// Carrega a luz somente quando o bloco existe e todos os campos sao validos.
+// Arquivos antigos sem "light" continuam funcionando e preservam a luz padrao.
+bool Scene::loadTransforms(const std::string& filePath, Light& light)
+{
+    try
+    {
+        std::ifstream input(filePath);
+        if (!input.is_open())
+            return false;
+
+        json data;
+        input >> data;
+        input.close();
+
+        if (!loadTransforms(filePath))
+            return false;
+
+        if (!data.is_object() || !data.contains("light") ||
+            !data["light"].is_object())
+            return true;
+
+        const json& savedLight = data["light"];
+        if (!savedLight.contains("type") ||
+            !savedLight["type"].is_number_integer() ||
+            !savedLight.contains("color") ||
+            !savedLight.contains("intensity") ||
+            !savedLight["intensity"].is_number() ||
+            !savedLight.contains("position") ||
+            !savedLight.contains("target"))
+            return true;
+
+        const int type = savedLight["type"].get<int>();
+        glm::vec3 color, position, target;
+        const float intensity = savedLight["intensity"].get<float>();
+        if (type < static_cast<int>(LightType::Point) ||
+            type > static_cast<int>(LightType::Spot) ||
+            !std::isfinite(intensity) || intensity < 0.0f ||
+            !jsonToVector(savedLight["color"], color) ||
+            !jsonToVector(savedLight["position"], position) ||
+            !jsonToVector(savedLight["target"], target))
+        {
+            std::cerr << "Dados da fonte de luz invalidos; mantendo valores atuais."
+                      << std::endl;
+            return true;
+        }
+
+        if (glm::any(glm::lessThan(color, glm::vec3(0.0f))) ||
+            glm::any(glm::greaterThan(color, glm::vec3(1.0f))))
+            return true;
+
+        light.type = static_cast<LightType>(type);
+        light.color = color;
+        light.intensity = intensity;
+        light.position = position;
+        light.target = target;
+        return true;
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "Erro ao carregar fonte de luz: " << error.what() << std::endl;
+        return false;
+    }
+}
+

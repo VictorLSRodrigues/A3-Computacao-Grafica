@@ -67,7 +67,7 @@ bool SandboxApplication::onInitialize()
         scene.captureDefaults();
 
     // Depois recupera as transformações salvas anteriormente.
-    if (!scene.loadTransforms(SCENE_STATE_PATH))
+    if (!scene.loadTransforms(SCENE_STATE_PATH, light))
     {
         std::cout << "Nenhum estado salvo foi restaurado. "
                   << "Utilizando as transformacoes iniciais."
@@ -141,7 +141,7 @@ void SandboxApplication::onShutdown()
         return;
 
     // Salva as transformações quando a aplicação encerra.
-    if (!scene.saveTransforms(SCENE_STATE_PATH))
+    if (!scene.saveTransforms(SCENE_STATE_PATH, light))
     {
         std::cerr << "Falha ao salvar as transformacoes da cena!"
                   << std::endl;
@@ -185,11 +185,12 @@ void SandboxApplication::renderUI()
         }
 
         editor.resetForSceneDefaults();
+        light.resetProperties();
 
         selectedModelName = "Todos";
 
         // Salva imediatamente o estado restaurado no computador.
-        if (!scene.saveTransforms(SCENE_STATE_PATH))
+        if (!scene.saveTransforms(SCENE_STATE_PATH, light))
         {
             std::cerr << "Falha ao salvar o estado restaurado."
                       << std::endl;
