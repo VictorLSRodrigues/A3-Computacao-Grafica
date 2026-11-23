@@ -1,6 +1,8 @@
 
 # Build directories
-/build/
+/build/*
+!/build/user_data/
+!/build/user_data/**
 /build-gcc/
 /build-clean/
 /glfw-build/
