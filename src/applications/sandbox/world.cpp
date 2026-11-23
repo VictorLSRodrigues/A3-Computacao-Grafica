@@ -49,10 +49,6 @@ bool buildWorld(Scene &scene)
     pyramidMesh->addTexture(std::move(diffuse));
     pyramidMesh->addTexture(std::move(specular));
 
-    // =========================================================
-    // GRID PLANE
-    // =========================================================
-
     auto gridMesh = std::make_shared<Mesh>();
 
     std::vector<Vertex> gridVertices;
@@ -87,15 +83,11 @@ bool buildWorld(Scene &scene)
 
     grid->transform.move(glm::vec3(0.0f, -1.5f, 0.0f));
 
-    // =========================================================
-    // FUNÇÃO PARA ADICIONAR MODELOS GLB
-    // =========================================================
-
     const auto addModel = [&scene](
-        const std::string &fileName,
-        const std::string &objectName,
-        const glm::vec3 &position,
-        float scale) -> bool
+                              const std::string &fileName,
+                              const std::string &objectName,
+                              const glm::vec3 &position,
+                              float scale) -> bool
     {
         const std::string modelPath =
             std::string(ASSETS_DIR) +
@@ -120,10 +112,6 @@ bool buildWorld(Scene &scene)
 
         return true;
     };
-
-    // =========================================================
-    // OBJETOS DA MESA - PRIMEIRA FILEIRA
-    // =========================================================
 
     if (!addModel(
             "Tablet_Vdd.glb",
@@ -174,10 +162,6 @@ bool buildWorld(Scene &scene)
             0.25f))
         return false;
 
-    // =========================================================
-    // NOVOS OBJETOS - SEGUNDA FILEIRA
-    // =========================================================
-
     if (!addModel(
             "Foto.glb",
             "foto",
@@ -199,9 +183,19 @@ bool buildWorld(Scene &scene)
             0.20f))
         return false;
 
-    // =========================================================
-    // PIRÂMIDE ORIGINAL
-    // =========================================================
+    if (!addModel(
+            "Monitor.glb",
+            "monitor",
+            glm::vec3(0.0f, 0.25f, -3.45f),
+            0.25f))
+        return false;
+
+    if (!addModel(
+            "Teclado.glb",
+            "teclado",
+            glm::vec3(0.0f, -0.05f, -2.85f),
+            0.20f))
+        return false;
 
     Scene::Object *pyramid =
         scene.addMesh(pyramidMesh, "pyramid");
@@ -230,10 +224,6 @@ bool buildWorld(Scene &scene)
 
     return true;
 }
-
-// =============================================================
-// ATALHOS PARA VISUALIZAR OS MODELOS
-// =============================================================
 
 void handleModelShortcuts(
     const Window &window,
