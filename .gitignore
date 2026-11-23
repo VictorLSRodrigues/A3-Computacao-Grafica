@@ -1,11 +1,7 @@
 
 # Build directories
 /build/
-# Ignorar build-gcc, exceto o estado compartilhado da cena
-/build-gcc/*
-!/build-gcc/user_data/
-/build-gcc/user_data/*
-!/build-gcc/user_data/scene_state.json
+/build-gcc/
 /build-clean/
 /glfw-build/
 /cmake-build-*/
