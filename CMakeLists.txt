@@ -61,6 +61,7 @@ set(ROTOR_ENGINE_SOURCES
     src/engine/graphics/environment/skybox.cpp
 
     # Engine: Renderer
+    src/engine/renderer/rain_renderer.cpp
     src/engine/renderer/renderer.cpp
 
     # Engine: Physics
