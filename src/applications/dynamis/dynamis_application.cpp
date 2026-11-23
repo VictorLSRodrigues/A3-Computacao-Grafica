@@ -151,7 +151,9 @@ bool DynamisApplication::onInitialize()
 
 void DynamisApplication::onUpdate(float deltaTime)
 {
+    const bool wasEditing = editor.isEditing();
     editor.handleModeToggle();
+    const bool isEditing = editor.isEditing();
 
     // O controle de câmera continua igual ao Sandbox; o Editor trata a seleção
     // e as transformações quando o modo de edição está ativo.
@@ -160,7 +162,21 @@ void DynamisApplication::onUpdate(float deltaTime)
 
     editor.update(true);
     scene.update(deltaTime);
-    physics.update(deltaTime);
+
+    // R volta a simulação ao ponto de partida.
+    if (window.keyPressed(GLFW_KEY_R))
+        physics.reset();
+
+    // Ao sair da edição, as posições escolhidas viram o novo ponto de partida.
+    if (wasEditing && !isEditing)
+    {
+        physics.recordStartPositions();
+        physics.reset();
+    }
+
+    // Enquanto edita, a física fica parada (e não acumula tempo).
+    if (!isEditing)
+        physics.update(deltaTime);
 }
 
 void DynamisApplication::onRender()
