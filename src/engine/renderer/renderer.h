@@ -5,6 +5,7 @@
 #include "engine/graphics/environment/skybox.h"
 #include "engine/graphics/mesh/mesh.h"
 #include "engine/graphics/resources/texture.h"
+#include "engine/renderer/rain_renderer.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
 #include "engine/scene/scenarios/rain_scenario.h"
@@ -34,6 +35,7 @@ public:
     // Volta as opções de renderização aos valores padrão.
     void resetSettings();
 
+    // Estado do cenário de chuva; o desenho fica a cargo do rainRenderer.
     RainScenario rainScenario;
 
 private:
@@ -58,4 +60,5 @@ private:
     Texture defaultTexture;
     Mesh lightMarker;
     Skybox skybox;
+    RainRenderer rainRenderer;
 };

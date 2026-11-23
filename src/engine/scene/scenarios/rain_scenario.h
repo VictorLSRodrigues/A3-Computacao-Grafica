@@ -1,28 +1,24 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <cstddef>
 #include <vector>
 
-#include "engine/graphics/buffers/VAO.h"
-#include "engine/graphics/buffers/VBO.h"
-#include "engine/graphics/resources/shader.h"
+#include <glm/glm.hpp>
 
-class Camera;
-
+// Cenário de chuva: guarda as gotas e calcula onde cada uma está em um instante.
+// Não desenha nada nem usa OpenGL; quem o desenha é a RainRenderer, do renderer.
 class RainScenario
 {
 public:
     bool enabled = false;
 
-    // Prepara os recursos OpenGL do cenário de chuva.
-    bool init();
+    // Gera as posições iniciais das gotas. O resultado é sempre o mesmo, para a chuva ser reproduzível.
+    void init();
 
-    // Desenha a chuva se o cenário estiver ativo.
-    void render(Camera &camera, bool framebufferSRGB);
+    // Calcula os segmentos de reta que representam as gotas no instante informado, em segundos.
+    // Escreve 6 valores por gota: x, y, z do começo e x, y, z do fim.
+    void buildSegments(double timeSeconds, std::vector<float> &vertices) const;
 
 private:
-    VAO vao;
-    VBO vbo;
-    Shader shader;
     std::vector<glm::vec3> drops;
 };

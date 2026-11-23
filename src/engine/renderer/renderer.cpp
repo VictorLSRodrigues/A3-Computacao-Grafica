@@ -27,7 +27,9 @@ bool Renderer::init()
         return false;
     }
 
-    if (!rainScenario.init())
+    rainScenario.init();
+
+    if (!rainRenderer.init())
         return false;
 
     // O céu é opcional: sem ele, a cena usa a cor de fundo lisa.
@@ -139,7 +141,7 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
     if (showSkybox)
         skybox.draw(camera, framebufferSRGB);
 
-    rainScenario.render(camera, framebufferSRGB);
+    rainRenderer.render(rainScenario, camera, framebufferSRGB);
 }
 
 void Renderer::drawScene(const Scene &scene)
