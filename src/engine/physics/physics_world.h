@@ -4,11 +4,14 @@
 #include <cstddef>
 #include <vector>
 
-#include "engine/scene/transform.h"
+#include "engine/physics/physics_types.h"
 
-// Simulação de corpos esféricos sob gravidade, com contatos entre esferas e
-// superfícies de apoio planas ou curvas (bacia). Usa passos fixos, impulso de
-// contato, atrito e dinâmica rotacional de esfera maciça.
+namespace rotor::physics
+{
+
+// Coordena a simulação de corpos rígidos esféricos e caixas orientadas.
+// A geometria de colisão e a resolução de contatos são delegadas aos módulos
+// collision e solver; o World controla tempo, integração e ordem dos sistemas.
 class PhysicsWorld
 {
 public:
@@ -32,11 +35,10 @@ public:
         float dynamicFriction = 0.4f);
     void clearGroundPlane();
 
-    // Registra uma Transform para receber a integração física.
-    // A posição, orientação e velocidades iniciais viram o ponto de partida (reset()).
-    // O raio é local e acompanha a escala do Transform; a massa deve ser positiva.
-    // Para raio efetivo positivo, o corpo usa I = 2/5 * massa * raio².
-    bool addBody(
+    // Registra uma esfera dinâmica. A Transform representa o centro da esfera.
+    // O raio é local e acompanha a maior escala absoluta do Transform; a massa
+    // deve ser positiva. Para raio efetivo positivo, usa I = 2/5 * massa * raio².
+    bool addSphereBody(
         Transform& transform,
         const glm::vec3& initialVelocity = glm::vec3(0.0f),
         float sphereRadius = 0.0f,
@@ -46,10 +48,33 @@ public:
         float dynamicFriction = 0.4f,
         const glm::vec3& initialAngularVelocity = glm::vec3(0.0f));
 
+    // Registra uma caixa dinâmica orientada. A Transform representa o centro
+    // geométrico do colisor; as meias-dimensões são locais e acompanham sua escala.
+    bool addBoxBody(
+        Transform& transform,
+        const glm::vec3& localHalfExtents,
+        const glm::vec3& initialVelocity = glm::vec3(0.0f),
+        float restitution = 0.0f,
+        float mass = 1.0f,
+        float staticFriction = 0.6f,
+        float dynamicFriction = 0.4f,
+        const glm::vec3& initialAngularVelocity = glm::vec3(0.0f));
+
     // Registra uma esfera imóvel, que colide com corpos dinâmicos.
-    void addStaticBody(
+    void addStaticSphere(
         Transform& transform,
         float sphereRadius,
+        float restitution = 0.0f,
+        float staticFriction = 0.6f,
+        float dynamicFriction = 0.4f);
+
+    // Registra uma caixa imóvel orientada (OBB). O centro e as meias-dimensões
+    // são locais ao Transform e acompanham sua posição, rotação e escala.
+    // Útil para superfícies rígidas como mesas e plataformas.
+    bool addStaticBox(
+        Transform& transform,
+        const glm::vec3& localCenter,
+        const glm::vec3& localHalfExtents,
         float restitution = 0.0f,
         float staticFriction = 0.6f,
         float dynamicFriction = 0.4f);
@@ -84,8 +109,12 @@ public:
     void update(float frameTime);
     void reset();
 
+    // Remove sobreposições já existentes antes de iniciar a simulação, sem gerar
+    // velocidades ou impulsos artificiais. Útil após carregar/editar uma cena.
+    void stabilizeInitialOverlaps(int iterations = 24);
+
     // Passa a usar posição e orientação atuais como ponto de partida (útil após o Editor).
-    void recordStartPositions();
+    void captureInitialPose();
 
     void clear();
     std::size_t bodyCount() const;
@@ -99,36 +128,22 @@ public:
     glm::vec3 angularVelocity(const Transform& transform) const;
 
 private:
-    struct Body
-    {
-        Transform* transform = nullptr;
-        glm::vec3 velocity{0.0f};
-        glm::vec3 angularVelocity{0.0f};
-        glm::vec3 forceAccumulator{0.0f};
-        glm::vec3 torqueAccumulator{0.0f};
-        glm::vec3 continuousForce{0.0f};
-        glm::vec3 continuousTorque{0.0f};
-        glm::vec3 startPosition{0.0f};
-        glm::vec3 startVelocity{0.0f};
-        glm::vec3 startAngularVelocity{0.0f};
-        glm::quat startOrientation{1.0f, 0.0f, 0.0f, 0.0f};
-        // Raio informado em espaço local e raio efetivo em espaço de mundo.
-        float baseSphereRadius = 0.0f;
-        float sphereRadius = 0.0f;
-        float restitution = 0.0f;
-        float staticFriction = 0.0f;
-        float dynamicFriction = 0.0f;
-        float inverseMass = 1.0f;
-        float inverseInertia = 0.0f;
-    };
+    using Body = RigidBody;
+    using BodyShape = ColliderShape;
 
     Body* findBody(Transform& transform);
     const Body* findBody(const Transform& transform) const;
+    struct ContactConstraint
+    {
+        RigidBody* bodyA = nullptr;
+        RigidBody* bodyB = nullptr;
+        ContactManifold manifold;
+        PhysicsMaterial material;
+    };
+
     void step(float dt);
-    void synchronizeBodyScale(Body& body);
-    void resolveGroundCollisions();
-    void resolveSphereCollisions();
-    void addBodyInternal(
+    void collectContactConstraints(std::vector<ContactConstraint>& contacts);
+    void addSphereBodyInternal(
         Transform& transform,
         const glm::vec3& initialVelocity,
         const glm::vec3& initialAngularVelocity,
@@ -140,15 +155,14 @@ private:
 
     static constexpr double kFixedStep = 1.0 / 120.0;
     static constexpr int kMaxStepsPerFrame = 12;
-    static constexpr int kCollisionIterations = 8;
+    static constexpr int kCollisionIterations = 80;
+    static constexpr int kPositionIterations = 6;
     static constexpr int kMaxAdaptiveSubsteps = 64;
     static constexpr double kTolerance = 1e-6;
-    static constexpr float kRestitutionVelocityThreshold = 0.5f;
-    static constexpr float kPenetrationSlop = 0.001f;
-    static constexpr float kPositionCorrection = 0.8f;
 
     glm::vec3 gravity_{0.0f, -9.81f, 0.0f};
     std::vector<Body> bodies_;
+    std::vector<StaticBoxCollider> staticBoxes_;
     bool hasGroundPlane_ = false;
     bool hasGroundBowl_ = false;
     float groundHeight_ = 0.0f;
@@ -160,3 +174,6 @@ private:
     double accumulator_ = 0.0;
     unsigned long long stepCount_ = 0;
 };
+
+} // namespace rotor::physics
+

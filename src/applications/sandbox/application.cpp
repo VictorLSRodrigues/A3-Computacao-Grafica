@@ -36,6 +36,10 @@ namespace
     // A camera, a interface e o restante da aplicacao continuam em tempo real.
     constexpr float SANDBOX_PHYSICS_TIME_SCALE = 0.1f;
 
+    // Mesa.glb tem um tampo com aproximadamente 0,21 unidade no eixo local Y.
+    // O colisor representa apenas essa placa; pernas continuam sendo visuais.
+    constexpr float SANDBOX_TABLETOP_COLLIDER_THICKNESS = 0.21f;
+
     WindowConfig createWindowConfig()
     {
         WindowConfig config;
@@ -108,15 +112,14 @@ bool SandboxApplication::registerScenePhysics()
 
     std::size_t registeredBodies = 0;
     std::size_t expectedBodies = 0;
+    bool tableColliderRegistered = false;
 
     for (Scene::Object &object : scene.getObjects())
     {
-        // O grid visual é o único objeto excluído: sua superfície é
-        // representada pelo plano de chão do PhysicsWorld.
+        // O grid visual é representado pelo plano de chão do PhysicsWorld.
         if (object.name == "grid_plane")
             continue;
 
-        ++expectedBodies;
         const BoundingBox *bounds = object.boundingBox();
         if (!bounds || !bounds->valid)
         {
@@ -130,38 +133,40 @@ bool SandboxApplication::registerScenePhysics()
         const glm::vec3 halfExtents =
             (bounds->max - bounds->min) * 0.5f;
 
-        float localRadius = glm::length(halfExtents);
-
-        // A mesa é muito larga e relativamente fina. Usar a meia diagonal
-        // criaria uma esfera que começaria sobreposta a quase todos os itens
-        // da bancada. Nesta primeira aproximação, sua esfera usa a meia-altura.
+        // A mesa não é um corpo dinâmico. Seu tampo é um colisor de caixa
+        // estático, orientado pelo Transform real do objeto. Não usamos a
+        // bounding box completa porque isso preencheria o espaço entre as pernas.
         if (object.name == "mesa")
-            localRadius = halfExtents.y;
-
-        // Malhas criadas pelo próprio Sandbox podem fornecer um raio mais
-        // preciso que a meia diagonal da caixa envolvente.
-        if (object.mesh && object.name != "mesa")
         {
-            const Geometry &geometry = object.mesh->getGeometry();
-            const auto &vertices = geometry.getStructuredVertices();
-            if (!vertices.empty())
+            const float halfThickness =
+                SANDBOX_TABLETOP_COLLIDER_THICKNESS * 0.5f;
+            const glm::vec3 tabletopCenter(
+                localCenter.x,
+                bounds->max.y - halfThickness,
+                localCenter.z);
+            const glm::vec3 tabletopHalfExtents(
+                halfExtents.x,
+                halfThickness,
+                halfExtents.z);
+
+            if (!physics.addStaticBox(
+                    object.transform,
+                    tabletopCenter,
+                    tabletopHalfExtents,
+                    0.0f,
+                    0.85f,
+                    0.65f))
             {
-                localRadius = 0.0f;
-                for (const Vertex &vertex : vertices)
-                {
-                    localRadius = std::max(
-                        localRadius, glm::length(vertex.position - localCenter));
-                }
+                std::cerr << "Falha ao registrar o colisor estático do tampo da mesa."
+                          << std::endl;
+                return false;
             }
+
+            tableColliderRegistered = true;
+            continue;
         }
 
-        if (!(localRadius > 1e-4f) || !std::isfinite(localRadius))
-        {
-            std::cerr << "Colisor inválido para o objeto: "
-                      << object.name << std::endl;
-            return false;
-        }
-
+        ++expectedBodies;
         PhysicsBinding &binding = physicsBindings.emplace_back();
         binding.object = &object;
         binding.localCenter = localCenter;
@@ -169,26 +174,69 @@ bool SandboxApplication::registerScenePhysics()
         binding.bodyTransform.move(object.visualCenter());
 
         const glm::vec3 absoluteScale = glm::abs(object.transform.scale());
-        const float scaleFactor = std::max(
-            absoluteScale.x, std::max(absoluteScale.y, absoluteScale.z));
-        const float worldRadius = localRadius * scaleFactor;
+        bool bodyRegistered = false;
 
-        // Massa proporcional ao volume da esfera aproximada: um corpo com
-        // raio de 0,5 m tem massa de referência de 1 kg.
-        const float radiusRatio = worldRadius / 0.5f;
-        const float mass = std::clamp(
-            radiusRatio * radiusRatio * radiusRatio, 0.05f, 1000.0f);
+        if (object.name == "physics_sphere")
+        {
+            // A esfera de demonstração usa um colisor esférico correspondente
+            // à sua geometria procedural, não a caixa envolvente.
+            float localRadius = glm::length(halfExtents);
+            if (object.mesh)
+            {
+                const auto &vertices =
+                    object.mesh->getGeometry().getStructuredVertices();
+                if (!vertices.empty())
+                {
+                    localRadius = 0.0f;
+                    for (const Vertex &vertex : vertices)
+                    {
+                        localRadius = std::max(
+                            localRadius,
+                            glm::length(vertex.position - localCenter));
+                    }
+                }
+            }
 
-        if (!physics.addBody(
+            const float worldRadius = localRadius * std::max(
+                absoluteScale.x,
+                std::max(absoluteScale.y, absoluteScale.z));
+            const float radiusRatio = worldRadius / 0.5f;
+            const float mass = std::clamp(
+                radiusRatio * radiusRatio * radiusRatio, 0.05f, 1000.0f);
+            bodyRegistered = physics.addSphereBody(
                 binding.bodyTransform,
                 glm::vec3(0.0f),
                 localRadius,
                 0.12f,
                 mass,
                 0.75f,
-                0.55f))
+                0.55f);
+        }
+        else
         {
-            std::cerr << "Falha ao registrar objeto na física: "
+            // Modelos importados usam OBB alinhado à orientação da instância,
+            // com dimensões derivadas dos limites reais da geometria do modelo.
+            // A massa é estimada pelo volume da caixa (densidade de referência
+            // de 250 kg/m³), com limites para evitar extremos em assets estilizados.
+            const float worldVolume = 8.0f *
+                halfExtents.x * absoluteScale.x *
+                halfExtents.y * absoluteScale.y *
+                halfExtents.z * absoluteScale.z;
+            const float mass = std::clamp(
+                worldVolume * 250.0f, 0.05f, 5.0f);
+            bodyRegistered = physics.addBoxBody(
+                binding.bodyTransform,
+                halfExtents,
+                glm::vec3(0.0f),
+                0.05f,
+                mass,
+                0.78f,
+                0.58f);
+        }
+
+        if (!bodyRegistered)
+        {
+            std::cerr << "Falha ao registrar o colisor físico do objeto: "
                       << object.name << std::endl;
             physicsBindings.pop_back();
             return false;
@@ -197,15 +245,27 @@ bool SandboxApplication::registerScenePhysics()
         ++registeredBodies;
     }
 
-    if (registeredBodies == 0 || registeredBodies != expectedBodies)
+    if (!tableColliderRegistered || registeredBodies == 0 ||
+        registeredBodies != expectedBodies)
     {
         std::cerr << "Registro físico incompleto: " << registeredBodies
-                  << " de " << expectedBodies << " objetos." << std::endl;
+                  << " de " << expectedBodies
+                  << " corpos dinâmicos; colisor da mesa: "
+                  << (tableColliderRegistered ? "sim" : "não") << "."
+                  << std::endl;
         return false;
     }
 
-    std::cout << "[SANDBOX] Corpos físicos registrados: "
-              << registeredBodies << " (grid excluído)." << std::endl;
+    // Corrige sobreposições herdadas do estado salvo antes da primeira queda.
+    // Isso não aplica impulsos: os objetos começam sem energia artificial e a
+    // pose já estabilizada passa a ser a referência do comando Reset.
+    physics.stabilizeInitialOverlaps(24);
+    physics.captureInitialPose();
+    syncSceneFromPhysics();
+
+    std::cout << "[SANDBOX] " << registeredBodies
+              << " corpos dinâmicos registrados; tampo da mesa estático; grid excluído."
+              << std::endl;
     return true;
 }
 

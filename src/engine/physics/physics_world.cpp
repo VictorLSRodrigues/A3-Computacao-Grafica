@@ -1,8 +1,14 @@
 #include "physics_world.h"
+#include "engine/physics/solver/contact_solver.h"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <glm/gtx/quaternion.hpp>
+
+namespace rotor::physics
+{
+
 
 namespace
 {
@@ -11,142 +17,10 @@ float clampFriction(float coefficient)
     return std::clamp(coefficient, 0.0f, 1.0f);
 }
 
-glm::vec3 velocityAtPoint(
-    const glm::vec3& linearVelocity,
-    const glm::vec3& angularVelocity,
-    const glm::vec3& arm)
-{
-    return linearVelocity + glm::cross(angularVelocity, arm);
-}
-
-float effectiveMassDenominator(
-    float inverseMassA,
-    float inverseInertiaA,
-    const glm::vec3& armA,
-    float inverseMassB,
-    float inverseInertiaB,
-    const glm::vec3& armB,
-    const glm::vec3& direction)
-{
-    const glm::vec3 angularA = glm::cross(armA, direction);
-    const glm::vec3 angularB = glm::cross(armB, direction);
-
-    return inverseMassA + inverseMassB +
-        inverseInertiaA * glm::dot(angularA, angularA) +
-        inverseInertiaB * glm::dot(angularB, angularB);
-}
-
-float combineFriction(float a, float b)
-{
-    return std::sqrt(std::max(0.0f, a * b));
-}
-
 bool isFiniteVector(const glm::vec3& value)
 {
     return std::isfinite(value.x) && std::isfinite(value.y) &&
         std::isfinite(value.z);
-}
-
-constexpr float kBowlLipStart = 0.78f;
-
-void evaluateBowlProfile(
-    float radius,
-    float depth,
-    float lipHeight,
-    float radialDistance,
-    float& height,
-    float& slope,
-    float& curvature)
-{
-    const float t = std::clamp(radialDistance / radius, 0.0f, 1.0f);
-    const float inverseRadius = 1.0f / radius;
-    const float lipWidth = 1.0f - kBowlLipStart;
-
-    height = depth * t * t;
-    slope = 2.0f * depth * radialDistance * inverseRadius * inverseRadius;
-    curvature = 2.0f * depth * inverseRadius * inverseRadius;
-
-    if (t > kBowlLipStart && lipHeight > 0.0f)
-    {
-        const float u = (t - kBowlLipStart) / lipWidth;
-        const float u2 = u * u;
-        const float u3 = u2 * u;
-        height += lipHeight * u2 * u2;
-        slope += 4.0f * lipHeight * u3 / (radius * lipWidth);
-        curvature += 12.0f * lipHeight * u2 /
-            (radius * radius * lipWidth * lipWidth);
-    }
-}
-
-struct BowlContact
-{
-    glm::vec3 surfacePoint{0.0f};
-    glm::vec3 normal{0.0f, 1.0f, 0.0f};
-    float signedDistance = 0.0f;
-};
-
-BowlContact findClosestBowlSurface(
-    const glm::vec3& position,
-    float radius,
-    float depth,
-    float lipHeight)
-{
-    const float radialDistance = std::sqrt(
-        position.x * position.x + position.z * position.z);
-    const float directionX = radialDistance > 1e-6f
-        ? position.x / radialDistance : 1.0f;
-    const float directionZ = radialDistance > 1e-6f
-        ? position.z / radialDistance : 0.0f;
-
-    // Para uma superfície de revolução, o ponto mais próximo compartilha o
-    // azimute do centro da esfera. Newton resolve a coordenada radial s para
-    // que o segmento até a superfície fique alinhado à normal local.
-    float surfaceRadius = std::clamp(radialDistance, 0.0f, radius);
-    for (int iteration = 0; iteration < 10; ++iteration)
-    {
-        float height = 0.0f;
-        float slope = 0.0f;
-        float curvature = 0.0f;
-        evaluateBowlProfile(
-            radius, depth, lipHeight, surfaceRadius,
-            height, slope, curvature);
-
-        const float function = (surfaceRadius - radialDistance) +
-            (height - position.y) * slope;
-        const float derivative = 1.0f + slope * slope +
-            (height - position.y) * curvature;
-        if (std::fabs(derivative) <= 1e-6f)
-            break;
-
-        const float nextRadius = std::clamp(
-            surfaceRadius - function / derivative, 0.0f, radius);
-        if (std::fabs(nextRadius - surfaceRadius) <= 1e-5f)
-        {
-            surfaceRadius = nextRadius;
-            break;
-        }
-        surfaceRadius = nextRadius;
-    }
-
-    float surfaceHeight = 0.0f;
-    float surfaceSlope = 0.0f;
-    float ignoredCurvature = 0.0f;
-    evaluateBowlProfile(
-        radius, depth, lipHeight, surfaceRadius,
-        surfaceHeight, surfaceSlope, ignoredCurvature);
-
-    BowlContact contact;
-    contact.surfacePoint = glm::vec3(
-        directionX * surfaceRadius,
-        surfaceHeight,
-        directionZ * surfaceRadius);
-    contact.normal = glm::normalize(glm::vec3(
-        -surfaceSlope * directionX,
-        1.0f,
-        -surfaceSlope * directionZ));
-    contact.signedDistance = glm::dot(
-        position - contact.surfacePoint, contact.normal);
-    return contact;
 }
 }
 
@@ -204,7 +78,7 @@ void PhysicsWorld::clearGroundPlane()
     hasGroundBowl_ = false;
 }
 
-bool PhysicsWorld::addBody(
+bool PhysicsWorld::addSphereBody(
     Transform& transform,
     const glm::vec3& initialVelocity,
     float sphereRadius,
@@ -221,7 +95,7 @@ bool PhysicsWorld::addBody(
     if (!std::isfinite(inverseMass))
         return false;
 
-    addBodyInternal(
+    addSphereBodyInternal(
         transform,
         initialVelocity,
         initialAngularVelocity,
@@ -233,14 +107,60 @@ bool PhysicsWorld::addBody(
     return true;
 }
 
-void PhysicsWorld::addStaticBody(
+bool PhysicsWorld::addBoxBody(
+    Transform& transform,
+    const glm::vec3& localHalfExtents,
+    const glm::vec3& initialVelocity,
+    float restitution,
+    float mass,
+    float staticFriction,
+    float dynamicFriction,
+    const glm::vec3& initialAngularVelocity)
+{
+    if (!isFiniteVector(localHalfExtents) ||
+        localHalfExtents.x <= 1e-5f ||
+        localHalfExtents.y <= 1e-5f ||
+        localHalfExtents.z <= 1e-5f ||
+        !isFiniteVector(initialVelocity) ||
+        !isFiniteVector(initialAngularVelocity) ||
+        !(mass > 0.0f) || !std::isfinite(mass))
+    {
+        return false;
+    }
+
+    const float inverseMass = 1.0f / mass;
+    if (!std::isfinite(inverseMass))
+        return false;
+
+    Body body;
+    body.transform = &transform;
+    body.collider.shape = BodyShape::Box;
+    body.velocity = initialVelocity;
+    body.angularVelocity = initialAngularVelocity;
+    body.startPosition = transform.position();
+    body.startVelocity = initialVelocity;
+    body.startAngularVelocity = initialAngularVelocity;
+    body.startOrientation = transform.orientation();
+    body.collider.baseBoxHalfExtents = localHalfExtents;
+    body.material.restitution = std::clamp(restitution, 0.0f, 1.0f);
+    body.material.staticFriction = clampFriction(staticFriction);
+    body.material.dynamicFriction = std::min(
+        clampFriction(dynamicFriction), body.material.staticFriction);
+    body.inverseMass = inverseMass;
+
+    bodies_.push_back(body);
+    bodies_.back().synchronizeColliderAndInertia();
+    return true;
+}
+
+void PhysicsWorld::addStaticSphere(
     Transform& transform,
     float sphereRadius,
     float restitution,
     float staticFriction,
     float dynamicFriction)
 {
-    addBodyInternal(
+    addSphereBodyInternal(
         transform,
         glm::vec3(0.0f),
         glm::vec3(0.0f),
@@ -251,7 +171,40 @@ void PhysicsWorld::addStaticBody(
         0.0f);
 }
 
-void PhysicsWorld::addBodyInternal(
+bool PhysicsWorld::addStaticBox(
+    Transform& transform,
+    const glm::vec3& localCenter,
+    const glm::vec3& localHalfExtents,
+    float restitution,
+    float staticFriction,
+    float dynamicFriction)
+{
+    if (!isFiniteVector(localCenter) || !isFiniteVector(localHalfExtents) ||
+        localHalfExtents.x <= 0.0f || localHalfExtents.y <= 0.0f ||
+        localHalfExtents.z <= 0.0f)
+    {
+        return false;
+    }
+
+    for (const StaticBoxCollider& collider : staticBoxes_)
+    {
+        if (collider.transform == &transform)
+            return false;
+    }
+
+    StaticBoxCollider collider;
+    collider.transform = &transform;
+    collider.localCenter = localCenter;
+    collider.localHalfExtents = localHalfExtents;
+    collider.material.restitution = std::clamp(restitution, 0.0f, 1.0f);
+    collider.material.staticFriction = clampFriction(staticFriction);
+    collider.material.dynamicFriction = std::min(
+        clampFriction(dynamicFriction), collider.material.staticFriction);
+    staticBoxes_.push_back(collider);
+    return true;
+}
+
+void PhysicsWorld::addSphereBodyInternal(
     Transform& transform,
     const glm::vec3& initialVelocity,
     const glm::vec3& initialAngularVelocity,
@@ -263,22 +216,23 @@ void PhysicsWorld::addBodyInternal(
 {
     Body body;
     body.transform = &transform;
+    body.collider.shape = BodyShape::Sphere;
     body.velocity = initialVelocity;
     body.angularVelocity = initialAngularVelocity;
     body.startPosition = transform.position();
     body.startVelocity = initialVelocity;
     body.startAngularVelocity = initialAngularVelocity;
     body.startOrientation = transform.orientation();
-    body.baseSphereRadius = std::max(0.0f, sphereRadius);
-    body.sphereRadius = body.baseSphereRadius;
-    body.restitution = std::clamp(restitution, 0.0f, 1.0f);
-    body.staticFriction = clampFriction(staticFriction);
-    body.dynamicFriction = std::min(
-        clampFriction(dynamicFriction), body.staticFriction);
+    body.collider.baseSphereRadius = std::max(0.0f, sphereRadius);
+    body.collider.sphereRadius = body.collider.baseSphereRadius;
+    body.material.restitution = std::clamp(restitution, 0.0f, 1.0f);
+    body.material.staticFriction = clampFriction(staticFriction);
+    body.material.dynamicFriction = std::min(
+        clampFriction(dynamicFriction), body.material.staticFriction);
     body.inverseMass = inverseMass;
 
     bodies_.push_back(body);
-    synchronizeBodyScale(bodies_.back());
+    bodies_.back().synchronizeColliderAndInertia();
 }
 
 
@@ -333,8 +287,8 @@ bool PhysicsWorld::applyTorque(Transform& transform, const glm::vec3& torque)
     Body* body = findBody(transform);
     if (!body || body->inverseMass <= 0.0f || !isFiniteVector(torque))
         return false;
-    synchronizeBodyScale(*body);
-    if (body->inverseInertia <= 0.0f)
+    body->synchronizeColliderAndInertia();
+    if (body->inverseMass <= 0.0f)
         return false;
 
     body->torqueAccumulator += torque;
@@ -358,8 +312,8 @@ bool PhysicsWorld::setContinuousTorque(
     Body* body = findBody(transform);
     if (!body || body->inverseMass <= 0.0f || !isFiniteVector(torque))
         return false;
-    synchronizeBodyScale(*body);
-    if (body->inverseInertia <= 0.0f)
+    body->synchronizeColliderAndInertia();
+    if (body->inverseMass <= 0.0f)
         return false;
 
     body->continuousTorque = torque;
@@ -382,11 +336,9 @@ bool PhysicsWorld::applyAngularImpulse(
     Body* body = findBody(transform);
     if (!body || body->inverseMass <= 0.0f || !isFiniteVector(angularImpulse))
         return false;
-    synchronizeBodyScale(*body);
-    if (body->inverseInertia <= 0.0f)
-        return false;
+    body->synchronizeColliderAndInertia();
 
-    body->angularVelocity += angularImpulse * body->inverseInertia;
+    body->angularVelocity += body->inverseInertiaTensorWorld() * angularImpulse;
     return true;
 }
 
@@ -399,11 +351,11 @@ bool PhysicsWorld::applyImpulseAtPoint(
     if (!body || body->inverseMass <= 0.0f ||
         !isFiniteVector(impulse) || !isFiniteVector(worldPoint))
         return false;
-    synchronizeBodyScale(*body);
+    body->synchronizeColliderAndInertia();
 
     const glm::vec3 arm = worldPoint - transform.position();
     body->velocity += impulse * body->inverseMass;
-    body->angularVelocity += body->inverseInertia * glm::cross(arm, impulse);
+    body->angularVelocity += body->inverseInertiaTensorWorld() * glm::cross(arm, impulse);
     return true;
 }
 
@@ -439,51 +391,25 @@ void PhysicsWorld::update(float frameTime)
     }
 }
 
-void PhysicsWorld::synchronizeBodyScale(Body& body)
-{
-    if (!body.transform || body.baseSphereRadius <= 0.0f)
-    {
-        body.sphereRadius = 0.0f;
-        body.inverseInertia = 0.0f;
-        return;
-    }
-
-    // O colisor esférico acompanha a maior escala absoluta. Para escala
-    // não uniforme, isso produz uma esfera envolvente conservadora.
-    const glm::vec3 scale = glm::abs(body.transform->scale());
-    const float scaleFactor = std::max(scale.x, std::max(scale.y, scale.z));
-    const float scaledRadius = body.baseSphereRadius * scaleFactor;
-    if (!std::isfinite(scaleFactor) || !std::isfinite(scaledRadius))
-    {
-        body.sphereRadius = 0.0f;
-        body.inverseInertia = 0.0f;
-        return;
-    }
-    body.sphereRadius = scaledRadius;
-
-    if (body.inverseMass > 0.0f && body.sphereRadius > 1e-6f)
-    {
-        const float radiusSquared = body.sphereRadius * body.sphereRadius;
-        body.inverseInertia = 2.5f * body.inverseMass / radiusSquared;
-    }
-    else
-    {
-        body.inverseInertia = 0.0f;
-    }
-}
-
 void PhysicsWorld::step(float dt)
 {
-    float smallestRadius = std::numeric_limits<float>::max();
+    float smallestExtent = std::numeric_limits<float>::max();
     float maximumTravel = 0.0f;
 
     for (Body& body : bodies_)
     {
-        synchronizeBodyScale(body);
-        if (!body.transform || body.sphereRadius <= 0.0f)
+        body.synchronizeColliderAndInertia();
+        if (!body.transform)
             continue;
 
-        smallestRadius = std::min(smallestRadius, body.sphereRadius);
+        const float minimumShapeExtent = body.collider.shape == BodyShape::Sphere
+            ? body.collider.sphereRadius
+            : std::min(body.collider.boxHalfExtents.x,
+                std::min(body.collider.boxHalfExtents.y, body.collider.boxHalfExtents.z));
+        if (minimumShapeExtent <= 1e-6f)
+            continue;
+        if (minimumShapeExtent > 1e-6f)
+            smallestExtent = std::min(smallestExtent, minimumShapeExtent);
         if (body.inverseMass <= 0.0f)
             continue;
 
@@ -496,11 +422,11 @@ void PhysicsWorld::step(float dt)
     }
 
     // Subpassos adaptativos limitam o deslocamento por subpasso em relação
-    // ao menor raio físico, reduzindo tunneling em colisões de alta velocidade.
+    // à menor meia-dimensão física (esfera ou caixa), reduzindo tunneling.
     int substeps = 1;
-    if (smallestRadius < std::numeric_limits<float>::max())
+    if (smallestExtent < std::numeric_limits<float>::max())
     {
-        const float maximumSubstepTravel = std::max(1e-4f, smallestRadius * 0.5f);
+        const float maximumSubstepTravel = std::max(1e-4f, smallestExtent * 0.5f);
         const float requiredSubsteps = maximumTravel / maximumSubstepTravel;
         if (!std::isfinite(requiredSubsteps) ||
             requiredSubsteps >= static_cast<float>(kMaxAdaptiveSubsteps))
@@ -523,8 +449,8 @@ void PhysicsWorld::step(float dt)
 
             const glm::vec3 acceleration = gravity_ +
                 (body.forceAccumulator + body.continuousForce) * body.inverseMass;
-            const glm::vec3 angularAcceleration =
-                (body.torqueAccumulator + body.continuousTorque) * body.inverseInertia;
+            const glm::vec3 angularAcceleration = body.inverseInertiaTensorWorld() *
+                (body.torqueAccumulator + body.continuousTorque);
 
             body.velocity += acceleration * substep;
             body.angularVelocity += angularAcceleration * substep;
@@ -540,219 +466,90 @@ void PhysicsWorld::step(float dt)
             }
         }
 
-        // Resolve pares primeiro e o chão por último em cada iteração, garantindo
-        // que o estado final do subpasso não deixe a esfera enterrada na superfície.
+        // Detecta uma vez por subpasso e mantém o mesmo conjunto de contatos
+        // durante as iterações do solver. Isso permite acumular impulsos por
+        // ponto sem recalcular a geometria a cada iteração.
+        std::vector<ContactConstraint> contacts;
+        contacts.reserve(bodies_.size() * 4);
+        collectContactConstraints(contacts);
+
+        // Contatos contra suportes estáticos são resolvidos primeiro. Em pilhas,
+        // isso ancora os corpos inferiores antes de propagar as cargas para os
+        // corpos dinâmicos apoiados neles nas iterações seguintes.
+        std::stable_partition(
+            contacts.begin(), contacts.end(),
+            [](const ContactConstraint& contact)
+            {
+                return !contact.bodyA || !contact.bodyB ||
+                    contact.bodyA->inverseMass <= 0.0f ||
+                    contact.bodyB->inverseMass <= 0.0f;
+            });
+        for (ContactConstraint& contact : contacts)
+        {
+            solver::prepareContactManifold(
+                contact.bodyA,
+                contact.bodyB,
+                contact.manifold,
+                contact.material);
+        }
+
         for (int iteration = 0; iteration < kCollisionIterations; ++iteration)
         {
-            resolveSphereCollisions();
-            resolveGroundCollisions();
+            for (ContactConstraint& contact : contacts)
+            {
+                solver::solveContactVelocity(
+                    contact.bodyA,
+                    contact.bodyB,
+                    contact.manifold,
+                    contact.material);
+            }
+        }
+
+        // Projeção posicional separada dos impulsos. Recoletamos os contatos
+        // após cada passagem, porque corrigir um apoio muda imediatamente os
+        // contatos dos corpos empilhados acima dele. Suportes estáticos são
+        // corrigidos primeiro; pares dinâmicos vêm em seguida.
+        for (int iteration = 0; iteration < kPositionIterations; ++iteration)
+        {
+            std::vector<ContactConstraint> positionContacts;
+            positionContacts.reserve(bodies_.size() * 4);
+            collectContactConstraints(positionContacts);
+            if (positionContacts.empty())
+                break;
+
+            std::stable_partition(
+                positionContacts.begin(), positionContacts.end(),
+                [](const ContactConstraint& contact)
+                {
+                    return !contact.bodyA || !contact.bodyB ||
+                        contact.bodyA->inverseMass <= 0.0f ||
+                        contact.bodyB->inverseMass <= 0.0f;
+                });
+
+            float deepestPenetration = 0.0f;
+            for (const ContactConstraint& contact : positionContacts)
+            {
+                for (std::size_t point = 0;
+                     point < contact.manifold.pointCount; ++point)
+                {
+                    deepestPenetration = std::max(
+                        deepestPenetration,
+                        contact.manifold.points[point].penetration);
+                }
+
+                solver::correctContactPosition(
+                    contact.bodyA,
+                    contact.bodyB,
+                    contact.manifold,
+                    1.0f);
+            }
+
+            if (deepestPenetration <= 0.0002f)
+                break;
         }
     }
 
     ++stepCount_;
-}
-
-void PhysicsWorld::resolveGroundCollisions()
-{
-    if (!hasGroundPlane_ && !hasGroundBowl_)
-        return;
-
-    for (Body& body : bodies_)
-    {
-        if (!body.transform || body.inverseMass == 0.0f || body.sphereRadius <= 0.0f)
-            continue;
-
-        glm::vec3 position = body.transform->position();
-        glm::vec3 normal(0.0f, 1.0f, 0.0f);
-        float signedDistance = 0.0f;
-
-        if (hasGroundPlane_)
-        {
-            signedDistance = position.y - groundHeight_;
-        }
-        else
-        {
-            const BowlContact contact = findClosestBowlSurface(
-                position,
-                groundBowlRadius_,
-                groundBowlDepth_,
-                groundBowlLipHeight_);
-            normal = contact.normal;
-            signedDistance = contact.signedDistance;
-        }
-
-        if (signedDistance >= body.sphereRadius)
-            continue;
-
-        // Corrige a penetração ao longo da normal local da superfície. Na
-        // bacia, a normal muda com a posição e aponta para dentro do recipiente.
-        position += normal * (body.sphereRadius - signedDistance);
-        body.transform->move(position);
-
-        const glm::vec3 arm = -normal * body.sphereRadius;
-        glm::vec3 contactVelocity = velocityAtPoint(
-            body.velocity, body.angularVelocity, arm);
-        const float normalVelocity = glm::dot(contactVelocity, normal);
-        if (normalVelocity >= 0.0f)
-            continue;
-
-        const float restitution = -normalVelocity > kRestitutionVelocityThreshold
-            ? body.restitution
-            : 0.0f;
-        const float normalDenominator = effectiveMassDenominator(
-            body.inverseMass, body.inverseInertia, arm,
-            0.0f, 0.0f, glm::vec3(0.0f), normal);
-        if (normalDenominator <= 1e-8f)
-            continue;
-
-        const float normalImpulseMagnitude =
-            -(1.0f + restitution) * normalVelocity / normalDenominator;
-        const glm::vec3 normalImpulse = normal * normalImpulseMagnitude;
-
-        body.velocity += normalImpulse * body.inverseMass;
-        body.angularVelocity += body.inverseInertia * glm::cross(arm, normalImpulse);
-
-        // O atrito usa o plano tangente local e produz torque em qualquer
-        // orientação da superfície, inclusive nas laterais inclinadas da bacia.
-        contactVelocity = velocityAtPoint(
-            body.velocity, body.angularVelocity, arm);
-        const glm::vec3 tangentVelocity =
-            contactVelocity - glm::dot(contactVelocity, normal) * normal;
-        const float tangentSpeed = glm::length(tangentVelocity);
-        if (tangentSpeed <= 1e-6f)
-            continue;
-
-        const glm::vec3 tangent = tangentVelocity / tangentSpeed;
-        const float tangentDenominator = effectiveMassDenominator(
-            body.inverseMass, body.inverseInertia, arm,
-            0.0f, 0.0f, glm::vec3(0.0f), tangent);
-        if (tangentDenominator <= 1e-8f)
-            continue;
-
-        const float requiredImpulse = -glm::dot(contactVelocity, tangent) /
-            tangentDenominator;
-        const float staticFriction = combineFriction(
-            body.staticFriction, groundStaticFriction_);
-        const float dynamicFriction = combineFriction(
-            body.dynamicFriction, groundDynamicFriction_);
-        const float staticLimit = staticFriction * normalImpulseMagnitude;
-
-        const float tangentImpulseMagnitude =
-            std::fabs(requiredImpulse) <= staticLimit
-                ? requiredImpulse
-                : -dynamicFriction * normalImpulseMagnitude;
-        const glm::vec3 tangentImpulse = tangent * tangentImpulseMagnitude;
-
-        body.velocity += tangentImpulse * body.inverseMass;
-        body.angularVelocity += body.inverseInertia * glm::cross(arm, tangentImpulse);
-    }
-}
-
-void PhysicsWorld::resolveSphereCollisions()
-{
-    for (std::size_t i = 0; i < bodies_.size(); ++i)
-    {
-        Body& bodyA = bodies_[i];
-        if (!bodyA.transform || bodyA.sphereRadius <= 0.0f)
-            continue;
-
-        for (std::size_t j = i + 1; j < bodies_.size(); ++j)
-        {
-            Body& bodyB = bodies_[j];
-            if (!bodyB.transform || bodyB.sphereRadius <= 0.0f)
-                continue;
-
-            const float inverseMassSum = bodyA.inverseMass + bodyB.inverseMass;
-            if (inverseMassSum <= 0.0f)
-                continue;
-
-            const glm::vec3 delta =
-                bodyB.transform->position() - bodyA.transform->position();
-            const float distanceSquared = glm::dot(delta, delta);
-            const float combinedRadius = bodyA.sphereRadius + bodyB.sphereRadius;
-            if (distanceSquared >= combinedRadius * combinedRadius)
-                continue;
-
-            const float distance = std::sqrt(std::max(0.0f, distanceSquared));
-            const glm::vec3 normal = distance > 1e-6f
-                ? delta / distance
-                : glm::vec3(1.0f, 0.0f, 0.0f);
-            const float penetration = combinedRadius - distance;
-            const float correctionMagnitude =
-                std::max(penetration - kPenetrationSlop, 0.0f) *
-                kPositionCorrection / inverseMassSum;
-            const glm::vec3 correction = normal * correctionMagnitude;
-
-            if (bodyA.inverseMass > 0.0f)
-                bodyA.transform->translate(-correction * bodyA.inverseMass);
-            if (bodyB.inverseMass > 0.0f)
-                bodyB.transform->translate(correction * bodyB.inverseMass);
-
-            const glm::vec3 armA = normal * bodyA.sphereRadius;
-            const glm::vec3 armB = -normal * bodyB.sphereRadius;
-            glm::vec3 relativeVelocity =
-                velocityAtPoint(bodyB.velocity, bodyB.angularVelocity, armB) -
-                velocityAtPoint(bodyA.velocity, bodyA.angularVelocity, armA);
-            const float normalVelocity = glm::dot(relativeVelocity, normal);
-            if (normalVelocity >= 0.0f)
-                continue;
-
-            const float restitution = -normalVelocity > kRestitutionVelocityThreshold
-                ? std::min(bodyA.restitution, bodyB.restitution)
-                : 0.0f;
-            const float normalDenominator = effectiveMassDenominator(
-                bodyA.inverseMass, bodyA.inverseInertia, armA,
-                bodyB.inverseMass, bodyB.inverseInertia, armB,
-                normal);
-            if (normalDenominator <= 1e-8f)
-                continue;
-
-            const float normalImpulseMagnitude =
-                -(1.0f + restitution) * normalVelocity / normalDenominator;
-            const glm::vec3 normalImpulse = normal * normalImpulseMagnitude;
-
-            bodyA.velocity -= normalImpulse * bodyA.inverseMass;
-            bodyA.angularVelocity -= bodyA.inverseInertia * glm::cross(armA, normalImpulse);
-            bodyB.velocity += normalImpulse * bodyB.inverseMass;
-            bodyB.angularVelocity += bodyB.inverseInertia * glm::cross(armB, normalImpulse);
-
-            // Recalcula a velocidade relativa no contato após o impulso normal.
-            relativeVelocity =
-                velocityAtPoint(bodyB.velocity, bodyB.angularVelocity, armB) -
-                velocityAtPoint(bodyA.velocity, bodyA.angularVelocity, armA);
-            const glm::vec3 tangentVelocity =
-                relativeVelocity - glm::dot(relativeVelocity, normal) * normal;
-            const float tangentSpeed = glm::length(tangentVelocity);
-            if (tangentSpeed <= 1e-6f)
-                continue;
-
-            const glm::vec3 tangent = tangentVelocity / tangentSpeed;
-            const float tangentDenominator = effectiveMassDenominator(
-                bodyA.inverseMass, bodyA.inverseInertia, armA,
-                bodyB.inverseMass, bodyB.inverseInertia, armB,
-                tangent);
-            if (tangentDenominator <= 1e-8f)
-                continue;
-
-            const float requiredImpulse = -glm::dot(relativeVelocity, tangent) /
-                tangentDenominator;
-            const float staticFriction = combineFriction(
-                bodyA.staticFriction, bodyB.staticFriction);
-            const float dynamicFriction = combineFriction(
-                bodyA.dynamicFriction, bodyB.dynamicFriction);
-            const float staticLimit = staticFriction * normalImpulseMagnitude;
-            const float tangentImpulseMagnitude =
-                std::fabs(requiredImpulse) <= staticLimit
-                    ? requiredImpulse
-                    : -dynamicFriction * normalImpulseMagnitude;
-            const glm::vec3 tangentImpulse = tangent * tangentImpulseMagnitude;
-
-            bodyA.velocity -= tangentImpulse * bodyA.inverseMass;
-            bodyA.angularVelocity -= bodyA.inverseInertia * glm::cross(armA, tangentImpulse);
-            bodyB.velocity += tangentImpulse * bodyB.inverseMass;
-            bodyB.angularVelocity += bodyB.inverseInertia * glm::cross(armB, tangentImpulse);
-        }
-    }
 }
 
 void PhysicsWorld::reset()
@@ -770,20 +567,20 @@ void PhysicsWorld::reset()
         body.torqueAccumulator = glm::vec3(0.0f);
         body.continuousForce = glm::vec3(0.0f);
         body.continuousTorque = glm::vec3(0.0f);
-        synchronizeBodyScale(body);
+        body.synchronizeColliderAndInertia();
     }
 
     accumulator_ = 0.0;
 }
 
-void PhysicsWorld::recordStartPositions()
+void PhysicsWorld::captureInitialPose()
 {
     for (Body& body : bodies_)
     {
         if (!body.transform)
             continue;
 
-        synchronizeBodyScale(body);
+        body.synchronizeColliderAndInertia();
         body.startPosition = body.transform->position();
         body.startOrientation = body.transform->orientation();
     }
@@ -792,6 +589,7 @@ void PhysicsWorld::recordStartPositions()
 void PhysicsWorld::clear()
 {
     bodies_.clear();
+    staticBoxes_.clear();
     clearGroundPlane();
     accumulator_ = 0.0;
 }
@@ -823,3 +621,5 @@ glm::vec3 PhysicsWorld::angularVelocity(const Transform& transform) const
     const Body* body = findBody(transform);
     return body ? body->angularVelocity : glm::vec3(0.0f);
 }
+
+} // namespace rotor::physics

@@ -22,7 +22,7 @@ protected:
 private:
     Renderer renderer;
     Scene scene;
-    PhysicsWorld physics;
+    rotor::physics::PhysicsWorld physics;
     Light light;
     Camera camera{1280, 800, glm::vec3(0.0f, 20.0f, 42.0f)};
     UI ui;

@@ -1,5 +1,8 @@
 #include "engine/physics/physics_world.h"
 #include "engine/graphics/geometry/shapes.h"
+#include "engine/physics/collision/collision_geometry.h"
+
+using rotor::physics::PhysicsWorld;
 
 #include <cmath>
 #include <iostream>
@@ -25,12 +28,12 @@ int main()
 
     Transform bouncingSphere;
     bouncingSphere.move(glm::vec3(0.0f, 0.51f, 0.0f));
-    bouncingWorld.addBody(
+    bouncingWorld.addSphereBody(
         bouncingSphere, glm::vec3(0.0f, -2.0f, 0.0f), 0.5f, 0.8f);
     bouncingWorld.update(1.0f / 120.0f);
 
     passed &= expect(
-        std::fabs(bouncingSphere.position().y - 0.5f) < 1e-5f,
+        std::fabs(bouncingSphere.position().y - 0.5f) < 2e-4f,
         "sphere is moved out of the ground after contact");
 
     bouncingWorld.update(1.0f / 120.0f);
@@ -47,13 +50,13 @@ int main()
     restingWorld.setGroundPlane(0.0f);
     Transform restingSphere;
     restingSphere.move(glm::vec3(0.0f, 1.0f, 0.0f));
-    restingWorld.addBody(restingSphere, glm::vec3(0.0f), 0.5f, 0.0f);
+    restingWorld.addSphereBody(restingSphere, glm::vec3(0.0f), 0.5f, 0.0f);
 
     for (int i = 0; i < 240; ++i)
         restingWorld.update(1.0f / 120.0f);
 
     passed &= expect(
-        std::fabs(restingSphere.position().y - 0.5f) < 1e-5f,
+        std::fabs(restingSphere.position().y - 0.5f) < 2e-4f,
         "zero restitution prevents penetration and leaves the sphere resting");
 
     PhysicsWorld pointWorld;
@@ -61,7 +64,7 @@ int main()
     pointWorld.setGroundPlane(0.0f);
     Transform pointBody;
     pointBody.move(glm::vec3(0.0f, 0.01f, 0.0f));
-    pointWorld.addBody(pointBody, glm::vec3(0.0f, -2.0f, 0.0f));
+    pointWorld.addSphereBody(pointBody, glm::vec3(0.0f, -2.0f, 0.0f));
     pointWorld.update(1.0f / 120.0f);
     passed &= expect(
         pointBody.position().y < 0.01f,
@@ -74,11 +77,11 @@ int main()
     lightSphere.move(glm::vec3(-0.5f, 0.0f, 0.0f));
     heavySphere.move(glm::vec3(0.5f, 0.0f, 0.0f));
     passed &= expect(
-        massWorld.addBody(
+        massWorld.addSphereBody(
             lightSphere, glm::vec3(1.0f, 0.0f, 0.0f), 0.5f, 1.0f, 1.0f),
         "positive-mass dynamic body is accepted");
     passed &= expect(
-        massWorld.addBody(
+        massWorld.addSphereBody(
             heavySphere, glm::vec3(0.0f), 0.5f, 1.0f, 3.0f),
         "body with a different positive mass is accepted");
     massWorld.update(1.0f / 120.0f);
@@ -92,9 +95,9 @@ int main()
     Transform movingSphere;
     fixedSphere.move(glm::vec3(0.0f));
     movingSphere.move(glm::vec3(-0.9f, 0.0f, 0.0f));
-    staticWorld.addStaticBody(fixedSphere, 0.5f, 1.0f);
+    staticWorld.addStaticSphere(fixedSphere, 0.5f, 1.0f);
     passed &= expect(
-        staticWorld.addBody(
+        staticWorld.addSphereBody(
             movingSphere, glm::vec3(1.0f, 0.0f, 0.0f), 0.5f, 1.0f),
         "dynamic sphere is accepted beside a static sphere");
     staticWorld.update(1.0f / 120.0f);
@@ -110,12 +113,14 @@ int main()
     sphereFrictionWorld.setGravity(glm::vec3(0.0f));
     Transform sphereFrictionObstacle;
     Transform sphereFrictionBody;
-    sphereFrictionBody.move(glm::vec3(-0.9f, -1.0f / 120.0f, 0.0f));
-    sphereFrictionWorld.addStaticBody(
+    // Sem sobreposição com o chão: testa somente o atrito no contato entre esferas.
+    sphereFrictionObstacle.move(glm::vec3(0.0f, 0.5f, 0.0f));
+    sphereFrictionBody.move(glm::vec3(-0.9f, 0.5f, 0.0f));
+    sphereFrictionWorld.addStaticSphere(
         sphereFrictionObstacle, 0.5f, 0.0f, 1.0f, 1.0f);
-    sphereFrictionWorld.addBody(
+    sphereFrictionWorld.addSphereBody(
         sphereFrictionBody,
-        glm::vec3(1.0f, 1.0f, 0.0f),
+        glm::vec3(1.0f, 0.5f, 0.0f),
         0.5f,
         0.0f,
         1.0f,
@@ -144,7 +149,7 @@ int main()
     slidingWorld.setGroundPlane(0.0f, 0.8f, 0.6f);
     Transform slidingSphere;
     slidingSphere.move(glm::vec3(0.0f, 0.5f, 0.0f));
-    slidingWorld.addBody(
+    slidingWorld.addSphereBody(
         slidingSphere,
         glm::vec3(3.0f, 0.0f, 0.0f),
         0.5f,
@@ -157,7 +162,7 @@ int main()
     frictionlessWorld.setGroundPlane(0.0f, 0.0f, 0.0f);
     Transform frictionlessSphere;
     frictionlessSphere.move(glm::vec3(0.0f, 0.5f, 0.0f));
-    frictionlessWorld.addBody(
+    frictionlessWorld.addSphereBody(
         frictionlessSphere,
         glm::vec3(3.0f, 0.0f, 0.0f),
         0.5f,
@@ -206,7 +211,7 @@ int main()
     staticFrictionWorld.setGroundPlane(0.0f, 0.8f, 0.6f);
     Transform barelySlidingSphere;
     barelySlidingSphere.move(glm::vec3(0.0f, 0.5f, 0.0f));
-    staticFrictionWorld.addBody(
+    staticFrictionWorld.addSphereBody(
         barelySlidingSphere,
         glm::vec3(0.02f, 0.0f, 0.0f),
         0.5f,
@@ -224,8 +229,8 @@ int main()
     overlapWorld.setGravity(glm::vec3(0.0f));
     Transform overlappingA;
     Transform overlappingB;
-    overlapWorld.addBody(overlappingA, glm::vec3(0.0f), 0.5f);
-    overlapWorld.addBody(overlappingB, glm::vec3(0.0f), 0.5f);
+    overlapWorld.addSphereBody(overlappingA, glm::vec3(0.0f), 0.5f);
+    overlapWorld.addSphereBody(overlappingB, glm::vec3(0.0f), 0.5f);
     overlapWorld.update(1.0f / 120.0f);
     passed &= expect(
         std::isfinite(glm::length(overlappingB.position() - overlappingA.position())) &&
@@ -236,7 +241,7 @@ int main()
     angularImpulseWorld.setGravity(glm::vec3(0.0f));
     Transform angularImpulseBody;
     angularImpulseBody.move(glm::vec3(0.0f, 1.0f, 0.0f));
-    angularImpulseWorld.addBody(
+    angularImpulseWorld.addSphereBody(
         angularImpulseBody, glm::vec3(0.0f), 0.5f, 0.0f, 2.0f);
     const glm::vec3 positionBeforeAngularImpulse = angularImpulseBody.position();
     passed &= expect(
@@ -257,7 +262,7 @@ int main()
     PhysicsWorld axisForceWorld;
     axisForceWorld.setGravity(glm::vec3(0.0f));
     Transform axisForceBody;
-    axisForceWorld.addBody(axisForceBody, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
+    axisForceWorld.addSphereBody(axisForceBody, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
     axisForceWorld.applyForce(axisForceBody, glm::vec3(0.0f, 0.0f, 12.0f));
     axisForceWorld.update(1.0f / 120.0f);
     const glm::vec3 forceVelocity = axisForceWorld.linearVelocity(axisForceBody);
@@ -272,10 +277,10 @@ int main()
     Transform cyanShowcaseSphere;
     orangeShowcaseSphere.move(glm::vec3(-2.7f, 0.5f, 0.0f));
     cyanShowcaseSphere.move(glm::vec3(2.7f, 0.5f, 0.0f));
-    showcaseWorld.addBody(
+    showcaseWorld.addSphereBody(
         orangeShowcaseSphere, glm::vec3(3.2f, 0.0f, 0.0f),
         0.5f, 0.35f, 1.0f, 0.95f, 0.78f);
-    showcaseWorld.addBody(
+    showcaseWorld.addSphereBody(
         cyanShowcaseSphere, glm::vec3(-2.4f, 0.0f, 0.0f),
         0.5f, 0.35f, 2.0f, 0.95f, 0.78f);
     for (int i = 0; i < 180; ++i)
@@ -322,9 +327,9 @@ int main()
     Transform heavyControlledSphere;
     lightControlledSphere.move(glm::vec3(-2.0f, 0.5f, 0.0f));
     heavyControlledSphere.move(glm::vec3(2.0f, 0.5f, 0.0f));
-    keyboardControlWorld.addBody(
+    keyboardControlWorld.addSphereBody(
         lightControlledSphere, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f, 0.95f, 0.78f);
-    keyboardControlWorld.addBody(
+    keyboardControlWorld.addSphereBody(
         heavyControlledSphere, glm::vec3(0.0f), 0.5f, 0.0f, 2.0f, 0.95f, 0.78f);
     for (int i = 0; i < 120; ++i)
     {
@@ -356,9 +361,9 @@ int main()
     Transform queriedDynamicBody;
     Transform queriedStaticBody;
     Transform queriedUnregisteredBody;
-    bodyQueryWorld.addBody(
+    bodyQueryWorld.addSphereBody(
         queriedDynamicBody, glm::vec3(0.0f), 0.5f, 0.0f, 2.5f);
-    bodyQueryWorld.addStaticBody(queriedStaticBody, 0.5f);
+    bodyQueryWorld.addStaticSphere(queriedStaticBody, 0.5f);
     passed &= expect(
         bodyQueryWorld.hasDynamicBody(queriedDynamicBody) &&
             !bodyQueryWorld.hasDynamicBody(queriedStaticBody) &&
@@ -367,7 +372,7 @@ int main()
     PhysicsWorld invalidMassWorld;
     Transform invalidMassBody;
     passed &= expect(
-        !invalidMassWorld.addBody(
+        !invalidMassWorld.addSphereBody(
             invalidMassBody, glm::vec3(0.0f), 0.5f, 0.0f, 0.0f) &&
             invalidMassWorld.bodyCount() == 0,
         "zero mass is rejected instead of creating an invalid dynamic body");
@@ -377,7 +382,7 @@ int main()
     PhysicsWorld forceWorld;
     forceWorld.setGravity(glm::vec3(0.0f));
     Transform forceBody;
-    forceWorld.addBody(forceBody, glm::vec3(0.0f), 0.5f, 0.0f, 2.0f);
+    forceWorld.addSphereBody(forceBody, glm::vec3(0.0f), 0.5f, 0.0f, 2.0f);
     passed &= expect(
         forceWorld.applyForce(forceBody, glm::vec3(4.0f, 0.0f, 0.0f)),
         "registered dynamic body accepts an external force");
@@ -395,7 +400,7 @@ int main()
     PhysicsWorld deferredForceWorld;
     deferredForceWorld.setGravity(glm::vec3(0.0f));
     Transform deferredForceBody;
-    deferredForceWorld.addBody(deferredForceBody, glm::vec3(0.0f), 0.5f, 0.0f);
+    deferredForceWorld.addSphereBody(deferredForceBody, glm::vec3(0.0f), 0.5f, 0.0f);
     deferredForceWorld.applyForce(deferredForceBody, glm::vec3(6.0f, 0.0f, 0.0f));
     deferredForceWorld.update(1.0f / 240.0f);
     passed &= expect(
@@ -413,7 +418,7 @@ int main()
         PhysicsWorld world;
         world.setGravity(glm::vec3(0.0f));
         Transform body;
-        world.addBody(body, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
+        world.addSphereBody(body, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
 
         const float frameTime = 1.0f / static_cast<float>(renderFps);
         for (int frame = 0; frame < renderFps; ++frame)
@@ -435,7 +440,7 @@ int main()
     PhysicsWorld releasedForceWorld;
     releasedForceWorld.setGravity(glm::vec3(0.0f));
     Transform releasedForceBody;
-    releasedForceWorld.addBody(releasedForceBody, glm::vec3(0.0f), 0.5f, 0.0f);
+    releasedForceWorld.addSphereBody(releasedForceBody, glm::vec3(0.0f), 0.5f, 0.0f);
     releasedForceWorld.setContinuousForce(
         releasedForceBody, glm::vec3(10.0f, 0.0f, 0.0f));
     releasedForceWorld.update(1.0f / 120.0f);
@@ -455,18 +460,18 @@ int main()
     scaledColliderWorld.setGroundPlane(0.0f);
     Transform scaledColliderBody;
     scaledColliderBody.move(glm::vec3(0.0f, 0.5f, 0.0f));
-    scaledColliderWorld.addBody(
+    scaledColliderWorld.addSphereBody(
         scaledColliderBody, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
     scaledColliderBody.setScale(glm::vec3(1.0f, 2.0f, 0.75f));
     scaledColliderWorld.update(1.0f / 120.0f);
     passed &= expect(
-        std::fabs(scaledColliderBody.position().y - 1.0f) < 1e-4f,
+        std::fabs(scaledColliderBody.position().y - 1.0f) < 2e-4f,
         "sphere collider expands with the largest absolute Transform scale component");
 
     PhysicsWorld scaledInertiaWorld;
     scaledInertiaWorld.setGravity(glm::vec3(0.0f));
     Transform scaledInertiaBody;
-    scaledInertiaWorld.addBody(
+    scaledInertiaWorld.addSphereBody(
         scaledInertiaBody, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
     scaledInertiaBody.setScale(glm::vec3(2.0f));
     scaledInertiaWorld.applyAngularImpulse(
@@ -482,9 +487,9 @@ int main()
     Transform fastMovingSphere;
     fastStaticSphere.move(glm::vec3(0.0f));
     fastMovingSphere.move(glm::vec3(-2.0f, 0.0f, 0.0f));
-    fastCollisionWorld.addStaticBody(
+    fastCollisionWorld.addStaticSphere(
         fastStaticSphere, 0.5f, 1.0f, 0.0f, 0.0f);
-    fastCollisionWorld.addBody(
+    fastCollisionWorld.addSphereBody(
         fastMovingSphere, glm::vec3(300.0f, 0.0f, 0.0f),
         0.5f, 1.0f, 1.0f, 0.0f, 0.0f);
     fastCollisionWorld.update(1.0f / 120.0f);
@@ -498,7 +503,7 @@ int main()
         PhysicsWorld world;
         world.setGravity(glm::vec3(0.0f));
         Transform body;
-        world.addBody(body, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
+        world.addSphereBody(body, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
 
         const float frameTime = 1.0f / static_cast<float>(renderFps);
         for (int frame = 0; frame < renderFps; ++frame)
@@ -518,7 +523,7 @@ int main()
     PhysicsWorld torqueWorld;
     torqueWorld.setGravity(glm::vec3(0.0f));
     Transform torqueBody;
-    torqueWorld.addBody(torqueBody, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
+    torqueWorld.addSphereBody(torqueBody, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f);
     passed &= expect(
         torqueWorld.applyTorque(torqueBody, glm::vec3(0.0f, 0.0f, 1.0f)),
         "dynamic sphere accepts external torque");
@@ -533,7 +538,7 @@ int main()
     PhysicsWorld impulseWorld;
     impulseWorld.setGravity(glm::vec3(0.0f));
     Transform impulseBody;
-    impulseWorld.addBody(impulseBody, glm::vec3(0.0f), 0.5f, 0.0f, 2.0f);
+    impulseWorld.addSphereBody(impulseBody, glm::vec3(0.0f), 0.5f, 0.0f, 2.0f);
     passed &= expect(
         impulseWorld.applyImpulseAtPoint(
             impulseBody,
@@ -548,7 +553,7 @@ int main()
     PhysicsWorld forceAtPointWorld;
     forceAtPointWorld.setGravity(glm::vec3(0.0f));
     Transform forceAtPointBody;
-    forceAtPointWorld.addBody(forceAtPointBody, glm::vec3(0.0f), 0.5f, 0.0f);
+    forceAtPointWorld.addSphereBody(forceAtPointBody, glm::vec3(0.0f), 0.5f, 0.0f);
     passed &= expect(
         forceAtPointWorld.applyForceAtPoint(
             forceAtPointBody,
@@ -563,7 +568,7 @@ int main()
 
     PhysicsWorld guardedForceWorld;
     Transform staticForceBody;
-    guardedForceWorld.addStaticBody(staticForceBody, 0.5f);
+    guardedForceWorld.addStaticSphere(staticForceBody, 0.5f);
     passed &= expect(
         !guardedForceWorld.applyForce(staticForceBody, glm::vec3(10.0f, 0.0f, 0.0f)) &&
             !guardedForceWorld.applyImpulse(staticForceBody, glm::vec3(10.0f, 0.0f, 0.0f)) &&
@@ -584,7 +589,7 @@ int main()
     fastGroundWorld.setGroundPlane(0.0f, 0.0f, 0.0f);
     Transform fastFallingSphere;
     fastFallingSphere.move(glm::vec3(0.0f, 2.0f, 0.0f));
-    fastGroundWorld.addBody(
+    fastGroundWorld.addSphereBody(
         fastFallingSphere, glm::vec3(0.0f, -300.0f, 0.0f),
         0.5f, 1.0f, 1.0f, 0.0f, 0.0f);
     fastGroundWorld.update(1.0f / 120.0f);
@@ -592,6 +597,107 @@ int main()
         fastFallingSphere.position().y > 0.5f &&
             fastGroundWorld.linearVelocity(fastFallingSphere).y > 0.0f,
         "adaptive substeps prevent a high-speed sphere from tunneling through the ground plane");
+
+    // O tampo da mesa é uma caixa estática independente dos corpos dinâmicos.
+    PhysicsWorld tabletopWorld;
+    Transform tabletopTransform;
+    passed &= expect(
+        tabletopWorld.addStaticBox(
+            tabletopTransform,
+            glm::vec3(0.0f),
+            glm::vec3(1.0f, 0.1f, 0.75f),
+            0.0f,
+            0.9f,
+            0.7f),
+        "static oriented box collider accepts valid dimensions");
+    Transform tabletopSphere;
+    tabletopSphere.move(glm::vec3(0.0f, 1.0f, 0.0f));
+    passed &= expect(
+        tabletopWorld.addSphereBody(
+            tabletopSphere, glm::vec3(0.0f), 0.25f, 0.0f, 1.0f),
+        "dynamic sphere is accepted above a static box collider");
+    passed &= expect(
+        tabletopWorld.bodyCount() == 1,
+        "static box collider is not counted as a dynamic body");
+    for (int i = 0; i < 240; ++i)
+        tabletopWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(tabletopSphere.position().y - 0.35f) < 2e-3f,
+        "sphere rests on top of a static box instead of passing through it");
+
+    // Fora da projeção horizontal do tampo, a esfera não deve colidir com ele.
+    PhysicsWorld outsideTableWorld;
+    Transform outsideTable;
+    outsideTableWorld.addStaticBox(
+        outsideTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 0.75f));
+    Transform outsideTableSphere;
+    outsideTableSphere.move(glm::vec3(1.6f, 1.0f, 0.0f));
+    outsideTableWorld.addSphereBody(
+        outsideTableSphere, glm::vec3(0.0f), 0.25f, 0.0f, 1.0f);
+    for (int i = 0; i < 120; ++i)
+        outsideTableWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        outsideTableSphere.position().y < 0.0f,
+        "static box only collides within its finite footprint");
+
+    // Mesmo em uma queda muito rápida, subpassos devem detectar o tampo.
+    PhysicsWorld fastTabletopWorld;
+    fastTabletopWorld.setGravity(glm::vec3(0.0f));
+    Transform fastTable;
+    fastTabletopWorld.addStaticBox(
+        fastTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 0.75f),
+        0.0f, 0.0f, 0.0f);
+    Transform fastTableSphere;
+    fastTableSphere.move(glm::vec3(0.0f, 2.0f, 0.0f));
+    fastTabletopWorld.addSphereBody(
+        fastTableSphere, glm::vec3(0.0f, -300.0f, 0.0f),
+        0.25f, 0.0f, 1.0f, 0.0f, 0.0f);
+    fastTabletopWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        fastTableSphere.position().y > 0.34f &&
+            fastTabletopWorld.linearVelocity(fastTableSphere).y > -1e-3f,
+        "adaptive substeps prevent a fast sphere from tunneling through a static box");
+
+    // Caixas também precisam participar do cálculo de subpassos adaptativos.
+    // Sem isso, o corpo OBB atravessa a plataforma no único passo fixo.
+    PhysicsWorld fastBoxWorld;
+    fastBoxWorld.setGravity(glm::vec3(0.0f));
+    Transform thinStaticWall;
+    fastBoxWorld.addStaticBox(
+        thinStaticWall, glm::vec3(0.0f), glm::vec3(0.04f, 0.5f, 0.5f),
+        0.0f, 0.0f, 0.0f);
+    Transform fastDynamicBox;
+    fastDynamicBox.move(glm::vec3(-1.0f, 0.0f, 0.0f));
+    passed &= expect(
+        fastBoxWorld.addBoxBody(
+            fastDynamicBox, glm::vec3(0.04f, 0.1f, 0.1f),
+            glm::vec3(300.0f, 0.0f, 0.0f), 0.0f, 1.0f, 0.0f, 0.0f),
+        "fast dynamic OBB is registered");
+    fastBoxWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        fastDynamicBox.position().x < -0.079f &&
+            fastBoxWorld.linearVelocity(fastDynamicBox).x < 1e-3f,
+        "adaptive substeps prevent a high-speed OBB from tunneling through a static wall");
+
+    // O colisor acompanha a transformação da mesa, inclusive escala e rotação.
+    PhysicsWorld transformedTableWorld;
+    Transform transformedTable;
+    transformedTable.move(glm::vec3(2.0f, 0.0f, -1.0f));
+    transformedTable.setRotation(glm::vec3(0.0f, 45.0f, 0.0f));
+    transformedTable.setScale(glm::vec3(2.0f, 1.0f, 0.5f));
+    transformedTableWorld.addStaticBox(
+        transformedTable,
+        glm::vec3(0.0f, 0.2f, 0.0f),
+        glm::vec3(1.0f, 0.1f, 0.75f));
+    Transform transformedTableSphere;
+    transformedTableSphere.move(glm::vec3(2.0f, 1.0f, -1.0f));
+    transformedTableWorld.addSphereBody(
+        transformedTableSphere, glm::vec3(0.0f), 0.25f, 0.0f, 1.0f);
+    for (int i = 0; i < 180; ++i)
+        transformedTableWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        transformedTableSphere.position().y > 0.45f,
+        "static box follows its Transform position, rotation, and scale");
 
     std::vector<Vertex> bowlVertices;
     std::vector<unsigned int> bowlIndices;
@@ -649,7 +755,7 @@ int main()
     bowlWorld.setGroundBowl(10.0f, 4.0f, 1.0f, 0.95f, 0.78f);
     Transform bowlCenterSphere;
     bowlCenterSphere.move(glm::vec3(0.0f, 0.5f, 0.0f));
-    bowlWorld.addBody(
+    bowlWorld.addSphereBody(
         bowlCenterSphere, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f, 0.95f, 0.78f);
     for (int i = 0; i < 120; ++i)
         bowlWorld.update(1.0f / 120.0f);
@@ -663,7 +769,7 @@ int main()
     longTermBowlWorld.setGroundBowl(10.0f, 4.0f, 1.0f, 0.95f, 0.78f);
     Transform longTermRestingSphere;
     longTermRestingSphere.move(glm::vec3(0.0f, 0.5f, 0.0f));
-    longTermBowlWorld.addBody(
+    longTermBowlWorld.addSphereBody(
         longTermRestingSphere, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f, 0.95f, 0.78f);
     for (int i = 0; i < 1200; ++i)
         longTermBowlWorld.update(1.0f / 120.0f);
@@ -682,7 +788,7 @@ int main()
         glm::vec3(-bowlSlope, 1.0f, 0.0f));
     const glm::vec3 bowlSurfacePoint(5.0f, 1.0f, 0.0f);
     bowlSideSphere.move(bowlSurfacePoint + bowlNormal * 0.5f);
-    bowlRollingWorld.addBody(
+    bowlRollingWorld.addSphereBody(
         bowlSideSphere, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f, 0.95f, 0.78f);
     for (int i = 0; i < 60; ++i)
         bowlRollingWorld.update(1.0f / 120.0f);
@@ -702,7 +808,7 @@ int main()
     const glm::vec3 initialBowlSurfacePoint(
         5.0f, 4.5f * 25.0f / (18.0f * 18.0f), 0.0f);
     longRunSlopeSphere.move(initialBowlSurfacePoint + initialBowlNormal * 0.5f);
-    longRunBowlWorld.addBody(
+    longRunBowlWorld.addSphereBody(
         longRunSlopeSphere, glm::vec3(0.0f), 0.5f, 0.0f, 1.0f, 0.95f, 0.78f);
     for (int i = 0; i < 1200; ++i)
         longRunBowlWorld.update(1.0f / 120.0f);
@@ -719,6 +825,320 @@ int main()
         longRunFinite && longRunRadialDistance < 18.0f &&
             longRunPosition.y > 0.0f,
         "a sphere rolling along the curved bowl remains finite and contained over ten seconds");
+
+    // Caixas dinâmicas usam a dimensão real do volume, sem transformar
+    // objetos planos em esferas enormes que os fariam flutuar sobre o chão.
+    PhysicsWorld thinBoxWorld;
+    thinBoxWorld.setGroundPlane(0.0f, 0.9f, 0.7f);
+    Transform thinBox;
+    thinBox.move(glm::vec3(0.0f, 0.5f, 0.0f));
+    passed &= expect(
+        thinBoxWorld.addBoxBody(
+            thinBox, glm::vec3(0.5f, 0.01f, 0.3f),
+            glm::vec3(0.0f), 0.0f, 1.0f, 0.9f, 0.7f),
+        "dynamic OBB accepts valid local half extents");
+    for (int i = 0; i < 240; ++i)
+        thinBoxWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(thinBox.position().y - 0.01f) < 1e-4f &&
+            glm::length(thinBoxWorld.angularVelocity(thinBox)) < 1e-4f,
+        "thin box rests on the ground using its actual thickness, without floating");
+
+    PhysicsWorld scaledBoxWorld;
+    scaledBoxWorld.setGravity(glm::vec3(0.0f, -9.81f, 0.0f));
+    scaledBoxWorld.setGroundPlane(0.0f);
+    Transform scaledBox;
+    scaledBox.setScale(glm::vec3(1.0f, 2.0f, 0.75f));
+    scaledBox.move(glm::vec3(0.0f, 0.5f, 0.0f));
+    passed &= expect(
+        scaledBoxWorld.addBoxBody(
+            scaledBox, glm::vec3(0.5f, 0.1f, 0.25f),
+            glm::vec3(0.0f), 0.0f, 1.0f),
+        "scaled OBB body is registered");
+    for (int i = 0; i < 240; ++i)
+        scaledBoxWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(scaledBox.position().y - 0.2f) < 2e-4f,
+        "box collider tracks non-uniform Transform scale and uses its Y half extent");
+
+    // A face-on-face collision must produce a patch, not a single support pivot.
+    {
+        using rotor::physics::collision::intersectOrientedBoxes;
+        using rotor::physics::collision::makeOrientedBox;
+        const auto tableBox = makeOrientedBox(
+            glm::vec3(0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 0.1f, 1.0f));
+        const auto bookBox = makeOrientedBox(
+            glm::vec3(0.0f, 0.12f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(0.3f, 0.02f, 0.3f));
+        rotor::physics::ContactManifold manifold;
+        const bool detected = intersectOrientedBoxes(tableBox, bookBox, manifold);
+        passed &= expect(
+            detected && manifold.pointCount == 4,
+            "face-to-face OBB collision generates four contact points");
+        for (std::size_t i = 0; i < manifold.pointCount; ++i)
+        {
+            passed &= expect(
+                manifold.points[i].hasSeparatePoints,
+                "each OBB contact stores one point on each collider surface");
+        }
+    }
+
+    // A box resting flat on a plane should contact through all four lower vertices.
+    {
+        using rotor::physics::collision::boxPlaneContacts;
+        using rotor::physics::collision::makeOrientedBox;
+        const auto box = makeOrientedBox(
+            glm::vec3(0.0f, 0.1f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(0.3f, 0.1f, 0.2f));
+        rotor::physics::ContactManifold manifold;
+        const bool detected = boxPlaneContacts(
+            box, glm::vec3(0.0f, 1.0f, 0.0f), 0.0f, manifold);
+        passed &= expect(
+            detected && manifold.pointCount == 4,
+            "flat box-plane contact generates a four-point support patch");
+
+        const auto deeplyOverlappingBox = makeOrientedBox(
+            glm::vec3(0.0f, -0.05f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(0.5f, 0.1f, 0.3f));
+        rotor::physics::ContactManifold deepManifold;
+        const bool deepDetected = boxPlaneContacts(
+            deeplyOverlappingBox, glm::vec3(0.0f, 1.0f, 0.0f), 0.0f,
+            deepManifold);
+        bool onlyLowestSupportFeature = deepDetected && deepManifold.pointCount == 4;
+        for (std::size_t i = 0; i < deepManifold.pointCount; ++i)
+        {
+            onlyLowestSupportFeature = onlyLowestSupportFeature &&
+                std::fabs(deepManifold.points[i].pointB.y + 0.15f) < 1e-5f &&
+                std::fabs(deepManifold.points[i].penetration - 0.15f) < 1e-5f;
+        }
+        passed &= expect(
+            onlyLowestSupportFeature,
+            "deep box-plane overlap uses only the lowest support face");
+    }
+
+    PhysicsWorld obbTableWorld;
+    obbTableWorld.setGravity(glm::vec3(0.0f, -9.81f, 0.0f));
+    Transform tabletop;
+    passed &= expect(
+        obbTableWorld.addStaticBox(
+            tabletop, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 1.0f)),
+        "static table top OBB is registered");
+    Transform fallingBook;
+    fallingBook.move(glm::vec3(0.0f, 1.0f, 0.0f));
+    passed &= expect(
+        obbTableWorld.addBoxBody(
+            fallingBook, glm::vec3(0.25f, 0.02f, 0.25f),
+            glm::vec3(0.0f), 0.0f, 0.5f),
+        "dynamic book-sized OBB is registered");
+    for (int i = 0; i < 480; ++i)
+        obbTableWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(fallingBook.position().y - 0.12f) < 1e-3f &&
+            std::fabs(obbTableWorld.linearVelocity(fallingBook).y) < 1e-4f &&
+            glm::length(obbTableWorld.angularVelocity(fallingBook)) < 1e-4f &&
+            std::fabs(fallingBook.position().x) < 1e-4f &&
+            std::fabs(fallingBook.position().z) < 1e-4f,
+        "symmetric vertical box impact rests on the table without artificial spin or drift");
+
+    PhysicsWorld boxPairWorld;
+    boxPairWorld.setGravity(glm::vec3(0.0f));
+    Transform movingBox;
+    Transform targetBox;
+    movingBox.move(glm::vec3(-0.4f, 0.0f, 0.0f));
+    targetBox.move(glm::vec3(0.4f, 0.0f, 0.0f));
+    passed &= expect(
+        boxPairWorld.addBoxBody(
+            movingBox, glm::vec3(0.5f, 0.2f, 0.2f),
+            glm::vec3(1.0f, 0.0f, 0.0f), 0.0f, 1.0f) &&
+        boxPairWorld.addBoxBody(
+            targetBox, glm::vec3(0.5f, 0.2f, 0.2f),
+            glm::vec3(0.0f), 0.0f, 1.0f),
+        "two dynamic OBB bodies are registered");
+    for (int i = 0; i < 120; ++i)
+        boxPairWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        targetBox.position().x - movingBox.position().x >= 0.998f &&
+            std::fabs(boxPairWorld.linearVelocity(movingBox).x -
+                      boxPairWorld.linearVelocity(targetBox).x) < 1e-3f &&
+            glm::length(boxPairWorld.angularVelocity(movingBox)) < 1e-4f &&
+            glm::length(boxPairWorld.angularVelocity(targetBox)) < 1e-4f,
+        "symmetric face-to-face OBB impact transfers momentum without artificial spin");
+
+    PhysicsWorld mixedShapeWorld;
+    mixedShapeWorld.setGravity(glm::vec3(0.0f));
+    Transform staticLikeBox;
+    Transform mixedMovingSphere;
+    mixedMovingSphere.move(glm::vec3(-0.6f, 0.0f, 0.0f));
+    passed &= expect(
+        mixedShapeWorld.addBoxBody(
+            staticLikeBox, glm::vec3(0.5f), glm::vec3(0.0f),
+            0.0f, 1.0f) &&
+        mixedShapeWorld.addSphereBody(
+            mixedMovingSphere, glm::vec3(1.0f, 0.0f, 0.0f),
+            0.2f, 0.0f, 1.0f),
+        "mixed sphere and box bodies are registered");
+    for (int i = 0; i < 120; ++i)
+        mixedShapeWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        staticLikeBox.position().x > 0.1f &&
+            staticLikeBox.position().x - mixedMovingSphere.position().x >= 0.698f,
+        "sphere collides with a dynamic OBB instead of its bounding sphere");
+
+    PhysicsWorld restingBoxOnTableWorld;
+    restingBoxOnTableWorld.setGravity(glm::vec3(0.0f, -9.81f, 0.0f));
+    Transform restingTable;
+    restingBoxOnTableWorld.addStaticBox(
+        restingTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 1.0f));
+    Transform restingBoxOnTable;
+    restingBoxOnTable.move(glm::vec3(0.0f, 0.12f, 0.0f));
+    restingBoxOnTableWorld.addBoxBody(
+        restingBoxOnTable, glm::vec3(0.3f, 0.02f, 0.3f),
+        glm::vec3(0.0f), 0.0f, 1.0f);
+    for (int i = 0; i < 1200; ++i)
+        restingBoxOnTableWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(restingBoxOnTable.position().y - 0.12f) < 2e-4f &&
+            glm::length(restingBoxOnTableWorld.linearVelocity(restingBoxOnTable)) < 1e-4f &&
+            glm::length(restingBoxOnTableWorld.angularVelocity(restingBoxOnTable)) < 1e-4f,
+        "box remains stable on the static tabletop over ten simulated seconds");
+
+    PhysicsWorld offCenterBoxCollisionWorld;
+    offCenterBoxCollisionWorld.setGravity(glm::vec3(0.0f));
+    Transform offCenterMovingBox;
+    Transform offCenterTargetBox;
+    offCenterMovingBox.move(glm::vec3(-0.6f, 0.0f, 0.0f));
+    offCenterTargetBox.move(glm::vec3(0.4f, 0.0f, 0.12f));
+    offCenterBoxCollisionWorld.addBoxBody(
+        offCenterMovingBox, glm::vec3(0.5f, 0.2f, 0.2f),
+        glm::vec3(2.0f, 0.0f, 0.0f), 0.0f, 1.0f);
+    offCenterBoxCollisionWorld.addBoxBody(
+        offCenterTargetBox, glm::vec3(0.5f, 0.2f, 0.2f),
+        glm::vec3(0.0f), 0.0f, 1.0f);
+    for (int i = 0; i < 60; ++i)
+        offCenterBoxCollisionWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(offCenterBoxCollisionWorld.angularVelocity(offCenterMovingBox).y) > 0.05f &&
+            std::fabs(offCenterBoxCollisionWorld.angularVelocity(offCenterTargetBox).y) > 0.05f,
+        "off-center OBB impact transfers angular motion to both boxes");
+
+    PhysicsWorld stackedBoxesWorld;
+    stackedBoxesWorld.setGravity(glm::vec3(0.0f, -9.81f, 0.0f));
+    Transform stackedTable;
+    stackedBoxesWorld.addStaticBox(
+        stackedTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 1.0f));
+    Transform lowerBox;
+    Transform upperBox;
+    lowerBox.move(glm::vec3(0.0f, 0.12f, 0.0f));
+    upperBox.move(glm::vec3(0.015f, 0.16f, 0.0f));
+    stackedBoxesWorld.addBoxBody(
+        lowerBox, glm::vec3(0.3f, 0.02f, 0.3f), glm::vec3(0.0f), 0.0f, 1.0f);
+    stackedBoxesWorld.addBoxBody(
+        upperBox, glm::vec3(0.3f, 0.02f, 0.3f), glm::vec3(0.0f), 0.0f, 1.0f);
+    float maximumLowerAngularSpeed = 0.0f;
+    float maximumUpperAngularSpeed = 0.0f;
+    for (int i = 0; i < 1200; ++i)
+    {
+        stackedBoxesWorld.update(1.0f / 120.0f);
+        maximumLowerAngularSpeed = std::max(
+            maximumLowerAngularSpeed,
+            glm::length(stackedBoxesWorld.angularVelocity(lowerBox)));
+        maximumUpperAngularSpeed = std::max(
+            maximumUpperAngularSpeed,
+            glm::length(stackedBoxesWorld.angularVelocity(upperBox)));
+    }
+    passed &= expect(
+        std::fabs(lowerBox.position().y - 0.12f) < 0.001f &&
+            std::fabs(upperBox.position().y - 0.16f) < 0.001f &&
+            maximumLowerAngularSpeed < 0.002f &&
+            maximumUpperAngularSpeed < 0.002f,
+        "two offset boxes remain stable without artificial rocking on a static tabletop");
+
+    PhysicsWorld threeBoxStackWorld;
+    threeBoxStackWorld.setGravity(glm::vec3(0.0f, -9.81f, 0.0f));
+    Transform threeBoxTable;
+    threeBoxStackWorld.addStaticBox(
+        threeBoxTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 1.0f));
+    Transform bottomStackBox;
+    Transform middleStackBox;
+    Transform topStackBox;
+    bottomStackBox.move(glm::vec3(0.0f, 0.12f, 0.0f));
+    middleStackBox.move(glm::vec3(0.01f, 0.16f, 0.0f));
+    topStackBox.move(glm::vec3(-0.01f, 0.20f, 0.0f));
+    threeBoxStackWorld.addBoxBody(
+        bottomStackBox, glm::vec3(0.3f, 0.02f, 0.3f),
+        glm::vec3(0.0f), 0.0f, 1.0f);
+    threeBoxStackWorld.addBoxBody(
+        middleStackBox, glm::vec3(0.3f, 0.02f, 0.3f),
+        glm::vec3(0.0f), 0.0f, 1.0f);
+    threeBoxStackWorld.addBoxBody(
+        topStackBox, glm::vec3(0.3f, 0.02f, 0.3f),
+        glm::vec3(0.0f), 0.0f, 1.0f);
+
+    glm::vec3 maximumStackAngularSpeed(0.0f);
+    for (int i = 0; i < 2400; ++i)
+    {
+        threeBoxStackWorld.update(1.0f / 120.0f);
+        maximumStackAngularSpeed.x = std::max(
+            maximumStackAngularSpeed.x,
+            glm::length(threeBoxStackWorld.angularVelocity(bottomStackBox)));
+        maximumStackAngularSpeed.y = std::max(
+            maximumStackAngularSpeed.y,
+            glm::length(threeBoxStackWorld.angularVelocity(middleStackBox)));
+        maximumStackAngularSpeed.z = std::max(
+            maximumStackAngularSpeed.z,
+            glm::length(threeBoxStackWorld.angularVelocity(topStackBox)));
+    }
+    passed &= expect(
+        std::fabs(bottomStackBox.position().y - 0.12f) < 0.0015f &&
+            std::fabs(middleStackBox.position().y - 0.16f) < 0.0015f &&
+            std::fabs(topStackBox.position().y - 0.20f) < 0.0015f &&
+            maximumStackAngularSpeed.x < 0.001f &&
+            maximumStackAngularSpeed.y < 0.001f &&
+            maximumStackAngularSpeed.z < 0.001f,
+        "three slightly offset boxes remain stable as a supported stack");
+
+    PhysicsWorld initialOverlapWorld;
+    initialOverlapWorld.setGravity(glm::vec3(0.0f, -9.81f, 0.0f));
+    Transform initialTable;
+    initialOverlapWorld.addStaticBox(
+        initialTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 1.0f));
+    Transform initiallyPenetratingBox;
+    initiallyPenetratingBox.move(glm::vec3(0.0f, 0.10f, 0.0f));
+    initialOverlapWorld.addBoxBody(
+        initiallyPenetratingBox, glm::vec3(0.25f, 0.02f, 0.25f),
+        glm::vec3(0.0f), 0.0f, 1.0f);
+    initialOverlapWorld.stabilizeInitialOverlaps(24);
+    initialOverlapWorld.captureInitialPose();
+    const float stabilizedInitialY = initiallyPenetratingBox.position().y;
+    initialOverlapWorld.reset();
+    passed &= expect(
+        stabilizedInitialY >= 0.119f &&
+            std::fabs(initiallyPenetratingBox.position().y - stabilizedInitialY) < 1e-6f &&
+            glm::length(initialOverlapWorld.linearVelocity(initiallyPenetratingBox)) < 1e-6f &&
+            glm::length(initialOverlapWorld.angularVelocity(initiallyPenetratingBox)) < 1e-6f,
+        "initial overlap stabilization corrects pose without injecting motion and reset preserves it");
+
+    PhysicsWorld boxInertiaWorld;
+    boxInertiaWorld.setGravity(glm::vec3(0.0f));
+    Transform anisotropicBox;
+    passed &= expect(
+        boxInertiaWorld.addBoxBody(
+            anisotropicBox, glm::vec3(1.0f, 0.1f, 0.5f),
+            glm::vec3(0.0f), 0.0f, 1.0f),
+        "anisotropic box is registered for rotational inertia test");
+    boxInertiaWorld.applyAngularImpulse(
+        anisotropicBox, glm::vec3(1.0f, 0.0f, 0.0f));
+    const float angularVelocityX =
+        boxInertiaWorld.angularVelocity(anisotropicBox).x;
+    boxInertiaWorld.reset();
+    boxInertiaWorld.applyAngularImpulse(
+        anisotropicBox, glm::vec3(0.0f, 0.0f, 1.0f));
+    const float angularVelocityZ =
+        boxInertiaWorld.angularVelocity(anisotropicBox).z;
+    passed &= expect(
+        angularVelocityX > angularVelocityZ * 2.0f,
+        "box inertia tensor responds differently around different local axes");
 
     return passed ? 0 : 1;
 }

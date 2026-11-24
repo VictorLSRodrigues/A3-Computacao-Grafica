@@ -57,7 +57,7 @@ std::shared_ptr<Texture> createGroundGridTexture()
 }
 
 // Bacia branca e ampla. A curvatura visual corresponde ao colisor analítico
-// configurado no PhysicsWorld, para que as esferas rolem sobre a superfície real.
+// configurado no rotor::physics::PhysicsWorld, para que as esferas rolem sobre a superfície real.
 std::shared_ptr<Mesh> createGroundBowl()
 {
     constexpr unsigned int radialSegments = 64;
@@ -240,7 +240,7 @@ bool DynamisApplication::onInitialize()
     // Atrito alto o bastante para transformar o deslizamento inicial em rolamento.
     physics.setGroundBowl(
         kBowlRadius, kBowlDepth, kBowlLipHeight, 0.95f, 0.78f);
-    if (!physics.addBody(
+    if (!physics.addSphereBody(
             orangeObject->transform,
             glm::vec3(3.2f, 0.0f, 0.0f),
             0.5f,
@@ -248,7 +248,7 @@ bool DynamisApplication::onInitialize()
             1.0f,
             0.95f,
             0.78f) ||
-        !physics.addBody(
+        !physics.addSphereBody(
             cyanObject->transform,
             glm::vec3(-2.4f, 0.0f, 0.0f),
             0.5f,
@@ -323,7 +323,7 @@ void DynamisApplication::onUpdate(float deltaTime)
     // Ao sair da edição, as posições transformadas viram o novo estado inicial.
     if (wasEditing && !isEditing)
     {
-        physics.recordStartPositions();
+        physics.captureInitialPose();
         physics.reset();
     }
 

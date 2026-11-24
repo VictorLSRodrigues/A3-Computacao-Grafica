@@ -52,8 +52,8 @@ private:
 
     Renderer renderer;
     Scene scene;
-    PhysicsWorld physics;
-    // PhysicsWorld guarda ponteiros para estas Transform. deque mantém
+    rotor::physics::PhysicsWorld physics;
+    // rotor::physics::PhysicsWorld guarda ponteiros para estas Transform. deque mantém
     // os endereços estáveis enquanto os vínculos são registrados.
     std::deque<PhysicsBinding> physicsBindings;
     Light light;
