@@ -1,96 +1,95 @@
-
 #pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 // Transformação individual de uma instância.
-// A rotação é expressa em graus.
+// A rotação pública continua expressa em graus (Euler), mas a orientação interna
+// é mantida como quaternion para permitir integração rotacional estável.
 class Transform
 {
 private:
-    // Estado interno da transformação.
     glm::vec3 position_{0.0f};
     glm::vec3 rotation_{0.0f};
     glm::vec3 scale_{1.0f};
+    glm::quat orientation_{1.0f, 0.0f, 0.0f, 0.0f};
+
+    void updateEulerFromOrientation()
+    {
+        // A ordem preserva a convenção histórica da matriz: Y, depois X, depois Z.
+        float yaw = 0.0f;
+        float pitch = 0.0f;
+        float roll = 0.0f;
+        glm::extractEulerAngleYXZ(
+            glm::mat4_cast(orientation_), yaw, pitch, roll);
+        rotation_ = glm::degrees(glm::vec3(pitch, yaw, roll));
+    }
 
 public:
-    // Consultas do estado atual.
-    const glm::vec3& position() const
-    {
-        return position_;
-    }
+    const glm::vec3& position() const { return position_; }
+    const glm::vec3& rotation() const { return rotation_; }
+    const glm::vec3& scale() const { return scale_; }
+    const glm::quat& orientation() const { return orientation_; }
 
-    const glm::vec3& rotation() const
-    {
-        return rotation_;
-    }
-
-    const glm::vec3& scale() const
-    {
-        return scale_;
-    }
-
-    // Define uma posição absoluta.
     void move(const glm::vec3& newPosition)
     {
         position_ = newPosition;
     }
 
-    // Aplica deslocamento relativo.
     void translate(const glm::vec3& offset)
     {
         position_ += offset;
     }
 
-    // Define uma rotação absoluta em graus.
+    // Define uma rotação absoluta em graus, mantendo a ordem Y-X-Z anterior.
     void setRotation(const glm::vec3& eulerDegrees)
     {
         rotation_ = eulerDegrees;
+
+        const glm::quat yaw = glm::angleAxis(
+            glm::radians(eulerDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        const glm::quat pitch = glm::angleAxis(
+            glm::radians(eulerDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        const glm::quat roll = glm::angleAxis(
+            glm::radians(eulerDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        orientation_ = glm::normalize(yaw * pitch * roll);
     }
 
-    // Aplica rotação incremental em graus.
+    // Define diretamente a orientação física. O Editor continua recebendo Euler
+    // por rotation(), enquanto o Renderer usa o quaternion sem perda de composição.
+    void setOrientation(const glm::quat& orientation)
+    {
+        const float normSquared = glm::dot(orientation, orientation);
+        orientation_ = normSquared > 1e-12f
+            ? glm::normalize(orientation)
+            : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        updateEulerFromOrientation();
+    }
+
     void rotate(const glm::vec3& eulerDelta)
     {
-        rotation_ += eulerDelta;
+        setRotation(rotation_ + eulerDelta);
     }
 
-    // Define escala absoluta.
     void setScale(const glm::vec3& newScale)
     {
         scale_ = newScale;
     }
 
-    // Aplica um fator multiplicativo à escala.
     void scaleBy(const glm::vec3& factors)
     {
         scale_ *= factors;
     }
 
-    // Gera a Model Matrix a partir do estado atual.
     glm::mat4 matrix() const
     {
-        glm::mat4 m(1.0f);
-
-        m = glm::translate(m, position_);
-
-        m = glm::rotate(
-            m,
-            glm::radians(rotation_.y),
-            glm::vec3(0.0f, 1.0f, 0.0f));
-
-        m = glm::rotate(
-            m,
-            glm::radians(rotation_.x),
-            glm::vec3(1.0f, 0.0f, 0.0f));
-
-        m = glm::rotate(
-            m,
-            glm::radians(rotation_.z),
-            glm::vec3(0.0f, 0.0f, 1.0f));
-
-        m = glm::scale(m, scale_);
-
-        return m;
+        glm::mat4 result(1.0f);
+        result = glm::translate(result, position_);
+        result *= glm::mat4_cast(orientation_);
+        result = glm::scale(result, scale_);
+        return result;
     }
 };

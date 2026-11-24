@@ -5,6 +5,8 @@ project(OpenGLProjeto
     LANGUAGES C CXX
 )
 
+include(CTest)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
@@ -98,6 +100,14 @@ target_link_libraries(rotor_engine PUBLIC
     glfw
     OpenGL::GL
 )
+
+if(BUILD_TESTING)
+    add_executable(physics_world_tests
+        tests/physics_world_tests.cpp
+    )
+    target_link_libraries(physics_world_tests PRIVATE rotor_engine)
+    add_test(NAME physics_world_tests COMMAND physics_world_tests)
+endif()
 
 # Aplicação existente. O nome do alvo OpenGLProjeto é preservado para manter
 # compatibilidade com os comandos de build já utilizados no projeto.

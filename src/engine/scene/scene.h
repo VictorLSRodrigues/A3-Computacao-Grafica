@@ -100,7 +100,9 @@ public:
         Object *&hitObject,
         FaceSelection &hitFace);
 
-    // Objetos da cena, somente para leitura.
+    // Acesso aos objetos para leitura; a aplicação pode obter a versão
+    // mutável quando precisa configurar sistemas externos sobre seus dados.
+    std::deque<Object> &getObjects() { return objects; }
     const std::deque<Object> &getObjects() const { return objects; }
 
     // Recupera as posições globais dos vértices de uma face do objeto.

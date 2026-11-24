@@ -56,7 +56,29 @@ public:
                            bool ignoreTranslation = false);
 
     // Atualiza posição e orientação a partir do teclado e do mouse.
-    void processInput(Window &window, float deltaTime, int rotateButton = GLFW_MOUSE_BUTTON_RIGHT);
+    // allowPlanarMovement=false reserva WASD para controlar um corpo da simulação.
+    void processInput(
+        Window &window,
+        float deltaTime,
+        int rotateButton = GLFW_MOUSE_BUTTON_RIGHT,
+        bool allowPlanarMovement = true);
+
+    // Liga a câmera a um alvo e permite orbitá-lo em terceira pessoa.
+    // O alvo é atualizado continuamente por processFollowInput().
+    void beginFollow(const glm::vec3 &target);
+    void processFollowInput(
+        Window &window,
+        const glm::vec3 &target,
+        float deltaTime,
+        int rotateButton = GLFW_MOUSE_BUTTON_RIGHT);
+    void processFollowInput(
+        Window &window,
+        const glm::vec3 &target,
+        const glm::vec3 &targetVelocity,
+        float deltaTime,
+        int rotateButton = GLFW_MOUSE_BUTTON_RIGHT);
+    void endFollow();
+    bool isFollowing() const { return followActive_; }
 
     // Atualiza a área usada para calcular a projeção.
     void setViewportSize(int width, int height);
@@ -65,6 +87,16 @@ public:
     void resetSettings();
 
 private:
+    bool followActive_ = false;
+    float followYaw_ = 0.0f;
+    float followPitch_ = glm::radians(28.0f);
+    float followDistance_ = 12.0f;
+    float followTargetDistance_ = 12.0f;
+    float followDistanceVelocity_ = 0.0f;
+    glm::vec3 followFocus_{0.0f};
+    glm::vec3 followFocusVelocity_{0.0f};
+    glm::vec3 followPositionVelocity_{0.0f};
+
     static constexpr float kDefaultFov = 45.0f;
     static constexpr float kDefaultWalkSpeed = 1.5f;
     static constexpr float kDefaultSprintSpeed = 5.0f;

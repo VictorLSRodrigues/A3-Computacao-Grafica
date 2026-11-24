@@ -1,10 +1,12 @@
 #pragma once
 
 #include <string>
+#include <deque>
 
 #include "engine/application/application.h"
 #include "engine/graphics/camera/camera.h"
 #include "engine/renderer/renderer.h"
+#include "engine/physics/physics_world.h"
 #include "engine/scene/light.h"
 #include "engine/scene/scene.h"
 #include "applications/sandbox/ui/HUD.h"
@@ -35,11 +37,25 @@ protected:
 private:
     void renderUI();
     void startDoom();
+    bool registerScenePhysics();
+    void syncSceneFromPhysics();
+    void resetPhysicsFromScene();
+
+    struct PhysicsBinding
+    {
+        Scene::Object *object = nullptr;
+        Transform bodyTransform;
+        glm::vec3 localCenter{0.0f};
+    };
 
     std::string selectedModelName = "Todos";
 
     Renderer renderer;
     Scene scene;
+    PhysicsWorld physics;
+    // PhysicsWorld guarda ponteiros para estas Transform. deque mantém
+    // os endereços estáveis enquanto os vínculos são registrados.
+    std::deque<PhysicsBinding> physicsBindings;
     Light light;
     Camera camera{1, 1, glm::vec3(0.0f, 0.0f, 2.0f)};
     UI ui;

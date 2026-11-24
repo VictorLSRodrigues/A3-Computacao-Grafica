@@ -9,6 +9,10 @@
 // Retorna false se algum recurso obrigatório não puder ser carregado.
 bool buildWorld(Scene& scene);
 
+// Adiciona uma esfera visual de demonstração; a aplicação decide se ela
+// participa de algum sistema físico.
+Scene::Object *addPhysicsDemoSphere(Scene &scene);
+
 // Atalhos de teclado do sandbox para escolher qual modelo da cena é exibido
 // (1 = macaco, 2 = multi, 3 = pyramid, 0 = todos). viewedModel recebe o nome exibido.
 void handleModelShortcuts(const Window& window, Scene& scene, std::string& viewedModel);

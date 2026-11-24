@@ -1,5 +1,6 @@
 #include "shapes.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -162,6 +163,131 @@ bool shapes::gridPlane(
                 static_cast<std::size_t>(z + 1) * columns + x);
             const unsigned int c = d + 1;
 
+            indices.insert(indices.end(), {a, d, c, a, c, b});
+        }
+    }
+
+    return true;
+}
+
+bool shapes::bowl(
+    float radius,
+    float depth,
+    float lipHeight,
+    unsigned int radialSegments,
+    unsigned int angularSegments,
+    std::vector<Vertex> &vertices,
+    std::vector<unsigned int> &indices)
+{
+    vertices.clear();
+    indices.clear();
+
+    if (!std::isfinite(radius) || !std::isfinite(depth) ||
+        !std::isfinite(lipHeight) || radius <= 0.0f ||
+        depth < 0.0f || lipHeight < 0.0f ||
+        radialSegments < 2 || angularSegments < 3)
+        return false;
+
+    const std::size_t columns = static_cast<std::size_t>(angularSegments) + 1;
+    const std::size_t rings = static_cast<std::size_t>(radialSegments);
+    const std::size_t maxCount = static_cast<std::size_t>(
+        std::numeric_limits<unsigned int>::max());
+    if (columns > maxCount / rings ||
+        1 + columns * rings > maxCount ||
+        static_cast<std::size_t>(radialSegments) > maxCount / columns / 6)
+        return false;
+
+    constexpr float pi = 3.14159265358979323846f;
+    constexpr float lipStart = 0.78f;
+    const float inverseRadius = 1.0f / radius;
+    const float lipWidth = 1.0f - lipStart;
+
+    const auto profile = [=](float radialDistance, float &height, float &slope)
+    {
+        const float normalizedRadius = std::clamp(
+            radialDistance * inverseRadius, 0.0f, 1.0f);
+        height = depth * normalizedRadius * normalizedRadius;
+        slope = 2.0f * depth * radialDistance * inverseRadius * inverseRadius;
+
+        if (normalizedRadius > lipStart && lipHeight > 0.0f)
+        {
+            const float lipT = (normalizedRadius - lipStart) / lipWidth;
+            const float lipT2 = lipT * lipT;
+            const float lipT3 = lipT2 * lipT;
+            height += lipHeight * lipT2 * lipT2;
+            slope += lipHeight * 4.0f * lipT3 / (radius * lipWidth);
+        }
+    };
+
+    vertices.reserve(1 + columns * rings);
+    indices.reserve(static_cast<std::size_t>(radialSegments) *
+                    angularSegments * 6);
+
+    vertices.push_back({
+        glm::vec3(0.0f),
+        glm::vec3(1.0f),
+        glm::vec2(0.5f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)});
+
+    const float twoPi = 2.0f * pi;
+    for (unsigned int ring = 1; ring <= radialSegments; ++ring)
+    {
+        const float radialFraction = static_cast<float>(ring) /
+            static_cast<float>(radialSegments);
+        const float radialDistance = radius * radialFraction;
+        float height = 0.0f;
+        float slope = 0.0f;
+        profile(radialDistance, height, slope);
+
+        for (unsigned int sector = 0; sector <= angularSegments; ++sector)
+        {
+            const float u = static_cast<float>(sector) /
+                static_cast<float>(angularSegments);
+            const float angle = u * twoPi;
+            const float cosAngle = std::cos(angle);
+            const float sinAngle = std::sin(angle);
+
+            const float x = radialDistance * cosAngle;
+            const float z = radialDistance * sinAngle;
+            const glm::vec3 normal = glm::normalize(glm::vec3(
+                -slope * cosAngle, 1.0f, -slope * sinAngle));
+            const glm::vec3 tangent = glm::normalize(glm::vec3(
+                cosAngle, slope, sinAngle));
+
+            vertices.push_back({
+                glm::vec3(x, height, z),
+                glm::vec3(1.0f),
+                glm::vec2(0.5f + 0.5f * x * inverseRadius,
+                          0.5f + 0.5f * z * inverseRadius),
+                normal,
+                glm::vec4(tangent, 1.0f)});
+        }
+    }
+
+    // Primeiro anel conectado ao único vértice central, sem triângulos
+    // degenerados no centro da bacia.
+    const unsigned int firstRing = 1;
+    for (unsigned int sector = 0; sector < angularSegments; ++sector)
+    {
+        const unsigned int current = firstRing + sector;
+        const unsigned int next = current + 1;
+        indices.insert(indices.end(), {0, next, current});
+    }
+
+    for (unsigned int ring = 2; ring <= radialSegments; ++ring)
+    {
+        const unsigned int innerStart = 1 + (ring - 2) *
+            static_cast<unsigned int>(columns);
+        const unsigned int outerStart = 1 + (ring - 1) *
+            static_cast<unsigned int>(columns);
+
+        for (unsigned int sector = 0; sector < angularSegments; ++sector)
+        {
+            const unsigned int a = innerStart + sector;
+            const unsigned int d = a + 1;
+            const unsigned int b = outerStart + sector;
+            const unsigned int c = b + 1;
             indices.insert(indices.end(), {a, d, c, a, c, b});
         }
     }

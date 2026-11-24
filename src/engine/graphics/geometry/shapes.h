@@ -32,6 +32,19 @@ namespace shapes
         std::vector<Vertex> &vertices,
         std::vector<unsigned int> &indices);
 
+    // Gera uma bacia circular côncava centrada na origem. O perfil é parabólico
+    // no fundo e ganha um lábio mais íngreme perto da borda.
+    // depth define a altura do fundo até o início do lábio; lipHeight define
+    // quanto a borda sobe além disso. As normais apontam para dentro da bacia.
+    bool bowl(
+        float radius,
+        float depth,
+        float lipHeight,
+        unsigned int radialSegments,
+        unsigned int angularSegments,
+        std::vector<Vertex> &vertices,
+        std::vector<unsigned int> &indices);
+
     // Gera uma caixa centrada na origem, com UVs, normais e tangentes por face.
     // Cada face possui seus próprios vértices para preservar os atributos das arestas.
     // Retorna false para dimensões inválidas.

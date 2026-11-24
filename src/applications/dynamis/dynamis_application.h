@@ -24,7 +24,9 @@ private:
     Scene scene;
     PhysicsWorld physics;
     Light light;
-    Camera camera{1280, 800, glm::vec3(8.0f, 8.0f, 10.0f)};
+    Camera camera{1280, 800, glm::vec3(0.0f, 20.0f, 42.0f)};
     UI ui;
     Editor editor{window, camera, scene, light, ui};
+    Scene::Object* followedObject = nullptr;
+    Transform* forceControlledTransform = nullptr;
 };

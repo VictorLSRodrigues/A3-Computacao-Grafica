@@ -13,6 +13,50 @@
 #include "engine/graphics/geometry/shapes.h"
 #include "engine/graphics/resources/texture.h"
 
+
+Scene::Object *addPhysicsDemoSphere(Scene &scene)
+{
+    constexpr float localRadius = 0.5f;
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    if (!shapes::sphere(localRadius, 32, 16, vertices, indices))
+    {
+        std::cerr << "Falha ao gerar a esfera de demonstracao fisica." << std::endl;
+        return nullptr;
+    }
+
+    auto mesh = std::make_shared<Mesh>();
+    if (!mesh->createIndexed(vertices, indices))
+    {
+        std::cerr << "Falha ao criar a malha da esfera de demonstracao fisica."
+                  << std::endl;
+        return nullptr;
+    }
+
+    // Uma textura branca de 1x1 deixa a cor do material independente da
+    // textura padrao do Renderer.
+    auto whiteTexture = std::make_shared<Texture>();
+    constexpr unsigned char whitePixel[4] = {255, 255, 255, 255};
+    if (!whiteTexture->create(
+            1, 1, 4, whitePixel, TextureColorSpace::SRGB))
+        return nullptr;
+    whiteTexture->setType("diffuse");
+    mesh->setTexture(std::move(whiteTexture));
+
+    Material material;
+    material.baseColorFactor = glm::vec4(0.92f, 0.28f, 0.08f, 1.0f);
+    material.metallicFactor = 0.0f;
+    material.roughnessFactor = 0.62f;
+    mesh->setMaterial(material);
+
+    Transform transform;
+    transform.move(glm::vec3(3.0f, 1.2f, -4.2f));
+    transform.setScale(glm::vec3(0.9f));
+
+    return scene.addMesh(std::move(mesh), "physics_sphere", transform);
+}
+
 bool buildWorld(Scene &scene)
 {
     // Cria a pirâmide original da cena.
@@ -210,17 +254,8 @@ bool buildWorld(Scene &scene)
     pyramid->transform.move(glm::vec3(1.8f, -0.55f, -3.0f));
     pyramid->transform.setScale(glm::vec3(0.35f));
 
-    // A pirâmide gira em torno do eixo Y.
-    pyramid->update = [](Transform &transform, float deltaTime)
-    {
-        glm::vec3 newRotation = transform.rotation();
-
-        newRotation.y = std::fmod(
-            newRotation.y + 90.0f * deltaTime,
-            360.0f);
-
-        transform.setRotation(newRotation);
-    };
+    // A pirâmide agora é um corpo dinâmico do Sandbox; a rotação deixa de
+    // ser animada por script para não disputar a orientação controlada pela física.
 
     return true;
 }
