@@ -10,24 +10,25 @@
 #include <limits>
 #include <nlohmann/json.hpp>
 #include <utility>
+#include <vector>
 
 namespace
 {
     using json = nlohmann::json;
 
     // Converte glm::vec3 para uma lista JSON.
-    json vectorToJson(const glm::vec3& value)
+    json vectorToJson(const glm::vec3 &value)
     {
-        return json::array({ value.x, value.y, value.z });
+        return json::array({value.x, value.y, value.z});
     }
 
     // Recupera um glm::vec3 de uma lista JSON.
-    bool jsonToVector(const json& value, glm::vec3& result)
+    bool jsonToVector(const json &value, glm::vec3 &result)
     {
         if (!value.is_array() || value.size() != 3)
             return false;
 
-        for (const auto& component : value)
+        for (const auto &component : value)
         {
             if (!component.is_number())
                 return false;
@@ -36,8 +37,7 @@ namespace
         const glm::vec3 parsed(
             value[0].get<float>(),
             value[1].get<float>(),
-            value[2].get<float>()
-        );
+            value[2].get<float>());
 
         if (!std::isfinite(parsed.x) ||
             !std::isfinite(parsed.y) ||
@@ -48,12 +48,12 @@ namespace
         return true;
     }
 
-    json vec2ToJson(const glm::vec2& value)
+    json vec2ToJson(const glm::vec2 &value)
     {
-        return json::array({ value.x, value.y });
+        return json::array({value.x, value.y});
     }
 
-    bool jsonToVec2(const json& value, glm::vec2& result)
+    bool jsonToVec2(const json &value, glm::vec2 &result)
     {
         if (!value.is_array() || value.size() != 2 ||
             !value[0].is_number() || !value[1].is_number())
@@ -61,8 +61,7 @@ namespace
 
         const glm::vec2 parsed(
             value[0].get<float>(),
-            value[1].get<float>()
-        );
+            value[1].get<float>());
 
         if (!std::isfinite(parsed.x) || !std::isfinite(parsed.y))
             return false;
@@ -71,17 +70,17 @@ namespace
         return true;
     }
 
-    json vec4ToJson(const glm::vec4& value)
+    json vec4ToJson(const glm::vec4 &value)
     {
-        return json::array({ value.x, value.y, value.z, value.w });
+        return json::array({value.x, value.y, value.z, value.w});
     }
 
-    bool jsonToVec4(const json& value, glm::vec4& result)
+    bool jsonToVec4(const json &value, glm::vec4 &result)
     {
         if (!value.is_array() || value.size() != 4)
             return false;
 
-        for (const auto& component : value)
+        for (const auto &component : value)
         {
             if (!component.is_number())
                 return false;
@@ -91,8 +90,7 @@ namespace
             value[0].get<float>(),
             value[1].get<float>(),
             value[2].get<float>(),
-            value[3].get<float>()
-        );
+            value[3].get<float>());
 
         if (!std::isfinite(parsed.x) ||
             !std::isfinite(parsed.y) ||
@@ -105,18 +103,17 @@ namespace
     }
 
     // Converte e reconstrói todos os atributos de um Vertex.
-    json vertexToJson(const Vertex& vertex)
+    json vertexToJson(const Vertex &vertex)
     {
         return {
             {"position", vectorToJson(vertex.position)},
             {"color", vectorToJson(vertex.color)},
             {"texUV", vec2ToJson(vertex.texUV)},
             {"normal", vectorToJson(vertex.normal)},
-            {"tangent", vec4ToJson(vertex.tangent)}
-        };
+            {"tangent", vec4ToJson(vertex.tangent)}};
     }
 
-    bool jsonToVertex(const json& value, Vertex& result)
+    bool jsonToVertex(const json &value, Vertex &result)
     {
         if (!value.is_object() ||
             !value.contains("position") ||
@@ -139,7 +136,7 @@ namespace
         return true;
     }
 
-    bool jsonToSize(const json& value, std::size_t& result)
+    bool jsonToSize(const json &value, std::size_t &result)
     {
         if (!value.is_number_integer() && !value.is_number_unsigned())
             return false;
@@ -165,7 +162,7 @@ namespace
         return true;
     }
 
-    std::string modelFileName(const std::string& path)
+    std::string modelFileName(const std::string &path)
     {
         std::string portablePath = path;
         std::replace(portablePath.begin(), portablePath.end(), '\\', '/');
@@ -174,15 +171,15 @@ namespace
 
     // Gera o registro JSON de uma geometria que já recebeu extrusão.
     bool appendExtrusionJson(
-        json& extrusions,
-        const Geometry& geometry,
+        json &extrusions,
+        const Geometry &geometry,
         std::size_t meshIndex)
     {
         if (!geometry.hasExtrusion())
             return false;
 
-        const auto& vertices = geometry.getStructuredVertices();
-        const auto& indices = geometry.getIndexData();
+        const auto &vertices = geometry.getStructuredVertices();
+        const auto &indices = geometry.getIndexData();
 
         if (vertices.empty() || indices.empty() || indices.size() % 3 != 0)
             return false;
@@ -190,7 +187,7 @@ namespace
         json savedVertices = json::array();
         json savedIndices = json::array();
 
-        for (const Vertex& vertex : vertices)
+        for (const Vertex &vertex : vertices)
             savedVertices.push_back(vertexToJson(vertex));
 
         for (unsigned int index : indices)
@@ -200,21 +197,19 @@ namespace
             savedIndices.push_back(index);
         }
 
-        extrusions.push_back({
-            {"mesh_index", meshIndex},
-            {"vertices", std::move(savedVertices)},
-            {"indices", std::move(savedIndices)}
-        });
+        extrusions.push_back({{"mesh_index", meshIndex},
+                              {"vertices", std::move(savedVertices)},
+                              {"indices", std::move(savedIndices)}});
 
         return true;
     }
 
     // Lê e valida um registro de extrusão antes de alterar a malha.
     bool jsonToExtrusion(
-        const json& value,
-        std::size_t& meshIndex,
-        std::vector<Vertex>& vertices,
-        std::vector<unsigned int>& indices)
+        const json &value,
+        std::size_t &meshIndex,
+        std::vector<Vertex> &vertices,
+        std::vector<unsigned int> &indices)
     {
         if (!value.is_object() ||
             !value.contains("mesh_index") ||
@@ -227,8 +222,8 @@ namespace
         if (!jsonToSize(value["mesh_index"], meshIndex))
             return false;
 
-        const json& savedVertices = value["vertices"];
-        const json& savedIndices = value["indices"];
+        const json &savedVertices = value["vertices"];
+        const json &savedIndices = value["indices"];
 
         if (savedVertices.empty() || savedIndices.empty() ||
             savedIndices.size() % 3 != 0)
@@ -237,7 +232,7 @@ namespace
         std::vector<Vertex> parsedVertices;
         parsedVertices.reserve(savedVertices.size());
 
-        for (const auto& savedVertex : savedVertices)
+        for (const auto &savedVertex : savedVertices)
         {
             Vertex vertex{};
             if (!jsonToVertex(savedVertex, vertex))
@@ -248,7 +243,7 @@ namespace
         std::vector<unsigned int> parsedIndices;
         parsedIndices.reserve(savedIndices.size());
 
-        for (const auto& savedIndex : savedIndices)
+        for (const auto &savedIndex : savedIndices)
         {
             std::size_t index = 0;
             if (!jsonToSize(savedIndex, index) ||
@@ -265,7 +260,7 @@ namespace
     }
 }
 
-bool Scene::saveTransforms(const std::string& filePath) const
+bool Scene::saveTransforms(const std::string &filePath) const
 {
     try
     {
@@ -280,7 +275,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
 
         for (std::size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex)
         {
-            const Object& object = objects[objectIndex];
+            const Object &object = objects[objectIndex];
 
             if (object.name.empty())
                 continue;
@@ -291,8 +286,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
                 {"visible", object.visible},
                 {"position", vectorToJson(object.transform.position())},
                 {"rotation", vectorToJson(object.transform.rotation())},
-                {"scale", vectorToJson(object.transform.scale())}
-            };
+                {"scale", vectorToJson(object.transform.scale())}};
 
             // A origem permite recriar modelos adicionados depois da inicializacao.
             if (object.model && !object.sourcePath.empty())
@@ -306,7 +300,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
                      meshIndex < object.model->getMeshCount();
                      ++meshIndex)
                 {
-                    const Geometry* geometry =
+                    const Geometry *geometry =
                         object.model->getMeshGeometry(meshIndex);
 
                     if (geometry)
@@ -318,8 +312,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
                 appendExtrusionJson(
                     extrusions,
                     object.mesh->getGeometry(),
-                    0
-                );
+                    0);
             }
 
             if (!extrusions.empty())
@@ -330,8 +323,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
 
         std::ofstream output(
             path,
-            std::ios::out | std::ios::trunc
-        );
+            std::ios::out | std::ios::trunc);
 
         if (!output.is_open())
         {
@@ -343,7 +335,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
         output << std::setw(4) << data << '\n';
         return output.good();
     }
-    catch (const std::exception& error)
+    catch (const std::exception &error)
     {
         std::cerr << "Erro ao salvar estado da cena: "
                   << error.what() << std::endl;
@@ -353,7 +345,7 @@ bool Scene::saveTransforms(const std::string& filePath) const
 
 // Persiste a fonte de luz junto com os objetos da cena. Mantem o formato
 // principal de objetos e acrescenta um bloco independente chamado "light".
-bool Scene::saveTransforms(const std::string& filePath, const Light& light) const
+bool Scene::saveTransforms(const std::string &filePath, const Light &light) const
 {
     if (!saveTransforms(filePath))
         return false;
@@ -373,8 +365,7 @@ bool Scene::saveTransforms(const std::string& filePath, const Light& light) cons
             {"color", vectorToJson(light.color)},
             {"intensity", light.intensity},
             {"position", vectorToJson(light.position)},
-            {"target", vectorToJson(light.target)}
-        };
+            {"target", vectorToJson(light.target)}};
 
         const std::filesystem::path path(filePath);
         const std::filesystem::path temporaryPath = path.string() + ".tmp";
@@ -405,14 +396,14 @@ bool Scene::saveTransforms(const std::string& filePath, const Light& light) cons
         }
         return true;
     }
-    catch (const std::exception& error)
+    catch (const std::exception &error)
     {
         std::cerr << "Erro ao salvar fonte de luz: " << error.what() << std::endl;
         return false;
     }
 }
 
-bool Scene::loadTransforms(const std::string& filePath)
+bool Scene::loadTransforms(const std::string &filePath)
 {
     try
     {
@@ -446,7 +437,11 @@ bool Scene::loadTransforms(const std::string& filePath)
         std::size_t restoredCount = 0;
         std::size_t restoredExtrusionCount = 0;
 
-        for (const auto& savedObject : data["objects"])
+        // Impede que dois registros do JSON sejam associados
+        // à mesma instância da cena.
+        std::vector<bool> matchedObjects(objects.size(), false);
+
+        for (const auto &savedObject : data["objects"])
         {
             if (!savedObject.is_object() ||
                 !savedObject.contains("name") ||
@@ -473,8 +468,10 @@ bool Scene::loadTransforms(const std::string& filePath)
 
             // O indice identifica instancias repetidas; source_path permite
             // reconstruir modelos que nao existiam quando a cena foi iniciada.
-            Object* targetObject = nullptr;
+            Object *targetObject = nullptr;
+            std::size_t targetObjectIndex = objects.size();
             std::size_t objectIndex = objects.size();
+
             if (savedObject.contains("object_index"))
                 jsonToSize(savedObject["object_index"], objectIndex);
 
@@ -484,24 +481,51 @@ bool Scene::loadTransforms(const std::string& filePath)
                     ? savedObject["source_path"].get<std::string>()
                     : std::string{};
 
-            if (objectIndex < objects.size() && objects[objectIndex].name == name)
+            // Arquivos antigos nao possuem source_path: mantem o fallback por nome.
+            // Quando source_path existe, tambem confirma o arquivo de origem.
+            const auto matchesSavedObject =
+                [&name, &sourcePath](const Object &candidate) -> bool
+            {
+                if (candidate.name != name)
+                    return false;
+
+                if (sourcePath.empty())
+                    return true;
+
+                if (!candidate.model || candidate.sourcePath.empty())
+                    return false;
+
+                return modelFileName(candidate.sourcePath) ==
+                       modelFileName(sourcePath);
+            };
+
+            // Primeiro tenta o indice salvo, desde que ele ainda identifique
+            // a mesma instancia e ainda nao tenha sido utilizado neste arquivo.
+            if (objectIndex < objects.size() &&
+                objectIndex < matchedObjects.size() &&
+                !matchedObjects[objectIndex] &&
+                matchesSavedObject(objects[objectIndex]))
             {
                 targetObject = &objects[objectIndex];
-                if (!sourcePath.empty() &&
-                    targetObject->sourcePath != sourcePath &&
-                    modelFileName(targetObject->sourcePath) !=
-                        modelFileName(sourcePath))
-                    targetObject = nullptr;
+                targetObjectIndex = objectIndex;
             }
 
-            // Arquivos antigos nao possuem source_path: mantem o fallback por nome.
-            if (!targetObject && sourcePath.empty())
+            // Se o indice mudou, procura uma instancia existente pelo nome
+            // e pelo arquivo de origem, sem reutilizar uma instancia ja associada.
+            if (!targetObject)
             {
-                auto object = std::find_if(
-                    objects.begin(), objects.end(),
-                    [&name](const Object& candidate) { return candidate.name == name; });
-                if (object != objects.end())
-                    targetObject = &(*object);
+                for (std::size_t i = 0; i < objects.size(); ++i)
+                {
+                    if (i < matchedObjects.size() && matchedObjects[i])
+                        continue;
+
+                    if (!matchesSavedObject(objects[i]))
+                        continue;
+
+                    targetObject = &objects[i];
+                    targetObjectIndex = i;
+                    break;
+                }
             }
 
             // Instancia dinamica de modelo: carrega o recurso e preserva o nome
@@ -511,6 +535,7 @@ bool Scene::loadTransforms(const std::string& filePath)
             {
                 std::string resolvedSourcePath = sourcePath;
                 std::error_code fileError;
+
                 if (!std::filesystem::is_regular_file(
                         resolvedSourcePath, fileError) ||
                     fileError)
@@ -520,19 +545,32 @@ bool Scene::loadTransforms(const std::string& filePath)
                         std::filesystem::path(
                             std::string(ASSETS_DIR) + "sandbox/models") /
                         modelFileName(sourcePath);
+
                     if (std::filesystem::is_regular_file(
                             assetPath, fileError) &&
                         !fileError)
+                    {
                         resolvedSourcePath = assetPath.string();
+                    }
                 }
 
                 targetObject = addModel(resolvedSourcePath);
+
                 if (targetObject)
+                {
                     targetObject->name = name;
+                    targetObjectIndex = objects.size() - 1;
+                }
             }
 
             if (!targetObject)
                 continue;
+
+            // Cada registro do JSON deve ser aplicado a uma instancia diferente.
+            if (matchedObjects.size() < objects.size())
+                matchedObjects.resize(objects.size(), false);
+
+            matchedObjects[targetObjectIndex] = true;
 
             if (version >= 3 && savedObject.contains("visible") &&
                 savedObject["visible"].is_boolean())
@@ -553,7 +591,7 @@ bool Scene::loadTransforms(const std::string& filePath)
             std::shared_ptr<Mesh> workingMesh;
             bool meshCopyAttempted = false;
 
-            for (const auto& savedExtrusion : savedObject["extrusions"])
+            for (const auto &savedExtrusion : savedObject["extrusions"])
             {
                 std::size_t meshIndex = 0;
                 std::vector<Vertex> vertices;
@@ -574,7 +612,7 @@ bool Scene::loadTransforms(const std::string& filePath)
 
                         // Se ainda for o modelo do cache, separa esta instância.
                         bool usesCachedModel = false;
-                        for (const auto& cached : modelCache)
+                        for (const auto &cached : modelCache)
                         {
                             if (cached.second == targetObject->model)
                             {
@@ -639,7 +677,7 @@ bool Scene::loadTransforms(const std::string& filePath)
 
         return restoredCount > 0;
     }
-    catch (const std::exception& error)
+    catch (const std::exception &error)
     {
         std::cerr << "Erro ao carregar estado da cena: "
                   << error.what() << std::endl;
@@ -649,7 +687,7 @@ bool Scene::loadTransforms(const std::string& filePath)
 
 // Carrega a luz somente quando o bloco existe e todos os campos sao validos.
 // Arquivos antigos sem "light" continuam funcionando e preservam a luz padrao.
-bool Scene::loadTransforms(const std::string& filePath, Light& light)
+bool Scene::loadTransforms(const std::string &filePath, Light &light)
 {
     try
     {
@@ -668,7 +706,7 @@ bool Scene::loadTransforms(const std::string& filePath, Light& light)
             !data["light"].is_object())
             return true;
 
-        const json& savedLight = data["light"];
+        const json &savedLight = data["light"];
         if (!savedLight.contains("type") ||
             !savedLight["type"].is_number_integer() ||
             !savedLight.contains("color") ||
@@ -704,7 +742,7 @@ bool Scene::loadTransforms(const std::string& filePath, Light& light)
         light.target = target;
         return true;
     }
-    catch (const std::exception& error)
+    catch (const std::exception &error)
     {
         std::cerr << "Erro ao carregar fonte de luz: " << error.what() << std::endl;
         return false;

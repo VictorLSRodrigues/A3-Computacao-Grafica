@@ -64,11 +64,10 @@ Scene::Object *Scene::addMesh(
     return &objects.back();
 }
 
+
 void Scene::captureDefaults()
 {
-    // Guarda uma cópia completa dos objetos que formam a cena inicial.
-    // Objetos extras carregados/importados depois podem ser removidos
-    // ao restaurar, sem exigir que a quantidade atual seja igual à original.
+    // Guarda uma cópia completa da cena inicial.
     defaultObjects = objects;
     defaultsCaptured = true;
 
@@ -83,18 +82,16 @@ bool Scene::resetToDefaults()
     {
         std::cerr
             << "Nao foi possivel restaurar a cena: "
-            << "o estado original ainda nao foi capturado."
+            << "estado original ainda nao foi capturado."
             << std::endl;
         return false;
     }
 
-    // Substitui a cena atual pelo snapshot original. Isso remove objetos
-    // adicionados dinamicamente e recupera os objetos originais.
     objects = defaultObjects;
 
-    std::cout << "Cena restaurada para os padroes originais: "
-              << objects.size() << " objetos."
-              << std::endl;
+    std::cout << "[SCENE] Cena restaurada com "
+              << objects.size()
+              << " objetos." << std::endl;
 
     return true;
 }

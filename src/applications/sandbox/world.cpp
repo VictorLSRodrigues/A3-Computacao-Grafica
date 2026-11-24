@@ -13,7 +13,6 @@
 #include "engine/graphics/geometry/shapes.h"
 #include "engine/graphics/resources/texture.h"
 
-
 Scene::Object *addPhysicsDemoSphere(Scene &scene)
 {
     constexpr float localRadius = 0.5f;
@@ -59,6 +58,23 @@ Scene::Object *addPhysicsDemoSphere(Scene &scene)
 
 bool buildWorld(Scene &scene)
 {
+    const auto &objects = scene.getObjects();
+
+    const bool worldAlreadyExists =
+        std::any_of(
+            objects.begin(),
+            objects.end(),
+            [](const Scene::Object &object)
+            {
+                return object.name == "tablet";
+            });
+
+    if (worldAlreadyExists)
+    {
+        std::cout << "[WORLD] A cena ja foi montada."
+                  << std::endl;
+        return true;
+    }
     // Cria a pirâmide original da cena.
     auto pyramidMesh = std::make_shared<Mesh>();
 
@@ -162,6 +178,13 @@ bool buildWorld(Scene &scene)
             "tablet",
             glm::vec3(-1.50f, 0.15f, -2.5f),
             0.25f))
+        return false;
+
+    if (!addModel(
+            "Mouse.glb",
+            "mouse",
+            glm::vec3(0.65f, -0.05f, -2.85f),
+            0.20f))
         return false;
 
     if (!addModel(
