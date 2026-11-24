@@ -66,54 +66,34 @@ Scene::Object *Scene::addMesh(
 
 void Scene::captureDefaults()
 {
-    defaultStates.clear();
-    defaultStates.reserve(objects.size());
-
-    for (const Object& object : objects)
-    {
-        defaultStates.push_back({
-            object.model,
-            object.mesh,
-            object.transform,
-            object.visible
-        });
-    }
+    // Guarda uma cópia completa dos objetos que formam a cena inicial.
+    // Objetos extras carregados/importados depois podem ser removidos
+    // ao restaurar, sem exigir que a quantidade atual seja igual à original.
+    defaultObjects = objects;
+    defaultsCaptured = true;
 
     std::cout << "Estado original da cena capturado: "
-              << defaultStates.size()
+              << defaultObjects.size()
               << " objetos." << std::endl;
 }
 
 bool Scene::resetToDefaults()
 {
-    if (defaultStates.size() != objects.size())
+    if (!defaultsCaptured)
     {
         std::cerr
             << "Nao foi possivel restaurar a cena: "
-            << "quantidade de objetos diferente do estado original."
+            << "o estado original ainda nao foi capturado."
             << std::endl;
         return false;
     }
 
-    std::size_t index = 0;
+    // Substitui a cena atual pelo snapshot original. Isso remove objetos
+    // adicionados dinamicamente e recupera os objetos originais.
+    objects = defaultObjects;
 
-    for (Object& object : objects)
-    {
-        const ObjectDefaultState& original =
-            defaultStates[index++];
-
-        // Recupera os recursos originais, sem extrusões.
-        object.model = original.model;
-        object.mesh = original.mesh;
-
-        // Recupera as transformações iniciais.
-        object.transform = original.transform;
-
-        // Recupera a visibilidade original.
-        object.visible = original.visible;
-    }
-
-    std::cout << "Cena restaurada para os padroes originais."
+    std::cout << "Cena restaurada para os padroes originais: "
+              << objects.size() << " objetos."
               << std::endl;
 
     return true;

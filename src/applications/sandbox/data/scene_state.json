@@ -43,21 +43,21 @@
             "name": "tablet",
             "object_index": 1,
             "position": [
-                -1.2099360227584839,
+                -1.2099343538284302,
                 -0.2944351136684418,
-                -2.503833770751953
+                -2.5038304328918457
             ],
             "rotation": [
                 -0.017312156036496162,
                 179.99557495117188,
-                -0.015179048292338848
+                -0.015179050154983997
             ],
             "scale": [
                 0.25,
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Tablet_Vdd.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Tablet_Vdd.glb",
             "visible": true
         },
         {
@@ -78,133 +78,133 @@
                 0.3499999940395355,
                 0.3499999940395355
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Mesa.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Mesa.glb",
             "visible": true
         },
         {
             "name": "caderno",
             "object_index": 3,
             "position": [
-                -1.7607927322387695,
-                0.20995306968688965,
-                -3.2784266471862793
+                -1.7607468366622925,
+                0.20986708998680115,
+                -3.2596302032470703
             ],
             "rotation": [
-                0.018048439174890518,
-                -0.008108679205179214,
-                -90.00040435791016
+                0.011813386343419552,
+                0.1813988983631134,
+                -89.99690246582031
             ],
             "scale": [
                 0.25,
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Caderno.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Caderno.glb",
             "visible": true
         },
         {
             "name": "caneca",
             "object_index": 4,
             "position": [
-                0.5725824236869812,
-                0.7649939060211182,
-                -2.8718602657318115
+                0.2789735794067383,
+                0.7648539543151855,
+                -2.717820644378662
             ],
             "rotation": [
-                -0.0013029269175603986,
-                -101.62213897705078,
-                179.9609832763672
+                0.00020455253252293915,
+                175.8708038330078,
+                -179.91143798828125
             ],
             "scale": [
                 0.20000000298023224,
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Caneca.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Caneca.glb",
             "visible": true
         },
         {
             "name": "celular",
             "object_index": 5,
             "position": [
-                0.4966600239276886,
-                0.8024120926856995,
-                -2.689241409301758
+                0.4970768690109253,
+                0.8024770021438599,
+                -2.690115451812744
             ],
             "rotation": [
-                -0.02224016562104225,
-                150.53445434570313,
-                180.0
+                -0.03207189217209816,
+                150.53013610839844,
+                179.99295043945313
             ],
             "scale": [
                 0.20000000298023224,
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/celular.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/celular.glb",
             "visible": true
         },
         {
             "name": "lapis",
             "object_index": 6,
             "position": [
-                -1.0393491983413696,
-                -0.2509823739528656,
-                -3.60145902633667
+                -1.0385699272155762,
+                -0.25136786699295044,
+                -3.6003284454345703
             ],
             "rotation": [
-                -89.6607666015625,
-                -139.07615661621094,
-                -2.326000452041626
+                -89.60676574707031,
+                -133.6792449951172,
+                -7.682502269744873
             ],
             "scale": [
                 0.20000000298023224,
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Lapis.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Lapis.glb",
             "visible": true
         },
         {
             "name": "lampada",
             "object_index": 7,
             "position": [
-                -1.6541833877563477,
-                0.12521111965179443,
-                -3.6772818565368652
+                -1.673887014389038,
+                0.12598922848701477,
+                -3.690964460372925
             ],
             "rotation": [
-                -8.537736562175269e-07,
-                -14.996728897094727,
-                -89.99797821044922
+                1.7075473124350538e-06,
+                -14.899139404296875,
+                -90.04499816894531
             ],
             "scale": [
                 0.25,
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Lampada.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Lampada.glb",
             "visible": true
         },
         {
             "name": "foto",
             "object_index": 8,
             "position": [
-                -0.9115421772003174,
-                0.15560150146484375,
+                -0.9115422368049622,
+                0.15560157597064972,
                 -3.7829232215881348
             ],
             "rotation": [
                 89.90730285644531,
-                -124.86335754394531,
-                -90.70228576660156
+                -124.86397552490234,
+                -90.70288848876953
             ],
             "scale": [
                 0.20000000298023224,
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Foto.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Foto.glb",
             "visible": true
         },
         {
@@ -213,28 +213,28 @@
             "position": [
                 -1.0070984363555908,
                 -0.46285903453826904,
-                -3.7286226749420166
+                -3.728626012802124
             ],
             "rotation": [
-                -0.06767275929450989,
-                1.6891573977773078e-05,
-                -0.06765876710414886
+                -0.06767182797193527,
+                1.689333475951571e-05,
+                -0.06765974313020706
             ],
             "scale": [
                 0.20000000298023224,
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Porta caneta.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Porta caneta.glb",
             "visible": true
         },
         {
             "name": "suculenta",
             "object_index": 10,
             "position": [
-                -1.3997766971588135,
+                -1.2856159210205078,
                 0.055999696254730225,
-                -3.561960458755493
+                -3.6005923748016357
             ],
             "rotation": [
                 -0.0,
@@ -246,7 +246,7 @@
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Suculenta_2.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Suculenta_2.glb",
             "visible": true
         },
         {
@@ -267,7 +267,7 @@
                 0.25,
                 0.25
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Monitor.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Monitor.glb",
             "visible": true
         },
         {
@@ -275,7 +275,7 @@
             "object_index": 12,
             "position": [
                 -0.21330836415290833,
-                -0.35291892290115356,
+                -0.4721054434776306,
                 -2.4543769359588623
             ],
             "rotation": [
@@ -288,7 +288,7 @@
                 0.20000000298023224,
                 0.20000000298023224
             ],
-            "source_path": "C:/Workspace/Codando/Projetos/c++/RotorGrafico/A3-Computacao-Grafica/assets/sandbox/models/Teclado.glb",
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Teclado.glb",
             "visible": true
         },
         {

@@ -139,16 +139,11 @@ public:
     bool loadTransforms(const std::string &filePath, Light &light);
 
 private:
-    struct ObjectDefaultState
-    {
-        std::shared_ptr<Model> model;
-        std::shared_ptr<Mesh> mesh;
-        Transform transform;
-        bool visible = true;
-    };
-
     std::map<std::string, std::shared_ptr<Model>> modelCache;
     std::deque<Object> objects;
 
-    std::vector<ObjectDefaultState> defaultStates;
+    // Snapshot completo: inclui recursos, nomes, caminhos, callbacks,
+    // visibilidade e transformações dos objetos originais.
+    std::deque<Object> defaultObjects;
+    bool defaultsCaptured = false;
 };

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <iostream>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -133,6 +134,7 @@ void Menu::drawMain(const Window &window, UI &ui)
             ButtonTone::Neutral))
     {
         scenePage = 0;
+        sceneLoadStatus.clear();
         page = Page::Scenes;
     }
 
@@ -427,6 +429,18 @@ void Menu::drawScenes(
         "Carregar cena",
         "Cenários encontrados na pasta data");
 
+    if (!sceneLoadStatus.empty())
+    {
+        sandbox_ui::drawTextFit(
+            ui,
+            sceneLoadStatus,
+            innerX,
+            y + 106.0f,
+            innerW,
+            0.34f,
+            sandbox_ui::palette::danger);
+    }
+
     // Diretório de dados que também é utilizado pelo application.cpp.
     const std::filesystem::path sceneDirectory =
         std::filesystem::path(SANDBOX_SCENE_DATA_DIR);
@@ -546,8 +560,7 @@ void Menu::drawScenes(
             const float cardY =
                 cellY + (cellH - cardSize) * 0.5f;
 
-            // Cartão visual. O carregamento será conectado
-            // numa etapa posterior.
+            // Cartão clicável para carregar o arquivo JSON selecionado.
             ui.addRegion(cardX, cardY, cardSize, cardSize);
 
             ui.drawRect(
@@ -611,10 +624,22 @@ void Menu::drawScenes(
                 window.getMouseY() >= cardY &&
                 window.getMouseY() <= cardY + cardSize)
             {
-                if (loadScene && loadScene(sceneFiles[i].string()))
+                const std::string selectedFile = sceneFiles[i].string();
+
+                if (loadScene && loadScene(selectedFile))
                 {
+                    sceneLoadStatus.clear();
                     page = Page::Main;
                     open = false;
+                }
+                else
+                {
+                    sceneLoadStatus =
+                        "Falha ao carregar " + sceneFiles[i].filename().string() +
+                        ". Verifique o terminal para detalhes.";
+                    std::cerr << sceneLoadStatus
+                              << " Caminho: " << selectedFile
+                              << std::endl;
                 }
             }
         }
@@ -636,6 +661,7 @@ void Menu::drawScenes(
             36.0f,
             ButtonTone::Neutral))
     {
+        sceneLoadStatus.clear();
         page = Page::Main;
     }
 

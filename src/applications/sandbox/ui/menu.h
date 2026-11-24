@@ -41,8 +41,9 @@ private:
     std::string saveStatus;
     bool saveSucceeded = false;
 
-    // Paginação da lista de cenas.
+    // Paginação da lista de cenas e retorno da última tentativa de carga.
     std::size_t scenePage = 0;
+    std::string sceneLoadStatus;
 
     void drawMain(const Window &window, UI &ui);
 
