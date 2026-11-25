@@ -4,6 +4,9 @@
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <limits>
+#include <memory>
+#include <utility>
 #include <vector>
 
 #ifdef _WIN32
@@ -32,13 +35,126 @@ namespace
         SANDBOX_DATA_DIR "/scene_state.json";
     constexpr const char *SCENE_EXPORT_DIR = SANDBOX_SCENE_DATA_DIR;
 
-    // Escala temporal local do Sandbox: 0.1 = simulacao a 10% da velocidade.
-    // A camera, a interface e o restante da aplicacao continuam em tempo real.
-    constexpr float SANDBOX_PHYSICS_TIME_SCALE = 0.1f;
-
     // Mesa.glb tem um tampo com aproximadamente 0,21 unidade no eixo local Y.
     // O colisor representa apenas essa placa; pernas continuam sendo visuais.
     constexpr float SANDBOX_TABLETOP_COLLIDER_THICKNESS = 0.21f;
+
+    bool appendGeometryTriangles(
+        const Geometry& geometry,
+        const glm::mat4& localTransform,
+        std::vector<glm::vec3>& positions,
+        std::vector<unsigned int>& triangleIndices)
+    {
+        if (geometry.getTopology() != PrimitiveTopology::Triangles)
+            return false;
+
+        const auto& vertices = geometry.getStructuredVertices();
+        if (vertices.empty())
+            return false;
+
+        if (positions.size() + vertices.size() >
+            static_cast<std::size_t>(std::numeric_limits<unsigned int>::max()))
+        {
+            return false;
+        }
+
+        const unsigned int baseIndex = static_cast<unsigned int>(positions.size());
+        positions.reserve(positions.size() + vertices.size());
+        for (const Vertex& vertex : vertices)
+        {
+            const glm::vec4 transformed =
+                localTransform * glm::vec4(vertex.position, 1.0f);
+            if (!std::isfinite(transformed.x) || !std::isfinite(transformed.y) ||
+                !std::isfinite(transformed.z) || std::fabs(transformed.w) <= 1e-8f)
+            {
+                return false;
+            }
+            positions.emplace_back(glm::vec3(transformed) / transformed.w);
+        }
+
+        const auto& indices = geometry.getIndexData();
+        if (!indices.empty())
+        {
+            if (indices.size() % 3 != 0)
+                return false;
+            triangleIndices.reserve(triangleIndices.size() + indices.size());
+            for (unsigned int index : indices)
+            {
+                if (index >= vertices.size())
+                    return false;
+                triangleIndices.push_back(baseIndex + index);
+            }
+            return true;
+        }
+
+        // Geometrias não indexadas mantêm faces reconstruídas pelo Geometry.
+        for (const Face& face : geometry.getFaces())
+        {
+            if (face.vertexIndices.size() < 3)
+                continue;
+            for (std::size_t i = 1; i + 1 < face.vertexIndices.size(); ++i)
+            {
+                const unsigned int a = face.vertexIndices[0];
+                const unsigned int b = face.vertexIndices[i];
+                const unsigned int c = face.vertexIndices[i + 1];
+                if (a >= vertices.size() || b >= vertices.size() || c >= vertices.size())
+                    return false;
+                triangleIndices.push_back(baseIndex + a);
+                triangleIndices.push_back(baseIndex + b);
+                triangleIndices.push_back(baseIndex + c);
+            }
+        }
+
+        return triangleIndices.size() >= 3;
+    }
+
+    std::shared_ptr<const rotor::physics::TriangleMeshColliderData>
+    buildObjectTriangleMeshCollider(
+        const Scene::Object& object,
+        glm::vec3& localCenterOfMass)
+    {
+        std::vector<glm::vec3> positions;
+        std::vector<unsigned int> triangleIndices;
+
+        if (object.model)
+        {
+            for (std::size_t meshIndex = 0;
+                 meshIndex < object.model->getMeshCount(); ++meshIndex)
+            {
+                const Geometry* geometry = object.model->getMeshGeometry(meshIndex);
+                const glm::mat4* meshTransform = object.model->getMeshTransform(meshIndex);
+                if (!geometry || !meshTransform ||
+                    !appendGeometryTriangles(
+                        *geometry, *meshTransform, positions, triangleIndices))
+                {
+                    return nullptr;
+                }
+            }
+        }
+        else if (object.mesh)
+        {
+            if (!appendGeometryTriangles(
+                    object.mesh->getGeometry(), glm::mat4(1.0f),
+                    positions, triangleIndices))
+            {
+                return nullptr;
+            }
+        }
+        else
+        {
+            return nullptr;
+        }
+
+        auto data = std::make_shared<rotor::physics::TriangleMeshColliderData>();
+        if (!rotor::physics::buildTriangleMeshColliderData(
+                positions, triangleIndices, *data))
+        {
+            return nullptr;
+        }
+
+        localCenterOfMass = data->localCenterOfMass;
+        return data;
+    }
 
     WindowConfig createWindowConfig()
     {
@@ -101,7 +217,7 @@ bool SandboxApplication::onInitialize()
     return true;
 }
 
-bool SandboxApplication::registerScenePhysics()
+bool SandboxApplication::registerScenePhysics(bool stabilizeOverlaps)
 {
     // Recria os vínculos após alterações no Editor ou carregamento de cena,
     // atualizando centros, escalas e limites geométricos dos colisores.
@@ -128,7 +244,7 @@ bool SandboxApplication::registerScenePhysics()
             return false;
         }
 
-        const glm::vec3 localCenter =
+        const glm::vec3 boundsCenter =
             (bounds->min + bounds->max) * 0.5f;
         const glm::vec3 halfExtents =
             (bounds->max - bounds->min) * 0.5f;
@@ -141,9 +257,9 @@ bool SandboxApplication::registerScenePhysics()
             const float halfThickness =
                 SANDBOX_TABLETOP_COLLIDER_THICKNESS * 0.5f;
             const glm::vec3 tabletopCenter(
-                localCenter.x,
+                boundsCenter.x,
                 bounds->max.y - halfThickness,
-                localCenter.z);
+                boundsCenter.z);
             const glm::vec3 tabletopHalfExtents(
                 halfExtents.x,
                 halfThickness,
@@ -169,17 +285,17 @@ bool SandboxApplication::registerScenePhysics()
         ++expectedBodies;
         PhysicsBinding &binding = physicsBindings.emplace_back();
         binding.object = &object;
-        binding.localCenter = localCenter;
-        binding.bodyTransform = object.transform;
-        binding.bodyTransform.move(object.visualCenter());
 
         const glm::vec3 absoluteScale = glm::abs(object.transform.scale());
         bool bodyRegistered = false;
 
         if (object.name == "physics_sphere")
         {
-            // A esfera de demonstração usa um colisor esférico correspondente
-            // à sua geometria procedural, não a caixa envolvente.
+            // A esfera procedural continua usando seu colisor analítico.
+            binding.localCenterOfMass = boundsCenter;
+            binding.bodyTransform = object.transform;
+            binding.bodyTransform.move(object.visualCenter());
+
             float localRadius = glm::length(halfExtents);
             if (object.mesh)
             {
@@ -192,7 +308,7 @@ bool SandboxApplication::registerScenePhysics()
                     {
                         localRadius = std::max(
                             localRadius,
-                            glm::length(vertex.position - localCenter));
+                            glm::length(vertex.position - boundsCenter));
                     }
                 }
             }
@@ -214,24 +330,53 @@ bool SandboxApplication::registerScenePhysics()
         }
         else
         {
-            // Modelos importados usam OBB alinhado à orientação da instância,
-            // com dimensões derivadas dos limites reais da geometria do modelo.
-            // A massa é estimada pelo volume da caixa (densidade de referência
-            // de 250 kg/m³), com limites para evitar extremos em assets estilizados.
+            glm::vec3 localCenterOfMass = boundsCenter;
+            std::shared_ptr<const rotor::physics::TriangleMeshColliderData> meshCollider =
+                buildObjectTriangleMeshCollider(object, localCenterOfMass);
+
+            // A posição física acompanha o centro de massa aproximado, que é
+            // ponderado pela área dos triângulos. A origem visual continua intacta.
+            binding.localCenterOfMass = localCenterOfMass;
+            binding.bodyTransform = object.transform;
+            const glm::vec3 worldCenterOfMass = glm::vec3(
+                object.transform.matrix() * glm::vec4(localCenterOfMass, 1.0f));
+            binding.bodyTransform.move(worldCenterOfMass);
+
             const float worldVolume = 8.0f *
                 halfExtents.x * absoluteScale.x *
                 halfExtents.y * absoluteScale.y *
                 halfExtents.z * absoluteScale.z;
             const float mass = std::clamp(
                 worldVolume * 250.0f, 0.05f, 5.0f);
-            bodyRegistered = physics.addBoxBody(
-                binding.bodyTransform,
-                halfExtents,
-                glm::vec3(0.0f),
-                0.05f,
-                mass,
-                0.78f,
-                0.58f);
+
+            if (meshCollider)
+            {
+                bodyRegistered = physics.addTriangleMeshBody(
+                    binding.bodyTransform,
+                    std::move(meshCollider),
+                    0.05f,
+                    mass,
+                    0.78f,
+                    0.58f);
+            }
+            else
+            {
+                // Fallback explícito para geometrias não trianguladas ou Raw.
+                binding.localCenterOfMass = boundsCenter;
+                binding.bodyTransform = object.transform;
+                binding.bodyTransform.move(object.visualCenter());
+                bodyRegistered = physics.addBoxBody(
+                    binding.bodyTransform,
+                    halfExtents,
+                    glm::vec3(0.0f),
+                    0.05f,
+                    mass,
+                    0.78f,
+                    0.58f);
+                std::cerr << "[SANDBOX] " << object.name
+                          << ": geometria sem triângulos estruturados; usando OBB."
+                          << std::endl;
+            }
         }
 
         if (!bodyRegistered)
@@ -259,7 +404,8 @@ bool SandboxApplication::registerScenePhysics()
     // Corrige sobreposições herdadas do estado salvo antes da primeira queda.
     // Isso não aplica impulsos: os objetos começam sem energia artificial e a
     // pose já estabilizada passa a ser a referência do comando Reset.
-    physics.stabilizeInitialOverlaps(24);
+    if (stabilizeOverlaps)
+        physics.stabilizeInitialOverlaps(24);
     physics.captureInitialPose();
     syncSceneFromPhysics();
 
@@ -279,7 +425,7 @@ void SandboxApplication::syncSceneFromPhysics()
         Transform &objectTransform = binding.object->transform;
         const glm::quat orientation = binding.bodyTransform.orientation();
         const glm::vec3 scale = binding.bodyTransform.scale();
-        const glm::vec3 scaledLocalCenter = scale * binding.localCenter;
+        const glm::vec3 scaledLocalCenter = scale * binding.localCenterOfMass;
         const glm::vec3 worldCenterOffset = orientation * scaledLocalCenter;
 
         objectTransform.setScale(scale);
@@ -289,9 +435,9 @@ void SandboxApplication::syncSceneFromPhysics()
     }
 }
 
-void SandboxApplication::resetPhysicsFromScene()
+void SandboxApplication::resetPhysicsFromScene(bool stabilizeOverlaps)
 {
-    if (!registerScenePhysics())
+    if (!registerScenePhysics(stabilizeOverlaps))
     {
         std::cerr << "Falha ao reconstruir os corpos físicos da cena."
                   << std::endl;
@@ -317,6 +463,15 @@ void SandboxApplication::onUpdate(float deltaTime)
             doomGame.update(window);
         }
         return;
+    }
+
+    if (window.keyPressed(GLFW_KEY_F4))
+    {
+        const bool enabled = !physics.profilingEnabled();
+        physics.setProfilingEnabled(enabled);
+        std::cout << "Profiling da física "
+                  << (enabled ? "ativado" : "desativado")
+                  << ". Consulte physics_profile.log." << std::endl;
     }
 
     hud.update(window, deltaTime);
@@ -351,11 +506,12 @@ void SandboxApplication::onUpdate(float deltaTime)
     // A física fica pausada durante a edição e enquanto o menu está aberto.
     // Ao sair do Editor, a transformação editada vira o novo estado inicial.
     if (wasEditing && !editor.isEditing())
-        resetPhysicsFromScene();
+        resetPhysicsFromScene(false);
 
     if (!editor.isEditing() && !menu.isOpen())
     {
-        physics.update(deltaTime * SANDBOX_PHYSICS_TIME_SCALE);
+        physics.setTimeScale(menu.getPhysicsTimeScale());
+        physics.update(deltaTime);
         syncSceneFromPhysics();
     }
 }

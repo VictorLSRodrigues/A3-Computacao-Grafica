@@ -3,16 +3,40 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
+#include <unordered_map>
 #include <glm/gtx/norm.hpp>
 #include <vector>
 
 namespace rotor::physics::collision
 {
+std::size_t MeshContactPositionKeyHash::operator()(
+    const MeshContactPositionKey& value) const
+{
+    const auto mix = [](std::uint64_t x)
+    {
+        x ^= x >> 30;
+        x *= 0xbf58476d1ce4e5b9ULL;
+        x ^= x >> 27;
+        x *= 0x94d049bb133111ebULL;
+        x ^= x >> 31;
+        return x;
+    };
+    const std::uint64_t x = mix(static_cast<std::uint64_t>(value.x));
+    const std::uint64_t y = mix(static_cast<std::uint64_t>(value.y));
+    const std::uint64_t z = mix(static_cast<std::uint64_t>(value.z));
+    return static_cast<std::size_t>(x ^ (y << 1) ^ (z << 7));
+}
+
 namespace
 {
 constexpr float kBowlLipStart = 0.78f;
 constexpr float kContactTolerance = 1e-4f;
+
+std::uint32_t beginVertexStampGeneration(
+    MeshCollisionScratch& scratch,
+    std::size_t vertexCount);
 
 void evaluateBowlProfile(
     float radius,
@@ -59,6 +83,47 @@ void addContactPoint(ContactManifold& manifold, const ContactPoint& point)
         manifold.points[manifold.pointCount++] = point;
 }
 
+void clipPolygonInPlace(
+    std::vector<glm::vec3>& polygon,
+    std::vector<glm::vec3>& scratch,
+    const glm::vec3& planeNormal,
+    float planeOffset)
+{
+    scratch.clear();
+    if (polygon.empty())
+        return;
+
+    glm::vec3 previous = polygon.back();
+    float previousDistance = glm::dot(planeNormal, previous) - planeOffset;
+    bool previousInside = previousDistance <= kContactTolerance;
+
+    for (const glm::vec3& current : polygon)
+    {
+        const float currentDistance = glm::dot(planeNormal, current) - planeOffset;
+        const bool currentInside = currentDistance <= kContactTolerance;
+
+        if (currentInside != previousInside)
+        {
+            const float denominator = previousDistance - currentDistance;
+            if (std::fabs(denominator) > 1e-8f)
+            {
+                const float t = std::clamp(previousDistance / denominator, 0.0f, 1.0f);
+                scratch.push_back(previous + (current - previous) * t);
+            }
+        }
+
+        if (currentInside)
+            scratch.push_back(current);
+
+        previous = current;
+        previousDistance = currentDistance;
+        previousInside = currentInside;
+    }
+
+    polygon.swap(scratch);
+    scratch.clear();
+}
+
 std::vector<glm::vec3> clipPolygon(
     const std::vector<glm::vec3>& polygon,
     const glm::vec3& planeNormal,
@@ -99,28 +164,59 @@ std::vector<glm::vec3> clipPolygon(
     return result;
 }
 
-void reduceContactPoints(ContactManifold& manifold, std::vector<ContactPoint>& candidates)
+MeshContactPositionKey contactPositionKey(const glm::vec3& point)
+{
+    constexpr double precision = 10000.0; // 0,1 mm
+    return {
+        static_cast<std::int64_t>(std::llround(point.x * precision)),
+        static_cast<std::int64_t>(std::llround(point.y * precision)),
+        static_cast<std::int64_t>(std::llround(point.z * precision))};
+}
+
+void reduceContactPoints(
+    ContactManifold& manifold,
+    std::vector<ContactPoint>& candidates,
+    MeshCollisionScratch* scratch = nullptr)
 {
     if (candidates.empty())
         return;
 
-    // Elimina pontos praticamente coincidentes.
-    std::vector<ContactPoint> unique;
+    // Malhas densas podem produzir muitos candidatos repetidos nas arestas
+    // compartilhadas dos triângulos. A tabela espacial evita deduplicação O(n²).
+    std::vector<ContactPoint> localUnique;
+    std::vector<std::size_t> localSelected;
+    std::unordered_map<MeshContactPositionKey, std::size_t,
+                       MeshContactPositionKeyHash> localIndices;
+    std::vector<ContactPoint>& unique = scratch
+        ? scratch->uniqueCandidates : localUnique;
+    std::vector<std::size_t>& selected = scratch
+        ? scratch->selectedCandidates : localSelected;
+    auto& indices = scratch ? scratch->contactIndices : localIndices;
+    unique.clear();
+    selected.clear();
+    indices.clear();
     unique.reserve(candidates.size());
+    indices.reserve(candidates.size());
     for (const ContactPoint& candidate : candidates)
     {
-        bool duplicate = false;
-        for (ContactPoint& existing : unique)
+        if (!std::isfinite(candidate.point.x) || !std::isfinite(candidate.point.y) ||
+            !std::isfinite(candidate.point.z))
         {
-            if (glm::length2(existing.point - candidate.point) < 1e-8f)
-            {
-                existing.penetration = std::max(existing.penetration, candidate.penetration);
-                duplicate = true;
-                break;
-            }
+            continue;
         }
-        if (!duplicate)
-            unique.push_back(candidate);
+
+        const MeshContactPositionKey key = contactPositionKey(candidate.point);
+        const auto found = indices.find(key);
+        if (found != indices.end())
+        {
+            ContactPoint& existing = unique[found->second];
+            if (candidate.penetration > existing.penetration)
+                existing = candidate;
+            continue;
+        }
+
+        indices.emplace(key, unique.size());
+        unique.push_back(candidate);
     }
 
     if (unique.size() <= manifold.points.size())
@@ -132,7 +228,6 @@ void reduceContactPoints(ContactManifold& manifold, std::vector<ContactPoint>& c
 
     // Escolhe primeiro o ponto mais profundo e depois maximiza a cobertura espacial
     // do patch, evitando concentrar quatro pontos próximos em uma mesma região.
-    std::vector<std::size_t> selected;
     selected.reserve(manifold.points.size());
     const auto deepest = std::max_element(
         unique.begin(), unique.end(),
@@ -423,7 +518,10 @@ glm::vec3 supportPoint(const OrientedBox& box, const glm::vec3& direction)
     return point;
 }
 
-glm::vec3 supportPoint(const RigidBody& body, const glm::vec3& direction)
+glm::vec3 supportPoint(
+    const RigidBody& body,
+    const glm::vec3& direction,
+    MeshCollisionScratch* scratch)
 {
     if (!body.transform)
         return glm::vec3(0.0f);
@@ -437,18 +535,167 @@ glm::vec3 supportPoint(const RigidBody& body, const glm::vec3& direction)
             unitDirection * body.collider.sphereRadius;
     }
 
+    if (body.collider.shape == ColliderShape::TriangleMesh &&
+        body.collider.triangleMesh &&
+        !body.collider.triangleMesh->vertices.empty())
+    {
+        const glm::quat orientation = body.transform->orientation();
+        const glm::vec3 scale = body.transform->scale();
+        const glm::vec3 localDirection =
+            scale * (glm::transpose(glm::mat3_cast(orientation)) * direction);
+
+        const auto& mesh = *body.collider.triangleMesh;
+        const auto& vertices = mesh.vertices;
+        const bool collectStats = scratch && scratch->collectStats;
+        const std::uint32_t vertexGeneration =
+            scratch && mesh.supportVertexIndices.empty() &&
+                !mesh.bvhNodes.empty()
+            ? beginVertexStampGeneration(*scratch, vertices.size())
+            : 0u;
+        if (collectStats)
+            ++scratch->counters.supportQueries;
+        std::size_t bestIndex = 0;
+        float bestProjection = -std::numeric_limits<float>::max();
+
+        if (!mesh.supportVertexIndices.empty())
+        {
+            for (const unsigned int vertexIndex : mesh.supportVertexIndices)
+            {
+                if (collectStats)
+                    ++scratch->counters.supportVerticesTested;
+                const float projection = glm::dot(
+                    vertices[vertexIndex], localDirection);
+                if (projection > bestProjection)
+                {
+                    bestProjection = projection;
+                    bestIndex = vertexIndex;
+                }
+            }
+        }
+        else if (!mesh.bvhNodes.empty())
+        {
+            // Busca de suporte branch-and-bound: bounds de nós que não podem
+            // superar o melhor vértice conhecido são descartados sem percorrer
+            // seus triângulos.
+            std::array<std::uint32_t, 128> stack{};
+            std::size_t stackSize = 0;
+            stack[stackSize++] = 0;
+            const auto maximumProjection = [&localDirection](
+                const TriangleMeshBvhNode& node)
+            {
+                float value = 0.0f;
+                for (int axis = 0; axis < 3; ++axis)
+                    value += localDirection[axis] *
+                        (localDirection[axis] >= 0.0f
+                            ? node.boundsMax[axis] : node.boundsMin[axis]);
+                return value;
+            };
+
+            while (stackSize > 0)
+            {
+                const std::uint32_t nodeIndex = stack[--stackSize];
+                const TriangleMeshBvhNode& node = mesh.bvhNodes[nodeIndex];
+                if (collectStats)
+                    ++scratch->counters.supportBvhNodesVisited;
+                if (maximumProjection(node) < bestProjection - 1e-7f)
+                {
+                    if (collectStats)
+                        ++scratch->counters.supportBvhNodesRejected;
+                    continue;
+                }
+
+                if (node.isLeaf())
+                {
+                    for (std::uint32_t i = 0; i < node.triangleCount; ++i)
+                    {
+                        const std::size_t base = static_cast<std::size_t>(
+                            mesh.triangleOrder[node.firstTriangle + i]) * 3;
+                        for (std::size_t corner = 0; corner < 3; ++corner)
+                        {
+                            const std::size_t vertexIndex = mesh.triangleIndices[base + corner];
+                            if (scratch)
+                            {
+                                if (scratch->vertexStamps[vertexIndex] ==
+                                    vertexGeneration)
+                                    continue;
+                                scratch->vertexStamps[vertexIndex] =
+                                    vertexGeneration;
+                            }
+                            if (collectStats)
+                                ++scratch->counters.supportVerticesTested;
+                            const float projection = glm::dot(
+                                vertices[vertexIndex], localDirection);
+                            if (projection > bestProjection)
+                            {
+                                bestProjection = projection;
+                                bestIndex = vertexIndex;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    const std::uint32_t left = node.leftChild;
+                    const std::uint32_t right = node.rightChild;
+                    const float leftBound = maximumProjection(mesh.bvhNodes[left]);
+                    const float rightBound = maximumProjection(mesh.bvhNodes[right]);
+                    // O maior limite é visitado primeiro para aumentar a poda.
+                    const std::uint32_t first = leftBound >= rightBound ? left : right;
+                    const std::uint32_t second = leftBound >= rightBound ? right : left;
+                    if (stackSize + 2 <= stack.size())
+                    {
+                        stack[stackSize++] = second;
+                        stack[stackSize++] = first;
+                    }
+                }
+            }
+        }
+        else
+        {
+            for (std::size_t i = 0; i < vertices.size(); ++i)
+            {
+                if (collectStats)
+                    ++scratch->counters.supportVerticesTested;
+                const float projection = glm::dot(vertices[i], localDirection);
+                if (projection > bestProjection)
+                {
+                    bestProjection = projection;
+                    bestIndex = i;
+                }
+            }
+        }
+
+        return body.transform->position() +
+            orientation * (scale * vertices[bestIndex]);
+    }
+
     const OrientedBox box = makeOrientedBox(
         body.transform->position(), body.transform->orientation(),
         body.collider.boxHalfExtents);
     return supportPoint(box, direction);
 }
 
-float supportRadius(const RigidBody& body, const glm::vec3& direction)
+float supportRadius(
+    const RigidBody& body,
+    const glm::vec3& direction,
+    MeshCollisionScratch* scratch)
 {
     if (body.collider.shape == ColliderShape::Sphere)
         return body.collider.sphereRadius;
     if (!body.transform)
         return 0.0f;
+
+    if (body.collider.shape == ColliderShape::TriangleMesh &&
+        body.collider.triangleMesh)
+    {
+        const float directionLength = glm::length(direction);
+        if (directionLength <= 1e-6f)
+            return 0.0f;
+        const glm::vec3 unitDirection = direction / directionLength;
+        return std::max(0.0f, glm::dot(
+            supportPoint(body, unitDirection, scratch) - body.transform->position(),
+            unitDirection));
+    }
 
     const OrientedBox box = makeOrientedBox(
         body.transform->position(), body.transform->orientation(),
@@ -616,6 +863,486 @@ bool boxPlaneContacts(
     }
 
     return manifold.pointCount > 0;
+}
+
+namespace
+{
+MeshCollisionScratch& resolveScratch(
+    MeshCollisionScratch* supplied,
+    MeshCollisionScratch& local)
+{
+    return supplied ? *supplied : local;
+}
+
+std::uint32_t beginVertexGeneration(MeshCollisionScratch& scratch, std::size_t vertexCount)
+{
+    const std::uint32_t generation =
+        beginVertexStampGeneration(scratch, vertexCount);
+    if (scratch.transformedVertices.size() < vertexCount)
+        scratch.transformedVertices.resize(vertexCount);
+
+    return generation;
+}
+
+std::uint32_t beginVertexStampGeneration(
+    MeshCollisionScratch& scratch,
+    std::size_t vertexCount)
+{
+    if (scratch.vertexStamps.size() < vertexCount)
+        scratch.vertexStamps.resize(vertexCount, 0u);
+
+    ++scratch.generation;
+    if (scratch.generation == 0u)
+    {
+        std::fill(scratch.vertexStamps.begin(), scratch.vertexStamps.end(), 0u);
+        scratch.generation = 1u;
+    }
+    return scratch.generation;
+}
+
+bool overlapsAabb(
+    const glm::vec3& aMin, const glm::vec3& aMax,
+    const TriangleMeshBvhNode& node)
+{
+    return !(aMax.x < node.boundsMin.x || aMin.x > node.boundsMax.x ||
+             aMax.y < node.boundsMin.y || aMin.y > node.boundsMax.y ||
+             aMax.z < node.boundsMin.z || aMin.z > node.boundsMax.z);
+}
+
+void queryMeshBvhAabb(
+    const TriangleMeshColliderData& mesh,
+    const glm::vec3& queryMin,
+    const glm::vec3& queryMax,
+    MeshCollisionScratch& scratch)
+{
+    scratch.candidateTriangles.clear();
+    scratch.traversalStack.clear();
+    if (mesh.bvhNodes.empty())
+    {
+        const std::size_t count = mesh.triangleIndices.size() / 3;
+        scratch.candidateTriangles.reserve(count);
+        for (std::uint32_t i = 0; i < count; ++i)
+        {
+            scratch.candidateTriangles.push_back(i);
+            if (scratch.collectStats)
+                ++scratch.counters.candidateTriangles;
+        }
+        return;
+    }
+
+    scratch.traversalStack.push_back(0u);
+    while (!scratch.traversalStack.empty())
+    {
+        const std::uint32_t index = scratch.traversalStack.back();
+        scratch.traversalStack.pop_back();
+        const TriangleMeshBvhNode& node = mesh.bvhNodes[index];
+        if (scratch.collectStats)
+            ++scratch.counters.bvhNodesVisited;
+        if (!overlapsAabb(queryMin, queryMax, node))
+        {
+            if (scratch.collectStats)
+                ++scratch.counters.bvhNodesRejected;
+            continue;
+        }
+
+        if (node.isLeaf())
+        {
+            for (std::uint32_t i = 0; i < node.triangleCount; ++i)
+            {
+                scratch.candidateTriangles.push_back(
+                    mesh.triangleOrder[node.firstTriangle + i]);
+                if (scratch.collectStats)
+                    ++scratch.counters.candidateTriangles;
+            }
+        }
+        else
+        {
+            scratch.traversalStack.push_back(node.leftChild);
+            scratch.traversalStack.push_back(node.rightChild);
+        }
+    }
+}
+
+float minimumNodeProjection(
+    const TriangleMeshBvhNode& node,
+    const glm::vec3& direction)
+{
+    float value = 0.0f;
+    for (int axis = 0; axis < 3; ++axis)
+        value += direction[axis] *
+            (direction[axis] >= 0.0f
+                ? node.boundsMin[axis] : node.boundsMax[axis]);
+    return value;
+}
+} // namespace
+
+bool triangleMeshPlaneContacts(
+    const RigidBody& body,
+    const glm::vec3& planeNormal,
+    float planeOffset,
+    ContactManifold& manifold,
+    MeshCollisionScratch* suppliedScratch)
+{
+    manifold.clear();
+    if (!body.transform || !body.collider.triangleMesh ||
+        body.collider.triangleMesh->vertices.empty())
+        return false;
+
+    const float normalLength = glm::length(planeNormal);
+    if (normalLength <= 1e-6f || !std::isfinite(normalLength))
+        return false;
+
+    const glm::vec3 normal = planeNormal / normalLength;
+    const float normalizedOffset = planeOffset / normalLength;
+    const glm::quat orientation = body.transform->orientation();
+    const glm::vec3 scale = body.transform->scale();
+    const glm::vec3 bodyPosition = body.transform->position();
+    constexpr float contactTolerance = 0.0001f;
+
+    MeshCollisionScratch localScratch;
+    MeshCollisionScratch& scratch = resolveScratch(suppliedScratch, localScratch);
+    if (scratch.collectStats)
+        ++scratch.counters.contactQueries;
+    const glm::vec3 lowestPoint = supportPoint(body, -normal, &scratch);
+    const float minimumDistance =
+        glm::dot(normal, lowestPoint) - normalizedOffset;
+    if (minimumDistance > contactTolerance)
+        return false;
+
+    const auto& mesh = *body.collider.triangleMesh;
+    scratch.candidates.clear();
+    scratch.candidates.reserve(std::min<std::size_t>(
+        mesh.triangleIndices.size() / 3, 256));
+    const std::uint32_t generation = beginVertexGeneration(scratch, mesh.vertices.size());
+
+    // O plano vira um funcional linear no espaço local. Os bounds da BVH
+    // permitem descartar nós cuja menor projeção já está acima do suporte.
+    const glm::vec3 localPlaneDirection = scale *
+        (glm::transpose(glm::mat3_cast(orientation)) * normal);
+    const float localPlaneOffset = glm::dot(normal, bodyPosition) - normalizedOffset;
+    const float maximumContactDistance = minimumDistance + contactTolerance;
+
+    const auto appendVertex = [&](std::size_t vertexIndex)
+    {
+        if (vertexIndex >= mesh.vertices.size() ||
+            scratch.vertexStamps[vertexIndex] == generation)
+            return;
+        scratch.vertexStamps[vertexIndex] = generation;
+        if (scratch.collectStats)
+            ++scratch.counters.verticesTested;
+
+        const glm::vec3& localVertex = mesh.vertices[vertexIndex];
+        const float signedDistance = localPlaneOffset +
+            glm::dot(localPlaneDirection, localVertex);
+        if (signedDistance > maximumContactDistance)
+            return;
+
+        const glm::vec3 worldVertex =
+            bodyPosition + orientation * (scale * localVertex);
+        ContactPoint point;
+        point.normal = normal;
+        point.penetration = std::max(0.0f, -signedDistance);
+        point.pointB = worldVertex;
+        point.pointA = worldVertex - normal * signedDistance;
+        point.point = (point.pointA + point.pointB) * 0.5f;
+        point.hasSeparatePoints = true;
+        scratch.candidates.push_back(point);
+    };
+
+    if (!mesh.bvhNodes.empty())
+    {
+        scratch.traversalStack.clear();
+        scratch.traversalStack.push_back(0u);
+        while (!scratch.traversalStack.empty())
+        {
+            const std::uint32_t nodeIndex = scratch.traversalStack.back();
+            scratch.traversalStack.pop_back();
+            const TriangleMeshBvhNode& node = mesh.bvhNodes[nodeIndex];
+            if (scratch.collectStats)
+                ++scratch.counters.bvhNodesVisited;
+            const float nodeMinimum = localPlaneOffset +
+                minimumNodeProjection(node, localPlaneDirection);
+            if (nodeMinimum > maximumContactDistance)
+            {
+                if (scratch.collectStats)
+                    ++scratch.counters.bvhNodesRejected;
+                continue;
+            }
+
+            if (node.isLeaf())
+            {
+                for (std::uint32_t i = 0; i < node.triangleCount; ++i)
+                {
+                    if (scratch.collectStats)
+                        ++scratch.counters.candidateTriangles;
+                    const std::size_t base = static_cast<std::size_t>(
+                        mesh.triangleOrder[node.firstTriangle + i]) * 3;
+                    appendVertex(mesh.triangleIndices[base]);
+                    appendVertex(mesh.triangleIndices[base + 1]);
+                    appendVertex(mesh.triangleIndices[base + 2]);
+                }
+            }
+            else
+            {
+                scratch.traversalStack.push_back(node.leftChild);
+                scratch.traversalStack.push_back(node.rightChild);
+            }
+        }
+    }
+    else
+    {
+        for (std::size_t i = 0; i < mesh.vertices.size(); ++i)
+            appendVertex(i);
+    }
+
+    reduceContactPoints(manifold, scratch.candidates, &scratch);
+    return !manifold.empty();
+}
+
+bool triangleMeshOrientedBoxContacts(
+    const RigidBody& body,
+    const OrientedBox& box,
+    ContactManifold& manifold,
+    MeshCollisionScratch* suppliedScratch)
+{
+    manifold.clear();
+    if (!body.transform || !body.collider.triangleMesh ||
+        body.collider.triangleMesh->vertices.empty() ||
+        body.collider.triangleMesh->triangleIndices.size() < 3)
+        return false;
+
+    const glm::quat orientation = body.transform->orientation();
+    const glm::mat3 rotation = glm::mat3_cast(orientation);
+    const glm::mat3 inverseRotation = glm::transpose(rotation);
+    const glm::vec3 scale = body.transform->scale();
+    if (std::fabs(scale.x) <= 1e-8f || std::fabs(scale.y) <= 1e-8f ||
+        std::fabs(scale.z) <= 1e-8f)
+        return false;
+
+    const glm::vec3 bodyPosition = body.transform->position();
+    MeshCollisionScratch localScratch;
+    MeshCollisionScratch& scratch = resolveScratch(suppliedScratch, localScratch);
+    if (scratch.collectStats)
+        ++scratch.counters.contactQueries;
+    const glm::mat3 boxBasis(box.axes[0], box.axes[1], box.axes[2]);
+    const glm::mat3 inverseBasis = glm::transpose(boxBasis);
+
+    const OrientedBox meshBounds = makeOrientedBox(
+        bodyPosition + orientation * body.collider.boxCenter,
+        orientation,
+        body.collider.boxHalfExtents);
+    ContactManifold broadphase;
+    if (!intersectOrientedBoxes(meshBounds, box, broadphase))
+        return false;
+
+    const auto& mesh = *body.collider.triangleMesh;
+
+    // Quando o eixo mínimo do SAT coincide com uma face da caixa estática,
+    // basta consultar o feature de suporte da malha contra o plano dessa face.
+    // Isso evita percorrer todos os triângulos que ficam dentro do volume grande
+    // de uma mesa/plataforma, mantendo a consulta por triângulos como fallback
+    // para contatos oblíquos, de aresta ou geometrias não cobertas pelo feature.
+    if (!broadphase.empty())
+    {
+        const glm::vec3 boxToMeshNormal =
+            -glm::normalize(broadphase.points[0].normal);
+        int alignedFaceAxis = -1;
+        float faceAlignment = 0.9995f;
+        for (int axis = 0; axis < 3; ++axis)
+        {
+            const float alignment = std::fabs(
+                glm::dot(box.axes[axis], boxToMeshNormal));
+            if (alignment > faceAlignment)
+            {
+                faceAlignment = alignment;
+                alignedFaceAxis = axis;
+            }
+        }
+
+        if (alignedFaceAxis >= 0)
+        {
+            const float side = glm::dot(
+                box.axes[alignedFaceAxis], boxToMeshNormal) >= 0.0f
+                    ? 1.0f : -1.0f;
+            const glm::vec3 faceNormal = box.axes[alignedFaceAxis] * side;
+            const float faceOffset = glm::dot(faceNormal, box.center) +
+                box.halfExtents[alignedFaceAxis];
+            ContactManifold supportManifold;
+            const std::uint64_t queriesBeforeSupport = scratch.collectStats
+                ? scratch.counters.contactQueries : 0;
+            const bool hasSupportContacts = triangleMeshPlaneContacts(
+                body, faceNormal, faceOffset, supportManifold, suppliedScratch);
+            // O relatório conta a consulta externa de mesh-vs-box uma vez; a
+            // chamada interna ao helper de plano é parte dessa mesma consulta.
+            if (scratch.collectStats)
+                scratch.counters.contactQueries = queriesBeforeSupport;
+            if (hasSupportContacts)
+            {
+                bool keptAnyPoint = false;
+                for (std::size_t pointIndex = 0;
+                     pointIndex < supportManifold.pointCount; ++pointIndex)
+                {
+                    const ContactPoint& point = supportManifold.points[pointIndex];
+                    const glm::vec3 localPoint =
+                        inverseBasis * (point.pointB - box.center);
+                    bool insideFace = true;
+                    for (int axis = 0; axis < 3; ++axis)
+                    {
+                        if (axis == alignedFaceAxis)
+                            continue;
+                        if (std::fabs(localPoint[axis]) >
+                            box.halfExtents[axis] + 0.0001f)
+                        {
+                            insideFace = false;
+                            break;
+                        }
+                    }
+                    if (insideFace)
+                    {
+                        addContactPoint(manifold, point);
+                        keptAnyPoint = true;
+                    }
+                }
+                if (keptAnyPoint)
+                    return true;
+                manifold.clear();
+            }
+        }
+    }
+
+    // Encapsula a OBB consultada no espaço local da malha. A AABB resultante
+    // é conservadora mesmo com rotação e escala não uniforme.
+    glm::vec3 queryMin(std::numeric_limits<float>::max());
+    glm::vec3 queryMax(std::numeric_limits<float>::lowest());
+    for (int x = -1; x <= 1; x += 2)
+    for (int y = -1; y <= 1; y += 2)
+    for (int z = -1; z <= 1; z += 2)
+    {
+        const glm::vec3 worldCorner = box.center +
+            box.axes[0] * (box.halfExtents.x * static_cast<float>(x)) +
+            box.axes[1] * (box.halfExtents.y * static_cast<float>(y)) +
+            box.axes[2] * (box.halfExtents.z * static_cast<float>(z));
+        const glm::vec3 rotated = inverseRotation * (worldCorner - bodyPosition);
+        const glm::vec3 localCorner(
+            rotated.x / scale.x, rotated.y / scale.y, rotated.z / scale.z);
+        queryMin = glm::min(queryMin, localCorner);
+        queryMax = glm::max(queryMax, localCorner);
+    }
+    const glm::vec3 localTolerance(
+        0.0001f / std::fabs(scale.x),
+        0.0001f / std::fabs(scale.y),
+        0.0001f / std::fabs(scale.z));
+    queryMeshBvhAabb(
+        mesh, queryMin - localTolerance, queryMax + localTolerance, scratch);
+    if (scratch.candidateTriangles.empty())
+        return false;
+
+    const std::uint32_t generation = beginVertexGeneration(scratch, mesh.vertices.size());
+    const auto toBoxLocal = [&](std::size_t vertexIndex) -> const glm::vec3&
+    {
+        if (scratch.vertexStamps[vertexIndex] != generation)
+        {
+            const glm::vec3 worldVertex = bodyPosition +
+                orientation * (scale * mesh.vertices[vertexIndex]);
+            scratch.transformedVertices[vertexIndex] =
+                inverseBasis * (worldVertex - box.center);
+            scratch.vertexStamps[vertexIndex] = generation;
+        }
+        return scratch.transformedVertices[vertexIndex];
+    };
+
+    scratch.candidates.clear();
+    scratch.candidates.reserve(std::min<std::size_t>(
+        scratch.candidateTriangles.size() * 3, 512));
+    scratch.polygon.clear();
+    scratch.polygonScratch.clear();
+    scratch.polygon.reserve(12);
+    scratch.polygonScratch.reserve(12);
+    constexpr float contactTolerance = 0.0001f;
+
+    for (const std::uint32_t triangle : scratch.candidateTriangles)
+    {
+        if (scratch.collectStats)
+            ++scratch.counters.trianglesTested;
+        const std::size_t base = static_cast<std::size_t>(triangle) * 3;
+        const unsigned int ia = mesh.triangleIndices[base];
+        const unsigned int ib = mesh.triangleIndices[base + 1];
+        const unsigned int ic = mesh.triangleIndices[base + 2];
+        if (ia >= mesh.vertices.size() || ib >= mesh.vertices.size() ||
+            ic >= mesh.vertices.size())
+            continue;
+
+        const glm::vec3& a = toBoxLocal(ia);
+        const glm::vec3& b = toBoxLocal(ib);
+        const glm::vec3& c = toBoxLocal(ic);
+        const glm::vec3 triangleMin = glm::min(a, glm::min(b, c));
+        const glm::vec3 triangleMax = glm::max(a, glm::max(b, c));
+        if (triangleMax.x < -box.halfExtents.x - contactTolerance ||
+            triangleMin.x > box.halfExtents.x + contactTolerance ||
+            triangleMax.y < -box.halfExtents.y - contactTolerance ||
+            triangleMin.y > box.halfExtents.y + contactTolerance ||
+            triangleMax.z < -box.halfExtents.z - contactTolerance ||
+            triangleMin.z > box.halfExtents.z + contactTolerance)
+            continue;
+
+        scratch.polygon.clear();
+        scratch.polygon.push_back(a);
+        scratch.polygon.push_back(b);
+        scratch.polygon.push_back(c);
+
+        for (int axis = 0; axis < 3 && !scratch.polygon.empty(); ++axis)
+        {
+            glm::vec3 normal(0.0f);
+            normal[axis] = 1.0f;
+            clipPolygonInPlace(
+                scratch.polygon, scratch.polygonScratch, normal,
+                box.halfExtents[axis] + contactTolerance);
+            normal[axis] = -1.0f;
+            clipPolygonInPlace(
+                scratch.polygon, scratch.polygonScratch, normal,
+                box.halfExtents[axis] + contactTolerance);
+        }
+        if (scratch.polygon.empty())
+            continue;
+
+        for (const glm::vec3& localPoint : scratch.polygon)
+        {
+            int closestAxis = 0;
+            float closestDistance = box.halfExtents.x - std::fabs(localPoint.x);
+            for (int axis = 1; axis < 3; ++axis)
+            {
+                const float distance =
+                    box.halfExtents[axis] - std::fabs(localPoint[axis]);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestAxis = axis;
+                }
+            }
+
+            const float side = localPoint[closestAxis] >= 0.0f ? 1.0f : -1.0f;
+            const glm::vec3 normal = box.axes[closestAxis] * side;
+            glm::vec3 boxSurfaceLocal = localPoint;
+            boxSurfaceLocal[closestAxis] =
+                side * box.halfExtents[closestAxis];
+
+            const glm::vec3 meshPoint = box.center + boxBasis * localPoint;
+            const glm::vec3 boxSurfacePoint =
+                box.center + boxBasis * boxSurfaceLocal;
+
+            ContactPoint point;
+            point.normal = normal;
+            point.penetration = std::max(0.0f, closestDistance);
+            point.pointA = boxSurfacePoint;
+            point.pointB = meshPoint;
+            point.point = (point.pointA + point.pointB) * 0.5f;
+            point.hasSeparatePoints = true;
+            scratch.candidates.push_back(point);
+        }
+    }
+
+    reduceContactPoints(manifold, scratch.candidates, &scratch);
+    return !manifold.empty();
 }
 
 bool sphereOrientedBoxContact(

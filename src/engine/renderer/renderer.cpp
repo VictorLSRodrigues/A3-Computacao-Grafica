@@ -1,9 +1,96 @@
 #include "renderer.h"
 
+#include <array>
+#include <cmath>
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "engine/graphics/geometry/shapes.h"
+
+namespace
+{
+using FrustumPlanes = std::array<glm::vec4, 6>;
+
+bool finite(const glm::vec3& value)
+{
+    return std::isfinite(value.x) && std::isfinite(value.y) &&
+        std::isfinite(value.z);
+}
+
+bool extractFrustumPlanes(
+    const glm::mat4& viewProjection,
+    FrustumPlanes& planes)
+{
+    glm::vec4 rows[4];
+    for (int row = 0; row < 4; ++row)
+    {
+        rows[row] = glm::vec4(
+            viewProjection[0][row],
+            viewProjection[1][row],
+            viewProjection[2][row],
+            viewProjection[3][row]);
+    }
+
+    planes = {{
+        rows[3] + rows[0], rows[3] - rows[0],
+        rows[3] + rows[1], rows[3] - rows[1],
+        rows[3] + rows[2], rows[3] - rows[2]}};
+
+    for (glm::vec4& plane : planes)
+    {
+        const float normalLength = glm::length(glm::vec3(plane));
+        if (!std::isfinite(normalLength) || normalLength <= 1e-7f ||
+            !std::isfinite(plane.w))
+            return false;
+        plane /= normalLength;
+    }
+    return true;
+}
+
+bool isInsideFrustum(
+    const BoundingBox& bounds,
+    const glm::mat4& modelMatrix,
+    const FrustumPlanes& planes)
+{
+    if (!bounds.valid || !finite(bounds.min) || !finite(bounds.max))
+        return true;
+
+    const glm::vec3 localCenter = (bounds.min + bounds.max) * 0.5f;
+    const glm::vec3 localHalfExtents =
+        glm::max((bounds.max - bounds.min) * 0.5f, glm::vec3(0.0f));
+    const glm::vec3 center(
+        modelMatrix * glm::vec4(localCenter, 1.0f));
+    const glm::mat3 basis(modelMatrix);
+    const glm::vec3 axisX = basis[0];
+    const glm::vec3 axisY = basis[1];
+    const glm::vec3 axisZ = basis[2];
+    if (!finite(center) || !finite(axisX) ||
+        !finite(axisY) || !finite(axisZ) || !finite(localHalfExtents))
+        return true;
+
+    for (const glm::vec4& plane : planes)
+    {
+        const glm::vec3 normal(plane);
+        const float projectedRadius =
+            std::fabs(glm::dot(normal, axisX)) * localHalfExtents.x +
+            std::fabs(glm::dot(normal, axisY)) * localHalfExtents.y +
+            std::fabs(glm::dot(normal, axisZ)) * localHalfExtents.z;
+        const float distance = glm::dot(normal, center) + plane.w;
+        const float margin = 1e-4f *
+            (1.0f + glm::length(center) + projectedRadius);
+        if (distance + projectedRadius < -margin)
+            return false;
+    }
+    return true;
+}
+
+void setFrontFaceForTransform(const glm::mat4& matrix)
+{
+    const float determinant = glm::determinant(glm::mat3(matrix));
+    glFrontFace(std::isfinite(determinant) && determinant < 0.0f
+        ? GL_CW : GL_CCW);
+}
+} // namespace
 
 bool Renderer::init()
 {
@@ -131,7 +218,7 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
     sceneShader.setInt("hasEnvironmentMap",
                        skybox.bindEnvironment(5) ? 1 : 0);
 
-    drawScene(scene);
+    drawScene(scene, camera.viewProjectionMatrix());
 
     // O cubo que marca onde a luz está é opcional.
     if (showLightMarker)
@@ -144,8 +231,13 @@ void Renderer::render(const Scene &scene, const Light &light, Camera &camera)
     rainRenderer.render(rainScenario, camera, framebufferSRGB);
 }
 
-void Renderer::drawScene(const Scene &scene)
+void Renderer::drawScene(
+    const Scene &scene,
+    const glm::mat4 &viewProjection)
 {
+    FrustumPlanes frustumPlanes{};
+    const bool canCull = extractFrustumPlanes(viewProjection, frustumPlanes);
+
     for (const Scene::Object &object : scene.getObjects())
     {
         // Não desenha objetos ocultos.
@@ -153,6 +245,10 @@ void Renderer::drawScene(const Scene &scene)
             continue;
 
         const glm::mat4 matrix = object.transform.matrix();
+        const BoundingBox* bounds = object.boundingBox();
+        if (canCull && bounds &&
+            !isInsideFrustum(*bounds, matrix, frustumPlanes))
+            continue;
 
         if (object.model)
         {
@@ -162,8 +258,10 @@ void Renderer::drawScene(const Scene &scene)
         }
         else if (object.mesh)
         {
+            setFrontFaceForTransform(matrix);
             sceneShader.setMat4("model", matrix);
             object.mesh->draw(sceneShader, &defaultTexture);
         }
+        glFrontFace(GL_CCW);
     }
 }

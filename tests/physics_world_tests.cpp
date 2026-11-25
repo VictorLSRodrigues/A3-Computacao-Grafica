@@ -1,12 +1,17 @@
+#include <algorithm>
 #include "engine/physics/physics_world.h"
 #include "engine/graphics/geometry/shapes.h"
 #include "engine/physics/collision/collision_geometry.h"
+#include "engine/physics/mesh_collider.h"
 
 using rotor::physics::PhysicsWorld;
 
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <vector>
+#include <iterator>
 
 namespace
 {
@@ -21,6 +26,28 @@ bool expect(bool condition, const char* message)
 int main()
 {
     bool passed = true;
+
+    PhysicsWorld duplicateRegistrationWorld;
+    Transform duplicateTransform;
+    passed &= expect(
+        duplicateRegistrationWorld.addSphereBody(duplicateTransform) &&
+            !duplicateRegistrationWorld.addBoxBody(
+                duplicateTransform, glm::vec3(0.5f)),
+        "a Transform cannot be registered as multiple dynamic rigid bodies");
+    Transform invalidSphereTransform;
+    passed &= expect(
+        !duplicateRegistrationWorld.addSphereBody(
+            invalidSphereTransform,
+            glm::vec3(std::numeric_limits<float>::quiet_NaN(), 0.0f, 0.0f),
+            0.5f),
+        "non-finite initial velocity is rejected when registering a sphere");
+    PhysicsWorld mixedDuplicateWorld;
+    Transform mixedDuplicateTransform;
+    passed &= expect(
+        mixedDuplicateWorld.addStaticBox(
+            mixedDuplicateTransform, glm::vec3(0.0f), glm::vec3(1.0f)) &&
+            !mixedDuplicateWorld.addSphereBody(mixedDuplicateTransform),
+        "a Transform cannot be shared by static and dynamic colliders");
 
     PhysicsWorld bouncingWorld;
     bouncingWorld.setGravity(glm::vec3(0.0f));
@@ -258,6 +285,44 @@ int main()
             std::fabs(glm::dot(angularImpulseBody.orientation(),
                                glm::quat(1.0f, 0.0f, 0.0f, 0.0f))) < 0.99999f,
         "angular impulse rotates the body in place");
+
+    PhysicsWorld dampingWorld;
+    dampingWorld.setGravity(glm::vec3(0.0f));
+    Transform dampingBody;
+    dampingWorld.addSphereBody(
+        dampingBody,
+        glm::vec3(10.0f, 0.0f, 0.0f),
+        0.5f,
+        0.0f,
+        1.0f,
+        0.0f,
+        0.0f,
+        glm::vec3(0.0f, 5.0f, 0.0f));
+    passed &= expect(
+        dampingWorld.setLinearDamping(dampingBody, 2.0f) &&
+            dampingWorld.setAngularDamping(dampingBody, 3.0f),
+        "dynamic bodies accept linear and angular damping");
+    dampingWorld.update(1.0f / 120.0f);
+    const float substep = 1.0f / 120.0f;
+    passed &= expect(
+        std::fabs(dampingWorld.linearVelocity(dampingBody).x -
+                  10.0f * std::exp(-2.0f * substep)) < 1e-5f &&
+            std::fabs(dampingWorld.angularVelocity(dampingBody).y -
+                      5.0f * std::exp(-3.0f * substep)) < 1e-5f,
+        "linear and angular damping use frame-rate-independent exponential decay");
+
+    PhysicsWorld timeScaleWorld;
+    timeScaleWorld.setGravity(glm::vec3(0.0f));
+    Transform timeScaleBody;
+    timeScaleWorld.addSphereBody(
+        timeScaleBody, glm::vec3(10.0f, 0.0f, 0.0f), 0.5f);
+    timeScaleWorld.setTimeScale(0.5f);
+    timeScaleWorld.update(0.1f);
+    passed &= expect(
+        timeScaleWorld.timeScale() == 0.5f &&
+            timeScaleBody.position().x > 0.49f &&
+            timeScaleBody.position().x < 0.51f,
+        "physics time scale applies a smooth slow-motion factor");
 
     PhysicsWorld axisForceWorld;
     axisForceWorld.setGravity(glm::vec3(0.0f));
@@ -1119,6 +1184,21 @@ int main()
             glm::length(initialOverlapWorld.angularVelocity(initiallyPenetratingBox)) < 1e-6f,
         "initial overlap stabilization corrects pose without injecting motion and reset preserves it");
 
+    PhysicsWorld scaledBoxInertiaCacheWorld;
+    scaledBoxInertiaCacheWorld.setGravity(glm::vec3(0.0f));
+    Transform scaledInertiaBox;
+    passed &= expect(
+        scaledBoxInertiaCacheWorld.addBoxBody(
+            scaledInertiaBox, glm::vec3(1.0f, 0.5f, 0.25f)),
+        "box for scale-dependent inertia cache test is registered");
+    scaledInertiaBox.setScale(glm::vec3(2.0f, 1.0f, 1.0f));
+    scaledBoxInertiaCacheWorld.applyAngularImpulse(
+        scaledInertiaBox, glm::vec3(0.0f, 0.0f, 1.0f));
+    passed &= expect(
+        scaledBoxInertiaCacheWorld.angularVelocity(scaledInertiaBox).z > 0.6f &&
+            scaledBoxInertiaCacheWorld.angularVelocity(scaledInertiaBox).z < 0.8f,
+        "cached local inertia is rebuilt when the Transform scale changes");
+
     PhysicsWorld boxInertiaWorld;
     boxInertiaWorld.setGravity(glm::vec3(0.0f));
     Transform anisotropicBox;
@@ -1139,6 +1219,276 @@ int main()
     passed &= expect(
         angularVelocityX > angularVelocityZ * 2.0f,
         "box inertia tensor responds differently around different local axes");
+
+    // Malha de teste: caixa fechada com oito vértices e doze triângulos.
+    const std::vector<glm::vec3> meshBoxVertices = {
+        {-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f},
+        {0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, -0.5f},
+        {-0.5f, -0.5f, 0.5f}, {0.5f, -0.5f, 0.5f},
+        {0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}};
+    const std::vector<unsigned int> meshBoxIndices = {
+        0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7,
+        0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5,
+        2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7};
+    auto meshBoxData = std::make_shared<rotor::physics::TriangleMeshColliderData>();
+    passed &= expect(
+        rotor::physics::buildTriangleMeshColliderData(
+            meshBoxVertices, meshBoxIndices, *meshBoxData),
+        "triangle mesh collider builds from the source geometry");
+    passed &= expect(
+        meshBoxData->valid() && meshBoxData->vertices.size() == 8 &&
+            meshBoxData->triangleIndices.size() == meshBoxIndices.size() &&
+            glm::length(meshBoxData->localCenterOfMass) < 1e-5f &&
+            glm::length(meshBoxData->localHalfExtents - glm::vec3(0.5f)) < 1e-5f,
+        "triangle mesh deduplicates positions and computes centered local bounds");
+    passed &= expect(
+        !meshBoxData->bvhNodes.empty() &&
+            meshBoxData->triangleOrder.size() == meshBoxIndices.size() / 3,
+        "triangle mesh builds a reusable BVH over its triangle indices");
+
+    Transform supportMeshTransform;
+    rotor::physics::RigidBody supportMeshBody;
+    supportMeshBody.transform = &supportMeshTransform;
+    supportMeshBody.collider.shape = rotor::physics::ColliderShape::TriangleMesh;
+    supportMeshBody.collider.triangleMesh = meshBoxData;
+    rotor::physics::collision::MeshCollisionScratch supportScratch;
+    supportScratch.collectStats = true;
+    const glm::vec3 supportDirection(0.0f, 1.0f, 0.0f);
+    const glm::vec3 exactSupportPoint =
+        rotor::physics::collision::supportPoint(
+            supportMeshBody, supportDirection, &supportScratch);
+    float bruteForceSupport = std::numeric_limits<float>::lowest();
+    for (const glm::vec3& vertex : meshBoxData->vertices)
+        bruteForceSupport = std::max(bruteForceSupport, vertex.y);
+    passed &= expect(
+        std::fabs(exactSupportPoint.y - bruteForceSupport) < 1e-6f &&
+            supportScratch.counters.supportBvhNodesVisited == 0 &&
+            supportScratch.counters.supportVerticesTested <=
+                meshBoxData->vertices.size() &&
+            supportScratch.counters.supportVerticesTested ==
+                meshBoxData->supportVertexIndices.size() &&
+            supportScratch.counters.supportVerticesTested <
+                meshBoxData->triangleIndices.size(),
+        "mesh support search preserves the exact extreme while testing shared vertices once");
+
+    // Uma malha com triângulos espacialmente separados deve consultar somente
+    // os poucos nós próximos da caixa, em vez de percorrer toda a geometria.
+    std::vector<glm::vec3> spatialVertices;
+    std::vector<unsigned int> spatialIndices;
+    for (int z = -5; z <= 5; ++z)
+    for (int x = -5; x <= 5; ++x)
+    {
+        const unsigned int base = static_cast<unsigned int>(spatialVertices.size());
+        const float px = static_cast<float>(x) * 2.0f;
+        const float pz = static_cast<float>(z) * 2.0f;
+        spatialVertices.emplace_back(px - 0.3f, 0.0f, pz - 0.3f);
+        spatialVertices.emplace_back(px + 0.3f, 0.0f, pz - 0.3f);
+        spatialVertices.emplace_back(px, 0.0f, pz + 0.3f);
+        spatialIndices.insert(spatialIndices.end(), {base, base + 1, base + 2});
+    }
+    auto spatialMeshData =
+        std::make_shared<rotor::physics::TriangleMeshColliderData>();
+    passed &= expect(
+        rotor::physics::buildTriangleMeshColliderData(
+            spatialVertices, spatialIndices, *spatialMeshData),
+        "spatially distributed triangle mesh builds its BVH");
+    Transform spatialMeshTransform;
+    rotor::physics::RigidBody spatialMeshBody;
+    spatialMeshBody.transform = &spatialMeshTransform;
+    spatialMeshBody.collider.shape = rotor::physics::ColliderShape::TriangleMesh;
+    spatialMeshBody.collider.triangleMesh = spatialMeshData;
+    spatialMeshBody.inverseMass = 1.0f;
+    spatialMeshBody.synchronizeColliderAndInertia();
+    const auto smallSpatialBox = rotor::physics::collision::makeOrientedBox(
+        glm::vec3(0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(0.5f, 0.1f, 0.5f));
+    rotor::physics::collision::MeshCollisionScratch spatialScratch;
+    rotor::physics::ContactManifold spatialManifold;
+    passed &= expect(
+        rotor::physics::collision::triangleMeshOrientedBoxContacts(
+            spatialMeshBody, smallSpatialBox, spatialManifold, &spatialScratch) &&
+            spatialScratch.candidateTriangles.size() <
+                spatialMeshData->triangleIndices.size() / 12,
+        "BVH narrow phase visits only a small fraction of a large mesh");
+
+    PhysicsWorld triangleMeshGroundWorld;
+    triangleMeshGroundWorld.setGroundPlane(0.0f, 0.8f, 0.6f);
+    Transform triangleMeshGroundBody;
+    triangleMeshGroundBody.move(glm::vec3(0.0f, 2.0f, 0.0f));
+    passed &= expect(
+        triangleMeshGroundWorld.addTriangleMeshBody(
+            triangleMeshGroundBody, meshBoxData, 0.0f, 1.0f),
+        "dynamic triangle mesh body is registered");
+    for (int i = 0; i < 480; ++i)
+        triangleMeshGroundWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(triangleMeshGroundBody.position().y - 0.5f) < 0.001f &&
+            glm::length(triangleMeshGroundWorld.angularVelocity(triangleMeshGroundBody)) < 1e-3f,
+        "triangle mesh uses its actual bottom vertices when resting on a plane");
+
+    PhysicsWorld triangleMeshTableWorld;
+    Transform triangleMeshTable;
+    triangleMeshTableWorld.addStaticBox(
+        triangleMeshTable, glm::vec3(0.0f), glm::vec3(1.0f, 0.1f, 1.0f));
+    Transform triangleMeshOnTable;
+    triangleMeshOnTable.move(glm::vec3(0.0f, 1.5f, 0.0f));
+    passed &= expect(
+        triangleMeshTableWorld.addTriangleMeshBody(
+            triangleMeshOnTable, meshBoxData, 0.0f, 1.0f),
+        "triangle mesh body is registered above a static box collider");
+    for (int i = 0; i < 480; ++i)
+        triangleMeshTableWorld.update(1.0f / 120.0f);
+    passed &= expect(
+        std::fabs(triangleMeshOnTable.position().y - 0.6f) < 0.0003f &&
+            glm::length(triangleMeshTableWorld.angularVelocity(triangleMeshOnTable)) < 1e-3f,
+        "triangle mesh uses its actual vertices on the static tabletop");
+
+    // Uma malha profundamente penetrada no plano deve usar somente o
+    // feature de suporte mais baixo, sem criar contatos nas laterais.
+    Transform deepMeshTransform;
+    deepMeshTransform.move(glm::vec3(0.0f, -0.3f, 0.0f));
+    rotor::physics::RigidBody deepMeshBody;
+    deepMeshBody.transform = &deepMeshTransform;
+    deepMeshBody.collider.shape = rotor::physics::ColliderShape::TriangleMesh;
+    deepMeshBody.collider.triangleMesh = meshBoxData;
+    deepMeshBody.inverseMass = 1.0f;
+    deepMeshBody.synchronizeColliderAndInertia();
+    rotor::physics::ContactManifold deepMeshPlaneManifold;
+    passed &= expect(
+        rotor::physics::collision::triangleMeshPlaneContacts(
+            deepMeshBody, glm::vec3(0.0f, 1.0f, 0.0f), 0.0f,
+            deepMeshPlaneManifold) && deepMeshPlaneManifold.pointCount == 4,
+        "deep mesh-plane overlap uses the four-point lowest support feature");
+    for (std::size_t i = 0; i < deepMeshPlaneManifold.pointCount; ++i)
+    {
+        passed &= expect(
+            std::fabs(deepMeshPlaneManifold.points[i].pointB.y + 0.8f) < 1e-4f,
+            "deep mesh-plane contacts do not use side vertices");
+    }
+
+    // A face can cross a collider even when all three original triangle
+    // vertices are outside its bounds. The narrow phase must clip triangles,
+    // not rely only on testing source vertices.
+    const std::vector<glm::vec3> crossingTriangleVertices = {
+        {-2.0f, 0.0f, -2.0f}, {2.0f, 0.0f, -2.0f}, {0.0f, 0.0f, 2.0f}};
+    const std::vector<unsigned int> crossingTriangleIndices = {0, 1, 2};
+    auto crossingTriangleData =
+        std::make_shared<rotor::physics::TriangleMeshColliderData>();
+    passed &= expect(
+        rotor::physics::buildTriangleMeshColliderData(
+            crossingTriangleVertices, crossingTriangleIndices, *crossingTriangleData),
+        "large crossing triangle mesh collider builds");
+    Transform crossingTriangleTransform;
+    rotor::physics::RigidBody crossingTriangleBody;
+    crossingTriangleBody.transform = &crossingTriangleTransform;
+    crossingTriangleBody.collider.shape = rotor::physics::ColliderShape::TriangleMesh;
+    crossingTriangleBody.collider.triangleMesh = crossingTriangleData;
+    crossingTriangleBody.inverseMass = 1.0f;
+    crossingTriangleBody.synchronizeColliderAndInertia();
+    const auto crossingTargetBox = rotor::physics::collision::makeOrientedBox(
+        glm::vec3(0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f, 0.1f, 1.0f));
+    rotor::physics::ContactManifold crossingTriangleManifold;
+    passed &= expect(
+        rotor::physics::collision::triangleMeshOrientedBoxContacts(
+            crossingTriangleBody, crossingTargetBox, crossingTriangleManifold) &&
+            crossingTriangleManifold.pointCount > 0,
+        "triangle-box clipping detects intersection even when no source vertex is inside");
+
+    // Uma malha assimétrica deve deslocar o centro de massa para a região com
+    // maior área superficial, em vez de usar automaticamente o centro do AABB.
+    std::vector<glm::vec3> asymmetricVertices;
+    std::vector<unsigned int> asymmetricIndices;
+    const auto appendTestBox = [&](const glm::vec3& center, const glm::vec3& half)
+    {
+        const unsigned int base = static_cast<unsigned int>(asymmetricVertices.size());
+        const glm::vec3 corners[8] = {
+            center + glm::vec3(-half.x, -half.y, -half.z),
+            center + glm::vec3( half.x, -half.y, -half.z),
+            center + glm::vec3( half.x,  half.y, -half.z),
+            center + glm::vec3(-half.x,  half.y, -half.z),
+            center + glm::vec3(-half.x, -half.y,  half.z),
+            center + glm::vec3( half.x, -half.y,  half.z),
+            center + glm::vec3( half.x,  half.y,  half.z),
+            center + glm::vec3(-half.x,  half.y,  half.z)};
+        asymmetricVertices.insert(
+            asymmetricVertices.end(), std::begin(corners), std::end(corners));
+        const unsigned int localIndices[] = {
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7,
+            0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5,
+            2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7};
+        for (unsigned int index : localIndices)
+            asymmetricIndices.push_back(base + index);
+    };
+    appendTestBox(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.5f, 0.1f, 0.5f));
+    appendTestBox(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.05f, 0.5f, 0.05f));
+    rotor::physics::TriangleMeshColliderData asymmetricMeshData;
+    passed &= expect(
+        rotor::physics::buildTriangleMeshColliderData(
+            asymmetricVertices, asymmetricIndices, asymmetricMeshData) &&
+            asymmetricMeshData.localCenterOfMass.y < 0.2f,
+        "surface-area center of mass shifts toward the larger base of an asymmetric mesh");
+
+    // Lâmpada simplificada: base larga/pesada por área, haste estreita e cúpula.
+    // Inclinada além do polígono de apoio, deve tombar em vez de ficar presa
+    // numa face de uma OBB que não representa sua geometria.
+    std::vector<glm::vec3> lampVertices;
+    std::vector<unsigned int> lampIndices;
+    const auto appendLampBox = [&](const glm::vec3& center, const glm::vec3& half)
+    {
+        const unsigned int base = static_cast<unsigned int>(lampVertices.size());
+        const glm::vec3 corners[8] = {
+            center + glm::vec3(-half.x, -half.y, -half.z),
+            center + glm::vec3( half.x, -half.y, -half.z),
+            center + glm::vec3( half.x,  half.y, -half.z),
+            center + glm::vec3(-half.x,  half.y, -half.z),
+            center + glm::vec3(-half.x, -half.y,  half.z),
+            center + glm::vec3( half.x, -half.y,  half.z),
+            center + glm::vec3( half.x,  half.y,  half.z),
+            center + glm::vec3(-half.x,  half.y,  half.z)};
+        lampVertices.insert(lampVertices.end(), std::begin(corners), std::end(corners));
+        const unsigned int localIndices[] = {
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7,
+            0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5,
+            2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7};
+        for (unsigned int index : localIndices)
+            lampIndices.push_back(base + index);
+    };
+    appendLampBox(glm::vec3(0.0f, -0.55f, 0.0f), glm::vec3(0.4f, 0.08f, 0.4f));
+    appendLampBox(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.025f, 0.55f, 0.025f));
+    appendLampBox(glm::vec3(0.0f, 0.68f, 0.0f), glm::vec3(0.25f, 0.10f, 0.25f));
+
+    auto lampMeshData = std::make_shared<rotor::physics::TriangleMeshColliderData>();
+    passed &= expect(
+        rotor::physics::buildTriangleMeshColliderData(
+            lampVertices, lampIndices, *lampMeshData),
+        "compound lamp mesh builds as one rigid collider");
+    PhysicsWorld tiltedLampWorld;
+    Transform tiltedLampTable;
+    tiltedLampWorld.addStaticBox(
+        tiltedLampTable, glm::vec3(0.0f), glm::vec3(2.0f, 0.1f, 2.0f),
+        0.0f, 0.9f, 0.7f);
+    Transform tiltedLamp;
+    const glm::quat initialLampOrientation = glm::angleAxis(
+        glm::radians(65.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    tiltedLamp.setOrientation(initialLampOrientation);
+    float lampLowestY = std::numeric_limits<float>::max();
+    for (const glm::vec3& vertex : lampMeshData->vertices)
+        lampLowestY = std::min(
+            lampLowestY, (initialLampOrientation * vertex).y);
+    tiltedLamp.move(glm::vec3(0.0f, 0.1f - lampLowestY, 0.0f));
+    passed &= expect(
+        tiltedLampWorld.addTriangleMeshBody(
+            tiltedLamp, lampMeshData, 0.0f, 2.0f, 0.9f, 0.7f),
+        "tilted lamp mesh registers as one rigid body");
+    for (int i = 0; i < 240; ++i)
+        tiltedLampWorld.update(1.0f / 120.0f);
+    const float lampRotationChange = 2.0f * std::acos(std::clamp(
+        std::fabs(glm::dot(initialLampOrientation, tiltedLamp.orientation())),
+        0.0f, 1.0f));
+    passed &= expect(
+        lampRotationChange > glm::radians(8.0f),
+        "tilted compound lamp tips when its center of mass leaves the base support area");
 
     return passed ? 0 : 1;
 }

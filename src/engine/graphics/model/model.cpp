@@ -31,9 +31,14 @@ void Model::draw(Shader &shader, const Texture &diffuseFallback,
 	// Um modelo pode conter várias partes; cada uma é desenhada na posição que o arquivo define para ela.
 	for (unsigned int i = 0; i < meshes.size(); i++)
 	{
-		shader.setMat4("model", objectMatrix * matricesMeshes[i]);
+		const glm::mat4 meshMatrix = objectMatrix * matricesMeshes[i];
+		const float determinant = glm::determinant(glm::mat3(meshMatrix));
+		glFrontFace(std::isfinite(determinant) && determinant < 0.0f
+			? GL_CW : GL_CCW);
+		shader.setMat4("model", meshMatrix);
 		meshes[i].Mesh::draw(shader, &diffuseFallback);
 	}
+	glFrontFace(GL_CCW);
 }
 
 bool Model::intersectRay(

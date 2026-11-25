@@ -83,6 +83,15 @@ public:
         return &meshes[meshIndex].getGeometry();
     }
 
+    // Transformação do nó/parte aplicada à geometria durante a renderização.
+    const glm::mat4 *getMeshTransform(std::size_t meshIndex) const
+    {
+        if (meshIndex >= matricesMeshes.size())
+            return nullptr;
+
+        return &matricesMeshes[meshIndex];
+    }
+
     // Restaura a geometria extrudada de uma malha específica.
     bool restoreExtrudedGeometry(
         std::size_t meshIndex,

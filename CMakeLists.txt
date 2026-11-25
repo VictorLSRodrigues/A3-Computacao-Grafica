@@ -69,6 +69,7 @@ set(ROTOR_ENGINE_SOURCES
     # Engine: Physics
     src/engine/physics/physics_world.cpp
     src/engine/physics/physics_world_contacts.cpp
+    src/engine/physics/mesh_collider.cpp
     src/engine/physics/rigid_body.cpp
     src/engine/physics/collision/collision_geometry.cpp
     src/engine/physics/solver/contact_solver.cpp

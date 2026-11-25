@@ -1,11 +1,26 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <cstddef>
 
 #include "engine/physics/physics_types.h"
 
 namespace rotor::physics::solver
 {
+struct ContactSolverCache
+{
+    glm::mat3 inverseInertiaA{0.0f};
+    glm::mat3 inverseInertiaB{0.0f};
+    glm::vec3 armsA[ContactManifold::MaxPoints]{};
+    glm::vec3 armsB[ContactManifold::MaxPoints]{};
+    glm::vec3 normals[ContactManifold::MaxPoints]{};
+    double normalMatrix[ContactManifold::MaxPoints]
+                       [ContactManifold::MaxPoints]{};
+    float inverseMassA = 0.0f;
+    float inverseMassB = 0.0f;
+    std::size_t pointCount = 0;
+};
+
 PhysicsMaterial combineMaterials(
     const PhysicsMaterial& a,
     const PhysicsMaterial& b);
@@ -17,9 +32,24 @@ void prepareContactManifold(
     ContactManifold& manifold,
     const PhysicsMaterial& material);
 
-// Resolve os impulsos normais do manifold como um pequeno sistema acoplado
-// (até quatro pontos) e, em seguida, o atrito acumulado por ponto.
-void solveContactVelocity(
+// Pré-calcula braços, inércias e a matriz de massa efetiva. Esses valores não
+// mudam durante as iterações de velocidade do mesmo subpasso.
+void prepareContactSolverCache(
+    RigidBody* bodyA,
+    RigidBody* bodyB,
+    const ContactManifold& manifold,
+    ContactSolverCache& cache);
+
+// Resolve os impulsos reutilizando o cache preparado para o manifold.
+float solveContactVelocity(
+    RigidBody* bodyA,
+    RigidBody* bodyB,
+    ContactManifold& manifold,
+    const PhysicsMaterial& material,
+    const ContactSolverCache& cache);
+
+// Versão de conveniência para chamadas externas e testes; prepara cache local.
+float solveContactVelocity(
     RigidBody* bodyA,
     RigidBody* bodyB,
     ContactManifold& manifold,

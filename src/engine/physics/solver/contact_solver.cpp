@@ -10,7 +10,7 @@ namespace rotor::physics::solver
 namespace
 {
 constexpr float kRestitutionVelocityThreshold = 0.5f;
-constexpr float kPenetrationSlop = 0.0001f;
+constexpr float kPenetrationSlop = 0.000025f;
 
 float clampFriction(float coefficient)
 {
@@ -66,23 +66,22 @@ float effectiveMassDenominator(
 void applyPairImpulse(
     RigidBody* bodyA,
     RigidBody* bodyB,
-    const ContactPoint& contact,
+    const glm::vec3& armA,
+    const glm::vec3& armB,
+    const glm::mat3& inverseInertiaA,
+    const glm::mat3& inverseInertiaB,
     const glm::vec3& impulseOnB)
 {
     if (bodyA && bodyA->transform && bodyA->inverseMass > 0.0f)
     {
-        const glm::vec3 armA = pointOnA(contact) - bodyA->transform->position();
-        const glm::mat3 inverseA = inverseInertia(bodyA);
         bodyA->velocity -= impulseOnB * bodyA->inverseMass;
-        bodyA->angularVelocity -= inverseA * glm::cross(armA, impulseOnB);
+        bodyA->angularVelocity -= inverseInertiaA * glm::cross(armA, impulseOnB);
     }
 
     if (bodyB && bodyB->transform && bodyB->inverseMass > 0.0f)
     {
-        const glm::vec3 armB = pointOnB(contact) - bodyB->transform->position();
-        const glm::mat3 inverseB = inverseInertia(bodyB);
         bodyB->velocity += impulseOnB * bodyB->inverseMass;
-        bodyB->angularVelocity += inverseB * glm::cross(armB, impulseOnB);
+        bodyB->angularVelocity += inverseInertiaB * glm::cross(armB, impulseOnB);
     }
 }
 
@@ -270,70 +269,95 @@ void prepareContactManifold(
     }
 }
 
-void solveContactVelocity(
+void prepareContactSolverCache(
+    RigidBody* bodyA,
+    RigidBody* bodyB,
+    const ContactManifold& manifold,
+    ContactSolverCache& cache)
+{
+    cache = ContactSolverCache{};
+    cache.pointCount = std::min(
+        manifold.pointCount, ContactManifold::MaxPoints);
+    cache.inverseMassA = inverseMass(bodyA);
+    cache.inverseMassB = inverseMass(bodyB);
+    cache.inverseInertiaA = inverseInertia(bodyA);
+    cache.inverseInertiaB = inverseInertia(bodyB);
+
+    for (std::size_t i = 0; i < cache.pointCount; ++i)
+    {
+        const ContactPoint& contact = manifold.points[i];
+        cache.armsA[i] = bodyA && bodyA->transform
+            ? pointOnA(contact) - bodyA->transform->position() : glm::vec3(0.0f);
+        cache.armsB[i] = bodyB && bodyB->transform
+            ? pointOnB(contact) - bodyB->transform->position() : glm::vec3(0.0f);
+        const float normalLength = glm::length(contact.normal);
+        cache.normals[i] = normalLength > 1e-7f
+            ? contact.normal / normalLength : glm::vec3(0.0f, 1.0f, 0.0f);
+    }
+
+    // A matriz de massa efetiva depende apenas da geometria do manifold,
+    // massas e orientação dos corpos. Recalculá-la em cada iteração era
+    // trabalho redundante: nenhuma dessas grandezas muda no solver de impulso.
+    for (std::size_t i = 0; i < cache.pointCount; ++i)
+    {
+        const glm::vec3 angularArmA = glm::cross(
+            cache.armsA[i], cache.normals[i]);
+        const glm::vec3 angularArmB = glm::cross(
+            cache.armsB[i], cache.normals[i]);
+        for (std::size_t j = 0; j < cache.pointCount; ++j)
+        {
+            const glm::vec3 angularArmAj = glm::cross(
+                cache.armsA[j], cache.normals[j]);
+            const glm::vec3 angularArmBj = glm::cross(
+                cache.armsB[j], cache.normals[j]);
+            const float coupling =
+                (cache.inverseMassA + cache.inverseMassB) *
+                    glm::dot(cache.normals[i], cache.normals[j]) +
+                glm::dot(angularArmA,
+                    cache.inverseInertiaA * angularArmAj) +
+                glm::dot(angularArmB,
+                    cache.inverseInertiaB * angularArmBj);
+            cache.normalMatrix[i][j] = static_cast<double>(coupling);
+        }
+    }
+}
+
+float solveContactVelocity(
     RigidBody* bodyA,
     RigidBody* bodyB,
     ContactManifold& manifold,
-    const PhysicsMaterial& material)
+    const PhysicsMaterial& material,
+    const ContactSolverCache& cache)
 {
-    if (manifold.empty())
-        return;
+    const std::size_t count = std::min(
+        manifold.pointCount, cache.pointCount);
+    if (count == 0)
+        return 0.0f;
 
-    const glm::mat3 inverseA = inverseInertia(bodyA);
-    const glm::mat3 inverseB = inverseInertia(bodyB);
-    const std::size_t count = manifold.pointCount;
-
-    glm::vec3 armsA[ContactManifold::MaxPoints]{};
-    glm::vec3 armsB[ContactManifold::MaxPoints]{};
-    glm::vec3 normals[ContactManifold::MaxPoints]{};
-    double normalMatrix[ContactManifold::MaxPoints]
-                       [ContactManifold::MaxPoints]{};
     double normalOffset[ContactManifold::MaxPoints]{};
     double accumulated[ContactManifold::MaxPoints]{};
     double solved[ContactManifold::MaxPoints]{};
+    float maximumImpulseChange = 0.0f;
 
-    // Constrói a matriz de massa efetiva acoplada do manifold. Cada impulso
-    // normal num ponto afeta a velocidade relativa em todos os outros pontos.
     for (std::size_t i = 0; i < count; ++i)
     {
         ContactPoint& contact = manifold.points[i];
-        armsA[i] = bodyA && bodyA->transform
-            ? pointOnA(contact) - bodyA->transform->position() : glm::vec3(0.0f);
-        armsB[i] = bodyB && bodyB->transform
-            ? pointOnB(contact) - bodyB->transform->position() : glm::vec3(0.0f);
-        normals[i] = glm::normalize(contact.normal);
         accumulated[i] = contact.accumulatedNormalImpulse;
-
         const glm::vec3 relativeVelocity =
             velocityAtPoint(bodyB, pointOnB(contact)) -
             velocityAtPoint(bodyA, pointOnA(contact));
         normalOffset[i] = static_cast<double>(
-            glm::dot(relativeVelocity, normals[i]) - contact.restitutionBias);
+            glm::dot(relativeVelocity, cache.normals[i]) - contact.restitutionBias);
     }
 
     for (std::size_t i = 0; i < count; ++i)
     {
-        const glm::vec3 angularArmA = glm::cross(armsA[i], normals[i]);
-        const glm::vec3 angularArmB = glm::cross(armsB[i], normals[i]);
         for (std::size_t j = 0; j < count; ++j)
-        {
-            const glm::vec3 angularArmAj = glm::cross(armsA[j], normals[j]);
-            const glm::vec3 angularArmBj = glm::cross(armsB[j], normals[j]);
-            const float coupling =
-                (inverseMass(bodyA) + inverseMass(bodyB)) *
-                    glm::dot(normals[i], normals[j]) +
-                glm::dot(angularArmA, inverseA * angularArmAj) +
-                glm::dot(angularArmB, inverseB * angularArmBj);
-            normalMatrix[i][j] = static_cast<double>(coupling);
-            normalOffset[i] -= normalMatrix[i][j] * accumulated[j];
-        }
+            normalOffset[i] -= cache.normalMatrix[i][j] * accumulated[j];
     }
 
-    // Manifolds pequenos (até quatro pontos) permitem resolver as cargas
-    // normais simultaneamente por active-set, evitando que a ordem dos vértices
-    // escolha artificialmente um pivô para contatos face-a-face.
     const bool solvedBlock = solveNormalImpulseLcp(
-        normalMatrix, normalOffset, count, solved);
+        cache.normalMatrix, normalOffset, count, solved);
 
     if (solvedBlock)
     {
@@ -345,8 +369,12 @@ void solveContactVelocity(
             if (std::fabs(delta) > 1e-8)
             {
                 applyPairImpulse(
-                    bodyA, bodyB, contact,
-                    normals[i] * static_cast<float>(delta));
+                    bodyA, bodyB,
+                    cache.armsA[i], cache.armsB[i],
+                    cache.inverseInertiaA, cache.inverseInertiaB,
+                    cache.normals[i] * static_cast<float>(delta));
+                maximumImpulseChange = std::max(
+                    maximumImpulseChange, std::fabs(static_cast<float>(delta)));
             }
         }
     }
@@ -359,9 +387,10 @@ void solveContactVelocity(
             const glm::vec3 relativeVelocity =
                 velocityAtPoint(bodyB, pointOnB(contact)) -
                 velocityAtPoint(bodyA, pointOnA(contact));
-            const float normalVelocity = glm::dot(relativeVelocity, contact.normal);
+            const float normalVelocity = glm::dot(relativeVelocity, cache.normals[i]);
             const float armDenominator = effectiveMassDenominator(
-                bodyA, bodyB, armsA[i], armsB[i], contact.normal, inverseA, inverseB);
+                bodyA, bodyB, cache.armsA[i], cache.armsB[i],
+                cache.normals[i], cache.inverseInertiaA, cache.inverseInertiaB);
             if (armDenominator <= 1e-8f)
                 continue;
 
@@ -371,12 +400,19 @@ void solveContactVelocity(
             contact.accumulatedNormalImpulse = std::max(0.0f, previous + delta);
             const float applied = contact.accumulatedNormalImpulse - previous;
             if (std::fabs(applied) > 1e-8f)
-                applyPairImpulse(bodyA, bodyB, contact, contact.normal * applied);
+            {
+                applyPairImpulse(
+                    bodyA, bodyB,
+                    cache.armsA[i], cache.armsB[i],
+                    cache.inverseInertiaA, cache.inverseInertiaB,
+                    cache.normals[i] * applied);
+                maximumImpulseChange = std::max(
+                    maximumImpulseChange, std::fabs(applied));
+            }
         }
     }
 
-    // Atrito tangencial é resolvido por ponto, limitado pelo cone de Coulomb.
-    // O limite depende do impulso normal já encontrado para aquele contato.
+    // Atrito tangencial acumulado por ponto, reutilizando braços e tensores.
     for (std::size_t i = 0; i < count; ++i)
     {
         ContactPoint& contact = manifold.points[i];
@@ -386,7 +422,7 @@ void solveContactVelocity(
         const glm::vec3 relativeVelocity =
             velocityAtPoint(bodyB, pointOnB(contact)) -
             velocityAtPoint(bodyA, pointOnA(contact));
-        const glm::vec3 normal = normals[i];
+        const glm::vec3& normal = cache.normals[i];
         const glm::vec3 tangentVelocity = relativeVelocity -
             glm::dot(relativeVelocity, normal) * normal;
         const float tangentSpeed = glm::length(tangentVelocity);
@@ -395,7 +431,8 @@ void solveContactVelocity(
 
         const glm::vec3 tangent = tangentVelocity / tangentSpeed;
         const float tangentDenominator = effectiveMassDenominator(
-            bodyA, bodyB, armsA[i], armsB[i], tangent, inverseA, inverseB);
+            bodyA, bodyB, cache.armsA[i], cache.armsB[i], tangent,
+            cache.inverseInertiaA, cache.inverseInertiaB);
         if (tangentDenominator <= 1e-8f)
             continue;
 
@@ -403,7 +440,6 @@ void solveContactVelocity(
             -glm::dot(relativeVelocity, tangent) / tangentDenominator;
         glm::vec3 candidateTangentImpulse =
             contact.accumulatedTangentImpulse + tangent * tangentImpulseDelta;
-
         const float candidateLength = glm::length(candidateTangentImpulse);
         const float staticLimit =
             clampFriction(material.staticFriction) * contact.accumulatedNormalImpulse;
@@ -421,9 +457,29 @@ void solveContactVelocity(
             candidateTangentImpulse - contact.accumulatedTangentImpulse;
         contact.accumulatedTangentImpulse = candidateTangentImpulse;
         if (glm::length2(appliedTangentImpulse) > 1e-16f)
-            applyPairImpulse(bodyA, bodyB, contact, appliedTangentImpulse);
+        {
+            applyPairImpulse(
+                bodyA, bodyB,
+                cache.armsA[i], cache.armsB[i],
+                cache.inverseInertiaA, cache.inverseInertiaB,
+                appliedTangentImpulse);
+            maximumImpulseChange = std::max(
+                maximumImpulseChange, glm::length(appliedTangentImpulse));
+        }
     }
 
+    return maximumImpulseChange;
+}
+
+float solveContactVelocity(
+    RigidBody* bodyA,
+    RigidBody* bodyB,
+    ContactManifold& manifold,
+    const PhysicsMaterial& material)
+{
+    ContactSolverCache cache;
+    prepareContactSolverCache(bodyA, bodyB, manifold, cache);
+    return solveContactVelocity(bodyA, bodyB, manifold, material, cache);
 }
 
 void correctContactPosition(
@@ -435,34 +491,47 @@ void correctContactPosition(
     if (manifold.empty())
         return;
 
-    float maximumPenetration = 0.0f;
-    for (std::size_t i = 0; i < manifold.pointCount; ++i)
-        maximumPenetration = std::max(
-            maximumPenetration, manifold.points[i].penetration);
-
-    const float correctionDepth = std::max(
-        maximumPenetration - kPenetrationSlop, 0.0f) *
-        std::clamp(correctionPercentage, 0.0f, 1.0f);
-    if (correctionDepth <= 0.0f)
-        return;
-
     const float invMassA = inverseMass(bodyA);
     const float invMassB = inverseMass(bodyB);
     const float inverseMassSum = invMassA + invMassB;
     if (inverseMassSum <= 1e-8f)
         return;
 
-    const glm::vec3 normal = manifold.points[0].normal;
+    // Um manifold de malha pode conter normais diferentes. Em vez de usar
+    // somente a normal do primeiro ponto, calculamos a direção média ponderada
+    // pela penetração. Para contatos coplanares o resultado permanece idêntico.
+    glm::vec3 weightedNormal(0.0f);
+    float totalWeight = 0.0f;
+    float maximumPenetration = 0.0f;
+    for (std::size_t i = 0; i < manifold.pointCount; ++i)
+    {
+        const ContactPoint& point = manifold.points[i];
+        const float depth = std::max(point.penetration - kPenetrationSlop, 0.0f);
+        if (depth <= 0.0f)
+            continue;
+        const float normalLength = glm::length(point.normal);
+        if (normalLength <= 1e-7f || !std::isfinite(normalLength))
+            continue;
+        weightedNormal += (point.normal / normalLength) * depth;
+        totalWeight += depth;
+        maximumPenetration = std::max(maximumPenetration, depth);
+    }
+
+    if (totalWeight <= 1e-8f || maximumPenetration <= 0.0f)
+        return;
+
+    const glm::vec3 averageNormal = weightedNormal / totalWeight;
+    const float directionLength = glm::length(averageNormal);
+    if (directionLength <= 1e-6f || !std::isfinite(directionLength))
+        return;
+
+    const glm::vec3 correction =
+        (averageNormal / directionLength) * maximumPenetration *
+        std::clamp(correctionPercentage, 0.0f, 1.0f);
     if (bodyA && bodyA->transform && invMassA > 0.0f)
-    {
-        bodyA->transform->translate(
-            -normal * correctionDepth * (invMassA / inverseMassSum));
-    }
+        bodyA->transform->translate(-correction * (invMassA / inverseMassSum));
     if (bodyB && bodyB->transform && invMassB > 0.0f)
-    {
-        bodyB->transform->translate(
-            normal * correctionDepth * (invMassB / inverseMassSum));
-    }
+        bodyB->transform->translate(correction * (invMassB / inverseMassSum));
 }
 
 void resolveBodySurfaceContact(
@@ -474,8 +543,10 @@ void resolveBodySurfaceContact(
     manifold.points[0] = contact;
     manifold.pointCount = 1;
     prepareContactManifold(nullptr, &body, manifold, material);
+    ContactSolverCache cache;
+    prepareContactSolverCache(nullptr, &body, manifold, cache);
     for (int iteration = 0; iteration < 8; ++iteration)
-        solveContactVelocity(nullptr, &body, manifold, material);
+        solveContactVelocity(nullptr, &body, manifold, material, cache);
     correctContactPosition(nullptr, &body, manifold, 1.0f);
 }
 
@@ -489,8 +560,10 @@ void resolveBodyPairContact(
     manifold.points[0] = contact;
     manifold.pointCount = 1;
     prepareContactManifold(&bodyA, &bodyB, manifold, material);
+    ContactSolverCache cache;
+    prepareContactSolverCache(&bodyA, &bodyB, manifold, cache);
     for (int iteration = 0; iteration < 8; ++iteration)
-        solveContactVelocity(&bodyA, &bodyB, manifold, material);
+        solveContactVelocity(&bodyA, &bodyB, manifold, material, cache);
     correctContactPosition(&bodyA, &bodyB, manifold, 1.0f);
 }
 } // namespace rotor::physics::solver

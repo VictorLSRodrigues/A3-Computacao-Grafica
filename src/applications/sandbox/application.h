@@ -37,15 +37,15 @@ protected:
 private:
     void renderUI();
     void startDoom();
-    bool registerScenePhysics();
+    bool registerScenePhysics(bool stabilizeOverlaps = true);
     void syncSceneFromPhysics();
-    void resetPhysicsFromScene();
+    void resetPhysicsFromScene(bool stabilizeOverlaps = true);
 
     struct PhysicsBinding
     {
         Scene::Object *object = nullptr;
         Transform bodyTransform;
-        glm::vec3 localCenter{0.0f};
+        glm::vec3 localCenterOfMass{0.0f};
     };
 
     std::string selectedModelName = "Todos";

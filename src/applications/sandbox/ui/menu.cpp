@@ -857,6 +857,20 @@ void Menu::drawOptions(
                 !renderer.rainScenario.enabled;
         }
 
+        sandbox_ui::slider(
+            ui,
+            "Velocidade da física",
+            physicsTimeScale,
+            0.1f,
+            2.0f,
+            innerX,
+            contentY + 166.0f,
+            innerW,
+            36.0f,
+            "physics_time_scale",
+            0,
+            100.0f);
+
         break;
     }
 

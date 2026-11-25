@@ -4,6 +4,9 @@
 #include <glm/gtc/quaternion.hpp>
 #include <array>
 #include <cstddef>
+#include <memory>
+
+#include "engine/physics/mesh_collider.h"
 
 #include "engine/scene/transform.h"
 
@@ -20,7 +23,8 @@ struct PhysicsMaterial
 enum class ColliderShape
 {
     Sphere,
-    Box
+    Box,
+    TriangleMesh
 };
 
 // Geometria de colisão associada a um corpo. Dimensões base são locais;
@@ -32,6 +36,8 @@ struct Collider
     float sphereRadius = 0.0f;
     glm::vec3 baseBoxHalfExtents{0.0f};
     glm::vec3 boxHalfExtents{0.0f};
+    glm::vec3 boxCenter{0.0f};
+    std::shared_ptr<const TriangleMeshColliderData> triangleMesh;
 };
 
 // Estado dinâmico de um corpo rígido. A referência a Transform é, por enquanto,
@@ -49,6 +55,8 @@ struct RigidBody
     glm::vec3 torqueAccumulator{0.0f};
     glm::vec3 continuousForce{0.0f};
     glm::vec3 continuousTorque{0.0f};
+    float linearDamping = 0.0f;
+    float angularDamping = 0.0f;
 
     glm::vec3 startPosition{0.0f};
     glm::vec3 startVelocity{0.0f};
@@ -58,6 +66,16 @@ struct RigidBody
     float inverseMass = 1.0f;
     // Tensor de inércia inverso diagonal em espaço local.
     glm::mat3 inverseInertiaLocal{0.0f};
+    // Dimensões e inércia local só dependem da escala e dos dados do colisor.
+    // Guardamos a última escala para evitar reconstruí-las a cada passo físico.
+    glm::vec3 lastSynchronizedScale{0.0f};
+    glm::vec3 lastSynchronizedSignedScale{0.0f};
+    glm::vec3 lastSynchronizedBoxHalfExtents{0.0f};
+    float lastSynchronizedSphereRadius = 0.0f;
+    float lastSynchronizedInverseMass = 0.0f;
+    ColliderShape lastSynchronizedShape = ColliderShape::Sphere;
+    const TriangleMeshColliderData* lastSynchronizedMesh = nullptr;
+    bool hasSynchronizedScale = false;
 
     // Atualiza dimensões efetivas do colisor e o tensor de inércia após mudanças de escala.
     void synchronizeColliderAndInertia();

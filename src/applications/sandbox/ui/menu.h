@@ -35,6 +35,7 @@ private:
 
     OptionsCategory optionsCategory = OptionsCategory::Camera;
     bool windowModeChangeFailed = false;
+    float physicsTimeScale = 1.0f;
 
     // Dados da tela de salvamento.
     std::string sceneName;
@@ -83,5 +84,10 @@ public:
     bool isOpen() const
     {
         return open;
+    }
+
+    float getPhysicsTimeScale() const
+    {
+        return physicsTimeScale;
     }
 };

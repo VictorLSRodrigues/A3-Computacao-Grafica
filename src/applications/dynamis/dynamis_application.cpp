@@ -57,7 +57,7 @@ std::shared_ptr<Texture> createGroundGridTexture()
 }
 
 // Bacia branca e ampla. A curvatura visual corresponde ao colisor analítico
-// configurado no rotor::physics::PhysicsWorld, para que as esferas rolem sobre a superfície real.
+// configurado no PhysicsWorld, para que as esferas rolem sobre a superfície real.
 std::shared_ptr<Mesh> createGroundBowl()
 {
     constexpr unsigned int radialSegments = 64;

@@ -52,8 +52,8 @@ private:
     // Desenha o marcador visual da luz usando sua posição e cor atuais.
     void drawLightMarker(const Light &light, Camera &camera);
 
-    // Desenha os objetos visíveis com o shader da cena, na ordem em que estão na Scene.
-    void drawScene(const Scene &scene);
+    // Desenha objetos dentro do frustum, preservando objetos sem bounds válidos.
+    void drawScene(const Scene &scene, const glm::mat4 &viewProjection);
 
     Shader sceneShader;
     Shader lightShader;

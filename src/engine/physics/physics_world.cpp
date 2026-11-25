@@ -3,7 +3,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <limits>
+#include <sstream>
 #include <glm/gtx/quaternion.hpp>
 
 namespace rotor::physics
@@ -14,7 +18,14 @@ namespace
 {
 float clampFriction(float coefficient)
 {
-    return std::clamp(coefficient, 0.0f, 1.0f);
+    return std::isfinite(coefficient)
+        ? std::clamp(coefficient, 0.0f, 1.0f) : 0.0f;
+}
+
+float clampRestitution(float coefficient)
+{
+    return std::isfinite(coefficient)
+        ? std::clamp(coefficient, 0.0f, 1.0f) : 0.0f;
 }
 
 bool isFiniteVector(const glm::vec3& value)
@@ -24,9 +35,100 @@ bool isFiniteVector(const glm::vec3& value)
 }
 }
 
+PhysicsWorld::AxisAlignedBounds PhysicsWorld::makeBodyBounds(const RigidBody& body)
+{
+    AxisAlignedBounds bounds;
+    const float infinity = std::numeric_limits<float>::infinity();
+    bounds.minimum = glm::vec3(infinity);
+    bounds.maximum = glm::vec3(-infinity);
+    if (!body.transform)
+        return bounds;
+
+    const glm::vec3 position = body.transform->position();
+    if (!isFiniteVector(position))
+        return bounds;
+    if (body.collider.shape == ColliderShape::Sphere)
+    {
+        const float radius = std::max(0.0f, body.collider.sphereRadius);
+        if (!std::isfinite(radius))
+            return bounds;
+        const glm::vec3 extent(radius);
+        bounds.minimum = position - extent;
+        bounds.maximum = position + extent;
+        return bounds;
+    }
+
+    const glm::quat orientation = body.transform->orientation();
+    glm::vec3 center = position;
+    if (body.collider.shape == ColliderShape::TriangleMesh)
+        center += orientation * body.collider.boxCenter;
+
+    const glm::mat3 rotation = glm::mat3_cast(orientation);
+    const glm::vec3 halfExtents = glm::max(body.collider.boxHalfExtents, glm::vec3(0.0f));
+    const glm::vec3 worldExtent =
+        glm::abs(rotation[0]) * halfExtents.x +
+        glm::abs(rotation[1]) * halfExtents.y +
+        glm::abs(rotation[2]) * halfExtents.z;
+    if (!isFiniteVector(center) || !isFiniteVector(worldExtent))
+        return bounds;
+    bounds.minimum = center - worldExtent;
+    bounds.maximum = center + worldExtent;
+    return bounds;
+}
+
+PhysicsWorld::AxisAlignedBounds PhysicsWorld::makeStaticBoxBounds(
+    const StaticBoxCollider& collider)
+{
+    AxisAlignedBounds bounds;
+    const float infinity = std::numeric_limits<float>::infinity();
+    bounds.minimum = glm::vec3(infinity);
+    bounds.maximum = glm::vec3(-infinity);
+    if (!collider.transform)
+        return bounds;
+
+    const glm::vec3 scale = collider.transform->scale();
+    if (!isFiniteVector(scale))
+        return bounds;
+    const glm::vec3 absoluteScale = glm::abs(scale);
+    const glm::quat orientation = collider.transform->orientation();
+    const glm::vec3 center = collider.transform->position() +
+        orientation * (scale * collider.localCenter);
+    const glm::vec3 halfExtents = absoluteScale * collider.localHalfExtents;
+    const glm::mat3 rotation = glm::mat3_cast(orientation);
+    const glm::vec3 worldExtent =
+        glm::abs(rotation[0]) * halfExtents.x +
+        glm::abs(rotation[1]) * halfExtents.y +
+        glm::abs(rotation[2]) * halfExtents.z;
+    if (!isFiniteVector(center) || !isFiniteVector(worldExtent))
+        return bounds;
+    bounds.minimum = center - worldExtent;
+    bounds.maximum = center + worldExtent;
+    return bounds;
+}
+
+bool PhysicsWorld::overlaps(
+    const AxisAlignedBounds& a,
+    const AxisAlignedBounds& b)
+{
+    if (!isFiniteVector(a.minimum) || !isFiniteVector(a.maximum) ||
+        !isFiniteVector(b.minimum) || !isFiniteVector(b.maximum) ||
+        a.minimum.x > a.maximum.x || a.minimum.y > a.maximum.y ||
+        a.minimum.z > a.maximum.z || b.minimum.x > b.maximum.x ||
+        b.minimum.y > b.maximum.y || b.minimum.z > b.maximum.z)
+        return false;
+    constexpr float contactMargin = 1e-4f;
+    return !(a.maximum.x + contactMargin < b.minimum.x ||
+             a.minimum.x - contactMargin > b.maximum.x ||
+             a.maximum.y + contactMargin < b.minimum.y ||
+             a.minimum.y - contactMargin > b.maximum.y ||
+             a.maximum.z + contactMargin < b.minimum.z ||
+             a.minimum.z - contactMargin > b.maximum.z);
+}
+
 void PhysicsWorld::setGravity(const glm::vec3& gravity)
 {
-    gravity_ = gravity;
+    if (isFiniteVector(gravity))
+        gravity_ = gravity;
 }
 
 const glm::vec3& PhysicsWorld::gravity() const
@@ -34,11 +136,24 @@ const glm::vec3& PhysicsWorld::gravity() const
     return gravity_;
 }
 
+void PhysicsWorld::setTimeScale(float timeScale)
+{
+    if (std::isfinite(timeScale))
+        timeScale_ = std::clamp(timeScale, 0.1f, 2.0f);
+}
+
+float PhysicsWorld::timeScale() const
+{
+    return timeScale_;
+}
+
 void PhysicsWorld::setGroundPlane(
     float height,
     float staticFriction,
     float dynamicFriction)
 {
+    if (!std::isfinite(height))
+        return;
     groundHeight_ = height;
     hasGroundPlane_ = true;
     hasGroundBowl_ = false;
@@ -88,7 +203,10 @@ bool PhysicsWorld::addSphereBody(
     float dynamicFriction,
     const glm::vec3& initialAngularVelocity)
 {
-    if (!(mass > 0.0f) || !std::isfinite(mass))
+    if (findBody(transform) || hasStaticBoxCollider(transform) ||
+        !isFiniteVector(initialVelocity) ||
+        !isFiniteVector(initialAngularVelocity) || !std::isfinite(sphereRadius) ||
+        sphereRadius < 0.0f || !(mass > 0.0f) || !std::isfinite(mass))
         return false;
 
     const float inverseMass = 1.0f / mass;
@@ -117,7 +235,8 @@ bool PhysicsWorld::addBoxBody(
     float dynamicFriction,
     const glm::vec3& initialAngularVelocity)
 {
-    if (!isFiniteVector(localHalfExtents) ||
+    if (findBody(transform) || hasStaticBoxCollider(transform) ||
+        !isFiniteVector(localHalfExtents) ||
         localHalfExtents.x <= 1e-5f ||
         localHalfExtents.y <= 1e-5f ||
         localHalfExtents.z <= 1e-5f ||
@@ -142,13 +261,57 @@ bool PhysicsWorld::addBoxBody(
     body.startAngularVelocity = initialAngularVelocity;
     body.startOrientation = transform.orientation();
     body.collider.baseBoxHalfExtents = localHalfExtents;
-    body.material.restitution = std::clamp(restitution, 0.0f, 1.0f);
+    body.material.restitution = clampRestitution(restitution);
     body.material.staticFriction = clampFriction(staticFriction);
     body.material.dynamicFriction = std::min(
         clampFriction(dynamicFriction), body.material.staticFriction);
     body.inverseMass = inverseMass;
 
     bodies_.push_back(body);
+    bodies_.back().synchronizeColliderAndInertia();
+    return true;
+}
+
+bool PhysicsWorld::addTriangleMeshBody(
+    Transform& transform,
+    std::shared_ptr<const TriangleMeshColliderData> mesh,
+    float restitution,
+    float mass,
+    float staticFriction,
+    float dynamicFriction,
+    const glm::vec3& initialVelocity,
+    const glm::vec3& initialAngularVelocity)
+{
+    if (findBody(transform) || hasStaticBoxCollider(transform) ||
+        !mesh || !mesh->valid() || !isFiniteVector(initialVelocity) ||
+        !isFiniteVector(initialAngularVelocity) || !(mass > 0.0f) ||
+        !std::isfinite(mass))
+    {
+        return false;
+    }
+
+    const float inverseMass = 1.0f / mass;
+    if (!std::isfinite(inverseMass))
+        return false;
+
+    Body body;
+    body.transform = &transform;
+    body.collider.shape = BodyShape::TriangleMesh;
+    body.collider.triangleMesh = std::move(mesh);
+    body.collider.baseBoxHalfExtents = body.collider.triangleMesh->localHalfExtents;
+    body.velocity = initialVelocity;
+    body.angularVelocity = initialAngularVelocity;
+    body.startPosition = transform.position();
+    body.startVelocity = initialVelocity;
+    body.startAngularVelocity = initialAngularVelocity;
+    body.startOrientation = transform.orientation();
+    body.material.restitution = clampRestitution(restitution);
+    body.material.staticFriction = clampFriction(staticFriction);
+    body.material.dynamicFriction = std::min(
+        clampFriction(dynamicFriction), body.material.staticFriction);
+    body.inverseMass = inverseMass;
+
+    bodies_.push_back(std::move(body));
     bodies_.back().synchronizeColliderAndInertia();
     return true;
 }
@@ -160,6 +323,8 @@ void PhysicsWorld::addStaticSphere(
     float staticFriction,
     float dynamicFriction)
 {
+    if (findBody(transform) || hasStaticBoxCollider(transform))
+        return;
     addSphereBodyInternal(
         transform,
         glm::vec3(0.0f),
@@ -179,24 +344,19 @@ bool PhysicsWorld::addStaticBox(
     float staticFriction,
     float dynamicFriction)
 {
-    if (!isFiniteVector(localCenter) || !isFiniteVector(localHalfExtents) ||
+    if (findBody(transform) || hasStaticBoxCollider(transform) ||
+        !isFiniteVector(localCenter) || !isFiniteVector(localHalfExtents) ||
         localHalfExtents.x <= 0.0f || localHalfExtents.y <= 0.0f ||
         localHalfExtents.z <= 0.0f)
     {
         return false;
     }
 
-    for (const StaticBoxCollider& collider : staticBoxes_)
-    {
-        if (collider.transform == &transform)
-            return false;
-    }
-
     StaticBoxCollider collider;
     collider.transform = &transform;
     collider.localCenter = localCenter;
     collider.localHalfExtents = localHalfExtents;
-    collider.material.restitution = std::clamp(restitution, 0.0f, 1.0f);
+    collider.material.restitution = clampRestitution(restitution);
     collider.material.staticFriction = clampFriction(staticFriction);
     collider.material.dynamicFriction = std::min(
         clampFriction(dynamicFriction), collider.material.staticFriction);
@@ -214,6 +374,12 @@ void PhysicsWorld::addSphereBodyInternal(
     float dynamicFriction,
     float inverseMass)
 {
+    if (findBody(transform) || hasStaticBoxCollider(transform) ||
+        !isFiniteVector(initialVelocity) || !isFiniteVector(initialAngularVelocity) ||
+        !std::isfinite(sphereRadius) ||
+        sphereRadius < 0.0f || !std::isfinite(inverseMass) || inverseMass < 0.0f)
+        return;
+
     Body body;
     body.transform = &transform;
     body.collider.shape = BodyShape::Sphere;
@@ -225,7 +391,7 @@ void PhysicsWorld::addSphereBodyInternal(
     body.startOrientation = transform.orientation();
     body.collider.baseSphereRadius = std::max(0.0f, sphereRadius);
     body.collider.sphereRadius = body.collider.baseSphereRadius;
-    body.material.restitution = std::clamp(restitution, 0.0f, 1.0f);
+    body.material.restitution = clampRestitution(restitution);
     body.material.staticFriction = clampFriction(staticFriction);
     body.material.dynamicFriction = std::min(
         clampFriction(dynamicFriction), body.material.staticFriction);
@@ -254,6 +420,16 @@ const PhysicsWorld::Body* PhysicsWorld::findBody(const Transform& transform) con
             return &body;
     }
     return nullptr;
+}
+
+bool PhysicsWorld::hasStaticBoxCollider(const Transform& transform) const
+{
+    for (const StaticBoxCollider& collider : staticBoxes_)
+    {
+        if (collider.transform == &transform)
+            return true;
+    }
+    return false;
 }
 
 bool PhysicsWorld::applyForce(Transform& transform, const glm::vec3& force)
@@ -320,6 +496,24 @@ bool PhysicsWorld::setContinuousTorque(
     return true;
 }
 
+bool PhysicsWorld::setLinearDamping(Transform& transform, float damping)
+{
+    Body* body = findBody(transform);
+    if (!body || !std::isfinite(damping) || damping < 0.0f)
+        return false;
+    body->linearDamping = std::min(damping, 1000.0f);
+    return true;
+}
+
+bool PhysicsWorld::setAngularDamping(Transform& transform, float damping)
+{
+    Body* body = findBody(transform);
+    if (!body || !std::isfinite(damping) || damping < 0.0f)
+        return false;
+    body->angularDamping = std::min(damping, 1000.0f);
+    return true;
+}
+
 bool PhysicsWorld::applyImpulse(Transform& transform, const glm::vec3& impulse)
 {
     Body* body = findBody(transform);
@@ -364,7 +558,15 @@ void PhysicsWorld::update(float frameTime)
     if (!(frameTime > 0.0f) || !std::isfinite(frameTime))
         return;
 
-    accumulator_ += frameTime;
+    if (profilingEnabled_)
+    {
+        if (profilingWindowStart_ == std::chrono::steady_clock::time_point{})
+            profilingWindowStart_ = std::chrono::steady_clock::now();
+        ++profilingWindow_.updateCalls;
+        profilingWindow_.inputSimulationSeconds += frameTime;
+    }
+
+    accumulator_ += frameTime * timeScale_;
 
     int steps = 0;
     while (accumulator_ + kTolerance >= kFixedStep && steps < kMaxStepsPerFrame)
@@ -377,7 +579,15 @@ void PhysicsWorld::update(float frameTime)
     // Mantém um limite de trabalho por quadro. O tempo excedente fica limitado
     // a menos de um passo para evitar uma espiral de atualização atrasada.
     if (steps == kMaxStepsPerFrame && accumulator_ >= kFixedStep)
+    {
+        if (profilingEnabled_)
+            ++profilingWindow_.droppedTimeEvents;
         accumulator_ = std::fmod(accumulator_, kFixedStep);
+    }
+
+    if (profilingEnabled_)
+        profilingWindow_.maxStepsInUpdate = std::max<std::uint64_t>(
+            profilingWindow_.maxStepsInUpdate, static_cast<std::uint64_t>(steps));
 
     // Forças pontuais acumuladas são consumidas quando ao menos um passo fixo
     // foi processado. Forças contínuas permanecem ativas até serem substituídas.
@@ -389,59 +599,289 @@ void PhysicsWorld::update(float frameTime)
             body.torqueAccumulator = glm::vec3(0.0f);
         }
     }
+
+    emitProfilingReportIfDue();
+}
+
+void PhysicsWorld::setProfilingEnabled(bool enabled)
+{
+    profilingEnabled_ = enabled;
+    profilingWindow_ = ProfilingWindow{};
+    profilingWindowStart_ = enabled
+        ? std::chrono::steady_clock::now()
+        : std::chrono::steady_clock::time_point{};
+    meshCollisionScratch_.collectStats = enabled;
+    meshCollisionScratch_.counters = collision::MeshCollisionCounters{};
+    if (enabled)
+    {
+        // O launcher inicia os aplicativos sem console no Windows; por isso,
+        // mantemos também um arquivo de diagnóstico no diretório de trabalho.
+        std::ofstream log("physics_profile.log", std::ios::out | std::ios::trunc);
+    }
+}
+
+bool PhysicsWorld::profilingEnabled() const
+{
+    return profilingEnabled_;
+}
+
+void PhysicsWorld::emitProfilingReportIfDue()
+{
+    if (!profilingEnabled_ ||
+        profilingWindowStart_ == std::chrono::steady_clock::time_point{})
+        return;
+
+    const auto now = std::chrono::steady_clock::now();
+    const double wallSeconds = std::chrono::duration<double>(
+        now - profilingWindowStart_).count();
+    if (wallSeconds < 1.0)
+        return;
+
+    const ProfilingWindow& p = profilingWindow_;
+    const std::uint64_t fixedSteps = p.fixedSteps;
+    const std::uint64_t substeps = p.substeps;
+    const double stepDivisor = fixedSteps > 0 ? static_cast<double>(fixedSteps) : 1.0;
+
+    std::size_t dynamicBodies = 0;
+    for (const Body& body : bodies_)
+    {
+        if (body.transform && body.inverseMass > 0.0f)
+            ++dynamicBodies;
+    }
+
+    const auto& mesh = meshCollisionScratch_.counters;
+    std::ostringstream report;
+    report << std::fixed << std::setprecision(3)
+              << "\n[PHYSICS PROFILE] janela=" << wallSeconds << "s"
+              << " | corpos=" << bodies_.size() << " (dinamicos=" << dynamicBodies << ")"
+              << " | updates=" << p.updateCalls
+              << " | delta_sim=" << p.inputSimulationSeconds << "s\n"
+              << "  passos=" << fixedSteps << " (" << fixedSteps / wallSeconds << "/s)"
+              << " | subpassos=" << substeps
+              << " (media=" << substeps / stepDivisor
+              << ", max=" << p.maxSubstepsInFixedStep << ")"
+              << " | passos/update_max=" << p.maxStepsInUpdate
+              << " | descarte_tempo=" << p.droppedTimeEvents << "\n"
+              << "  passo_ms medio/max=" << p.stepMilliseconds / stepDivisor
+              << "/" << p.maxStepMilliseconds
+              << " | uso_1_core=" << (p.stepMilliseconds / (wallSeconds * 10.0)) << "%\n"
+              << "  fases_ms/passo: setup=" << p.setupMilliseconds / stepDivisor
+              << " integracao=" << p.integrationMilliseconds / stepDivisor
+              << " contatos=" << p.initialContactMilliseconds / stepDivisor
+              << " preparo=" << p.contactPreparationMilliseconds / stepDivisor
+              << " solver=" << p.velocitySolveMilliseconds / stepDivisor
+              << " cache_contatos_pos=" << p.positionContactMilliseconds / stepDivisor
+              << " correcao_pos=" << p.positionCorrectionMilliseconds / stepDivisor << "\n"
+              << "  contatos: coletas=" << p.contactCollectionCalls
+              << " manifolds_iniciais=" << p.initialManifolds
+              << " pontos_iniciais=" << p.initialContactPoints
+              << " manifolds_pos_reutilizados=" << p.positionManifolds
+              << " pontos_pos=" << p.positionContactPoints
+              << " novas_coletas_pos=" << p.positionCollectionCalls
+              << " passes_pos=" << p.positionPasses
+              << " max_manifolds/coleta=" << p.maxContactManifolds << "\n"
+              << "  solver: iteracoes_vel=" << p.velocityIterations
+              << " resolucoes_contato=" << p.velocityContactSolves << "\n"
+              << "  broadphase: pares_possiveis=" << p.bodyPairPossible
+              << " pares_candidatos=" << p.bodyPairTests
+              << " pares_descartados_AABB=" << p.bodyPairAabbRejected
+              << " pares_colidindo=" << p.bodyPairHits
+              << " testes_caixa_estatica=" << p.staticBoxTests
+              << " caixas_descartadas_AABB=" << p.staticBoxAabbRejected
+              << " testes_chao=" << p.groundBodyTests
+              << " corpos_descartados_chao=" << p.groundAabbRejected << "\n"
+              << "  malhas: consultas=" << mesh.contactQueries
+              << " suporte=" << mesh.supportQueries
+              << " nos_BVH=" << mesh.bvhNodesVisited
+              << " nos_podados=" << mesh.bvhNodesRejected
+              << " nos_suporte=" << mesh.supportBvhNodesVisited
+              << " nos_suporte_podados=" << mesh.supportBvhNodesRejected
+              << " triangulos_candidatos=" << mesh.candidateTriangles
+              << " triangulos_testados=" << mesh.trianglesTested
+              << " vertices_testados=" << mesh.verticesTested
+              << " vertices_suporte=" << mesh.supportVerticesTested
+              << '\n';
+    const std::string reportText = report.str();
+    std::cout << reportText << std::flush;
+    {
+        std::ofstream log("physics_profile.log", std::ios::out | std::ios::app);
+        if (log)
+            log << reportText;
+    }
+
+    profilingWindow_ = ProfilingWindow{};
+    meshCollisionScratch_.counters = collision::MeshCollisionCounters{};
+    profilingWindowStart_ = now;
 }
 
 void PhysicsWorld::step(float dt)
 {
-    float smallestExtent = std::numeric_limits<float>::max();
-    float maximumTravel = 0.0f;
+    using Clock = std::chrono::steady_clock;
+    const auto stepStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
+    auto phaseStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
 
-    for (Body& body : bodies_)
+    // Escolhe subpassos somente para movimentos que podem atingir outra forma.
+    // Um objeto pequeno e parado, longe de qualquer trajetória, não força toda
+    // a cena a usar sua dimensão como referência.
+    bodyMotionScratch_.resize(bodies_.size());
+    for (std::size_t index = 0; index < bodies_.size(); ++index)
     {
+        Body& body = bodies_[index];
         body.synchronizeColliderAndInertia();
+        BodyMotionProxy& motion = bodyMotionScratch_[index];
+        motion = BodyMotionProxy{};
         if (!body.transform)
             continue;
 
-        const float minimumShapeExtent = body.collider.shape == BodyShape::Sphere
-            ? body.collider.sphereRadius
-            : std::min(body.collider.boxHalfExtents.x,
-                std::min(body.collider.boxHalfExtents.y, body.collider.boxHalfExtents.z));
-        if (minimumShapeExtent <= 1e-6f)
-            continue;
-        if (minimumShapeExtent > 1e-6f)
-            smallestExtent = std::min(smallestExtent, minimumShapeExtent);
-        if (body.inverseMass <= 0.0f)
+        const AxisAlignedBounds currentBounds = makeBodyBounds(body);
+        motion.sweptBounds = currentBounds;
+        motion.active = true;
+        const glm::vec3 halfExtents = body.collider.shape == BodyShape::Sphere
+            ? glm::vec3(body.collider.sphereRadius)
+            : body.collider.boxHalfExtents;
+        motion.minimumHalfExtent = std::min(
+            halfExtents.x, std::min(halfExtents.y, halfExtents.z));
+        if (motion.minimumHalfExtent <= 1e-6f)
+        {
+            // Malhas abertas podem ter espessura geométrica zero (por exemplo,
+            // uma placa). Usa uma fração da menor dimensão não nula para não
+            // desativar a subdivisão adaptativa nesses corpos.
+            float smallestPositiveExtent = std::numeric_limits<float>::max();
+            for (int axis = 0; axis < 3; ++axis)
+            {
+                if (halfExtents[axis] > 1e-6f)
+                    smallestPositiveExtent = std::min(
+                        smallestPositiveExtent, halfExtents[axis]);
+            }
+            motion.minimumHalfExtent = smallestPositiveExtent <
+                std::numeric_limits<float>::max()
+                    ? smallestPositiveExtent * 0.1f : 1e-3f;
+        }
+        if (body.inverseMass <= 0.0f || motion.minimumHalfExtent <= 1e-6f)
             continue;
 
         const glm::vec3 acceleration = gravity_ +
             (body.forceAccumulator + body.continuousForce) * body.inverseMass;
-        const glm::vec3 predictedVelocity = body.velocity + acceleration * dt;
-        const float predictedTravel = glm::length(predictedVelocity) * dt +
-            0.5f * glm::length(acceleration) * dt * dt;
-        maximumTravel = std::max(maximumTravel, predictedTravel);
+        motion.linearDisplacement = body.velocity * dt +
+            0.5f * acceleration * dt * dt;
+
+        const glm::vec3 angularAcceleration = body.inverseInertiaTensorWorld() *
+            (body.torqueAccumulator + body.continuousTorque);
+        const float angularTravel = body.collider.shape == BodyShape::Sphere
+            ? 0.0f
+            : glm::length(body.collider.boxHalfExtents) *
+                (glm::length(body.angularVelocity) * dt +
+                 0.5f * glm::length(angularAcceleration) * dt * dt);
+        motion.angularTravel = angularTravel;
+        motion.totalTravel = glm::length(motion.linearDisplacement) + angularTravel;
+
+        const glm::vec3 displacement = motion.linearDisplacement;
+        const glm::vec3 angularExpansion(angularTravel);
+        motion.sweptBounds.minimum = glm::min(
+            currentBounds.minimum, currentBounds.minimum + displacement) - angularExpansion;
+        motion.sweptBounds.maximum = glm::max(
+            currentBounds.maximum, currentBounds.maximum + displacement) + angularExpansion;
     }
 
-    // Subpassos adaptativos limitam o deslocamento por subpasso em relação
-    // à menor meia-dimensão física (esfera ou caixa), reduzindo tunneling.
     int substeps = 1;
-    if (smallestExtent < std::numeric_limits<float>::max())
+    const auto includeRequiredSubsteps = [&substeps](float relativeTravel, float featureSize)
     {
-        const float maximumSubstepTravel = std::max(1e-4f, smallestExtent * 0.5f);
-        const float requiredSubsteps = maximumTravel / maximumSubstepTravel;
-        if (!std::isfinite(requiredSubsteps) ||
-            requiredSubsteps >= static_cast<float>(kMaxAdaptiveSubsteps))
+        if (!std::isfinite(relativeTravel) || !std::isfinite(featureSize) ||
+            relativeTravel <= 0.0f || featureSize <= 1e-6f)
+            return;
+        const float required = std::ceil(relativeTravel / (featureSize * 0.5f));
+        if (!std::isfinite(required) || required >=
+            static_cast<float>(kMaxAdaptiveSubsteps))
         {
             substeps = kMaxAdaptiveSubsteps;
+            return;
         }
-        else
+        substeps = std::max(substeps, std::max(1, static_cast<int>(required)));
+    };
+
+    // Pares dinâmicos/estáticos registrados como bodies. Somente trajetórias
+    // cujos AABBs varridos se cruzam influenciam a subdivisão temporal.
+    for (std::size_t i = 0; i < bodies_.size(); ++i)
+    {
+        const BodyMotionProxy& a = bodyMotionScratch_[i];
+        if (!a.active)
+            continue;
+        for (std::size_t j = i + 1; j < bodies_.size(); ++j)
         {
-            substeps = std::max(1, static_cast<int>(std::ceil(requiredSubsteps)));
+            const BodyMotionProxy& b = bodyMotionScratch_[j];
+            if (!b.active || bodies_[j].inverseMass + bodies_[i].inverseMass <= 0.0f ||
+                !overlaps(a.sweptBounds, b.sweptBounds))
+                continue;
+
+            const float bFeature = b.minimumHalfExtent > 1e-6f
+                ? b.minimumHalfExtent : a.minimumHalfExtent;
+            const float featureSize = std::min(a.minimumHalfExtent, bFeature);
+            const float relativeTravel = glm::length(
+                a.linearDisplacement - b.linearDisplacement) +
+                a.angularTravel + b.angularTravel;
+            includeRequiredSubsteps(relativeTravel, featureSize);
         }
+    }
+
+    // Colisores estáticos separados dos bodies (mesa, plataformas etc.).
+    for (std::size_t bodyIndex = 0; bodyIndex < bodies_.size(); ++bodyIndex)
+    {
+        const Body& body = bodies_[bodyIndex];
+        const BodyMotionProxy& motion = bodyMotionScratch_[bodyIndex];
+        if (!motion.active || body.inverseMass <= 0.0f || motion.totalTravel <= 0.0f)
+            continue;
+        for (const StaticBoxCollider& collider : staticBoxes_)
+        {
+            if (!collider.transform)
+                continue;
+            const glm::vec3 scale = glm::abs(collider.transform->scale());
+            const float staticFeature = std::min(
+                scale.x * collider.localHalfExtents.x,
+                std::min(scale.y * collider.localHalfExtents.y,
+                         scale.z * collider.localHalfExtents.z));
+            if (staticFeature <= 1e-6f ||
+                !overlaps(motion.sweptBounds, makeStaticBoxBounds(collider)))
+                continue;
+            includeRequiredSubsteps(
+                motion.totalTravel, std::min(motion.minimumHalfExtent, staticFeature));
+        }
+
+        if (hasGroundPlane_ && motion.sweptBounds.minimum.y <= groundHeight_ + 1e-4f)
+        {
+            // Em um plano infinito, deslocamento horizontal não aumenta o risco
+            // de tunneling contra o chão; só contam movimento normal e rotação.
+            const float groundNormalTravel =
+                std::fabs(motion.linearDisplacement.y) + motion.angularTravel;
+            includeRequiredSubsteps(groundNormalTravel, motion.minimumHalfExtent);
+        }
+        else if (hasGroundBowl_)
+        {
+            AxisAlignedBounds bowlBounds;
+            bowlBounds.minimum = glm::vec3(
+                -groundBowlRadius_, -1e-3f, -groundBowlRadius_);
+            bowlBounds.maximum = glm::vec3(
+                groundBowlRadius_, groundBowlDepth_ + groundBowlLipHeight_ + 1e-3f,
+                groundBowlRadius_);
+            if (overlaps(motion.sweptBounds, bowlBounds))
+                includeRequiredSubsteps(motion.totalTravel, motion.minimumHalfExtent);
+        }
+    }
+
+    if (profilingEnabled_)
+    {
+        profilingWindow_.setupMilliseconds +=
+            std::chrono::duration<double, std::milli>(Clock::now() - phaseStart).count();
+        ++profilingWindow_.fixedSteps;
+        profilingWindow_.substeps += static_cast<std::uint64_t>(substeps);
+        profilingWindow_.maxSubstepsInFixedStep = std::max<std::uint64_t>(
+            profilingWindow_.maxSubstepsInFixedStep,
+            static_cast<std::uint64_t>(substeps));
     }
 
     const float substep = dt / static_cast<float>(substeps);
     for (int substepIndex = 0; substepIndex < substeps; ++substepIndex)
     {
+        phaseStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
         for (Body& body : bodies_)
         {
             if (!body.transform || body.inverseMass == 0.0f)
@@ -454,6 +894,8 @@ void PhysicsWorld::step(float dt)
 
             body.velocity += acceleration * substep;
             body.angularVelocity += angularAcceleration * substep;
+            body.velocity *= std::exp(-body.linearDamping * substep);
+            body.angularVelocity *= std::exp(-body.angularDamping * substep);
             body.transform->translate(body.velocity * substep);
 
             const float angularSpeed = glm::length(body.angularVelocity);
@@ -465,17 +907,42 @@ void PhysicsWorld::step(float dt)
                     delta * body.transform->orientation()));
             }
         }
+        if (profilingEnabled_)
+        {
+            profilingWindow_.integrationMilliseconds +=
+                std::chrono::duration<double, std::milli>(Clock::now() - phaseStart).count();
+        }
 
         // Detecta uma vez por subpasso e mantém o mesmo conjunto de contatos
         // durante as iterações do solver. Isso permite acumular impulsos por
         // ponto sem recalcular a geometria a cada iteração.
-        std::vector<ContactConstraint> contacts;
-        contacts.reserve(bodies_.size() * 4);
+        std::vector<ContactConstraint>& contacts = contactsScratch_;
+        contacts.reserve(std::max(contacts.capacity(), bodies_.size() * 4));
+        phaseStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
+        if (profilingEnabled_)
+        {
+            profileCollectionActive_ = true;
+            meshCollisionScratch_.collectStats = true;
+        }
         collectContactConstraints(contacts);
+        if (profilingEnabled_)
+        {
+            profileCollectionActive_ = false;
+            meshCollisionScratch_.collectStats = false;
+            profilingWindow_.initialContactMilliseconds +=
+                std::chrono::duration<double, std::milli>(Clock::now() - phaseStart).count();
+            ++profilingWindow_.contactCollectionCalls;
+            profilingWindow_.initialManifolds += contacts.size();
+            profilingWindow_.maxContactManifolds = std::max<std::uint64_t>(
+                profilingWindow_.maxContactManifolds, contacts.size());
+            for (const ContactConstraint& contact : contacts)
+                profilingWindow_.initialContactPoints += contact.manifold.pointCount;
+        }
 
         // Contatos contra suportes estáticos são resolvidos primeiro. Em pilhas,
         // isso ancora os corpos inferiores antes de propagar as cargas para os
         // corpos dinâmicos apoiados neles nas iterações seguintes.
+        phaseStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
         std::stable_partition(
             contacts.begin(), contacts.end(),
             [](const ContactConstraint& contact)
@@ -491,65 +958,145 @@ void PhysicsWorld::step(float dt)
                 contact.bodyB,
                 contact.manifold,
                 contact.material);
+            solver::prepareContactSolverCache(
+                contact.bodyA, contact.bodyB,
+                contact.manifold, contact.solverCache);
+        }
+        if (profilingEnabled_)
+        {
+            profilingWindow_.contactPreparationMilliseconds +=
+                std::chrono::duration<double, std::milli>(Clock::now() - phaseStart).count();
         }
 
+        phaseStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
+        int velocityIterationsUsed = 0;
+        if (contacts.empty())
+            velocityIterationsUsed = 0;
+        else
         for (int iteration = 0; iteration < kCollisionIterations; ++iteration)
+        {
+            float maximumImpulseChange = 0.0f;
+            bool singlePointOnly = true;
+            for (ContactConstraint& contact : contacts)
+            {
+                if (contact.manifold.pointCount != 1)
+                    singlePointOnly = false;
+                maximumImpulseChange = std::max(
+                    maximumImpulseChange,
+                    solver::solveContactVelocity(
+                    contact.bodyA,
+                    contact.bodyB,
+                    contact.manifold,
+                    contact.material,
+                    contact.solverCache));
+            }
+            ++velocityIterationsUsed;
+            if (singlePointOnly && iteration >= 7 &&
+                maximumImpulseChange < 1e-5f)
+                break;
+        }
+        if (profilingEnabled_)
+        {
+            profilingWindow_.velocitySolveMilliseconds +=
+                std::chrono::duration<double, std::milli>(Clock::now() - phaseStart).count();
+            profilingWindow_.velocityIterations += velocityIterationsUsed;
+            profilingWindow_.velocityContactSolves +=
+                static_cast<std::uint64_t>(contacts.size()) *
+                static_cast<std::uint64_t>(velocityIterationsUsed);
+        }
+
+        // Projeção posicional separada dos impulsos. Reutilizamos os manifolds
+        // coletados no início do subpasso: a correção é translacional, então a
+        // profundidade pode ser atualizada exatamente pela mudança relativa de
+        // posição ao longo da normal, sem reconstruir a geometria das malhas.
+        if (!contacts.empty())
         {
             for (ContactConstraint& contact : contacts)
             {
-                solver::solveContactVelocity(
-                    contact.bodyA,
-                    contact.bodyB,
-                    contact.manifold,
-                    contact.material);
+                contact.lastPositionA = contact.bodyA && contact.bodyA->transform
+                    ? contact.bodyA->transform->position() : glm::vec3(0.0f);
+                contact.lastPositionB = contact.bodyB && contact.bodyB->transform
+                    ? contact.bodyB->transform->position() : glm::vec3(0.0f);
             }
-        }
 
-        // Projeção posicional separada dos impulsos. Recoletamos os contatos
-        // após cada passagem, porque corrigir um apoio muda imediatamente os
-        // contatos dos corpos empilhados acima dele. Suportes estáticos são
-        // corrigidos primeiro; pares dinâmicos vêm em seguida.
-        for (int iteration = 0; iteration < kPositionIterations; ++iteration)
-        {
-            std::vector<ContactConstraint> positionContacts;
-            positionContacts.reserve(bodies_.size() * 4);
-            collectContactConstraints(positionContacts);
-            if (positionContacts.empty())
-                break;
-
-            std::stable_partition(
-                positionContacts.begin(), positionContacts.end(),
-                [](const ContactConstraint& contact)
-                {
-                    return !contact.bodyA || !contact.bodyB ||
-                        contact.bodyA->inverseMass <= 0.0f ||
-                        contact.bodyB->inverseMass <= 0.0f;
-                });
-
-            float deepestPenetration = 0.0f;
-            for (const ContactConstraint& contact : positionContacts)
+            for (int iteration = 0; iteration < kPositionIterations; ++iteration)
             {
-                for (std::size_t point = 0;
-                     point < contact.manifold.pointCount; ++point)
+                phaseStart = profilingEnabled_ ? Clock::now() : Clock::time_point{};
+                float deepestPenetration = 0.0f;
+                for (ContactConstraint& contact : contacts)
                 {
+                    const glm::vec3 currentPositionA =
+                        contact.bodyA && contact.bodyA->transform
+                            ? contact.bodyA->transform->position() : glm::vec3(0.0f);
+                    const glm::vec3 currentPositionB =
+                        contact.bodyB && contact.bodyB->transform
+                            ? contact.bodyB->transform->position() : glm::vec3(0.0f);
+                    const glm::vec3 relativeCorrection =
+                        (currentPositionB - contact.lastPositionB) -
+                        (currentPositionA - contact.lastPositionA);
+
+                    // Os manifolds preservam suas normais e pontos durante a
+                    // projeção. Como esta etapa não gira os corpos, a mudança
+                    // de penetração pela translação é a projeção exata abaixo.
+                    float contactDeepestPenetration = 0.0f;
+                    for (std::size_t pointIndex = 0;
+                         pointIndex < contact.manifold.pointCount; ++pointIndex)
+                    {
+                        ContactPoint& point = contact.manifold.points[pointIndex];
+                        point.penetration = std::max(
+                            0.0f, point.penetration -
+                                glm::dot(relativeCorrection, point.normal));
+                        contactDeepestPenetration = std::max(
+                            contactDeepestPenetration, point.penetration);
+                    }
                     deepestPenetration = std::max(
-                        deepestPenetration,
-                        contact.manifold.points[point].penetration);
+                        deepestPenetration, contactDeepestPenetration);
+
+                    contact.lastPositionA = currentPositionA;
+                    contact.lastPositionB = currentPositionB;
+                    if (contactDeepestPenetration > 0.0002f)
+                    {
+                        const auto correctionStart = profilingEnabled_
+                            ? Clock::now() : Clock::time_point{};
+                        solver::correctContactPosition(
+                            contact.bodyA, contact.bodyB, contact.manifold, 1.0f);
+                        if (profilingEnabled_)
+                        {
+                            profilingWindow_.positionCorrectionMilliseconds +=
+                                std::chrono::duration<double, std::milli>(
+                                    Clock::now() - correctionStart).count();
+                        }
+                    }
                 }
 
-                solver::correctContactPosition(
-                    contact.bodyA,
-                    contact.bodyB,
-                    contact.manifold,
-                    1.0f);
-            }
+                if (profilingEnabled_)
+                {
+                    profilingWindow_.positionContactMilliseconds +=
+                        std::chrono::duration<double, std::milli>(
+                            Clock::now() - phaseStart).count();
+                    ++profilingWindow_.positionPasses;
+                    profilingWindow_.positionManifolds += contacts.size();
+                    for (const ContactConstraint& contact : contacts)
+                        profilingWindow_.positionContactPoints +=
+                            contact.manifold.pointCount;
+                }
 
-            if (deepestPenetration <= 0.0002f)
-                break;
+                if (deepestPenetration <= 0.0002f)
+                    break;
+            }
         }
+
     }
 
     ++stepCount_;
+    if (profilingEnabled_)
+    {
+        const double elapsed = std::chrono::duration<double, std::milli>(
+            Clock::now() - stepStart).count();
+        profilingWindow_.stepMilliseconds += elapsed;
+        profilingWindow_.maxStepMilliseconds = std::max(
+            profilingWindow_.maxStepMilliseconds, elapsed);
+    }
 }
 
 void PhysicsWorld::reset()
@@ -590,6 +1137,13 @@ void PhysicsWorld::clear()
 {
     bodies_.clear();
     staticBoxes_.clear();
+    contactsScratch_.clear();
+    bodyBoundsByIndexScratch_.clear();
+    bodySweepScratch_.clear();
+    staticBoxBoundsScratch_.clear();
+    bodyPairScratch_.clear();
+    bodyMotionScratch_.clear();
+    meshCollisionScratch_ = collision::MeshCollisionScratch{};
     clearGroundPlane();
     accumulator_ = 0.0;
 }
