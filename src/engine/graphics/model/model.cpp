@@ -41,6 +41,20 @@ void Model::draw(Shader &shader, const Texture &diffuseFallback,
 	glFrontFace(GL_CCW);
 }
 
+void Model::drawDepth(Shader &shader, const glm::mat4 &objectMatrix) const
+{
+    for (std::size_t i = 0; i < meshes.size(); ++i)
+    {
+        const glm::mat4 meshMatrix = objectMatrix * matricesMeshes[i];
+        const float determinant = glm::determinant(glm::mat3(meshMatrix));
+        glFrontFace(std::isfinite(determinant) && determinant < 0.0f
+            ? GL_CW : GL_CCW);
+        shader.setMat4("model", meshMatrix);
+        meshes[i].drawDepth();
+    }
+    glFrontFace(GL_CCW);
+}
+
 bool Model::intersectRay(
 	const glm::vec3 &rayOrigin,
 	const glm::vec3 &rayDirection,

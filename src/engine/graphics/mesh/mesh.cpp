@@ -376,6 +376,12 @@ void Mesh::draw() const
     vao.Unbind();
 }
 
+// O passe de sombras não precisa de materiais ou texturas: somente os vértices.
+void Mesh::drawDepth() const
+{
+    draw();
+}
+
 // Desenha a malha aplicando texturas e propriedades do material.
 
 void Mesh::draw(

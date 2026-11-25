@@ -102,6 +102,9 @@ public:
 
     void draw() const;
 
+    // Desenha somente a geometria no passe de profundidade das sombras.
+    void drawDepth() const;
+
     // Associa as texturas e desenha a malha; usa diffuseFallback se não houver textura difusa.
     void draw(Shader &shader, const Texture *diffuseFallback = nullptr) const;
 

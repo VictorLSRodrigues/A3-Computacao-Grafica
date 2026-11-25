@@ -8,6 +8,7 @@ in vec3 color;
 in vec2 texCoord;
 in vec3 Normal;
 in vec3 crntPos;
+in vec4 FragPosLightSpace;
 
 // Base TBN para Normal Mapping.
 in vec3 Tangent;
@@ -21,6 +22,12 @@ uniform sampler2D normalMap;
 
 // Cubemap do ambiente.
 uniform samplerCube environmentMap;
+uniform sampler2D shadowMap;
+uniform int shadowsEnabled;
+uniform sampler2D ambientOcclusionMap;
+uniform int ambientOcclusionEnabled;
+uniform vec2 screenSize;
+uniform float ambientOcclusionStrength;
 
 // Controle dos mapas.
 uniform int hasMetallicRoughnessMap;
@@ -56,10 +63,26 @@ vec3 linearToSrgb(vec3 color)
     vec3 high = 1.055 * pow(color, vec3(1.0 / 2.4)) - 0.055;
     return mix(high, low, lessThanEqual(color, vec3(0.0031308)));
 }
+// ACES fitted tone mapper: compresses highlights while preserving midtone contrast.
+vec3 acesFitted(vec3 color)
+{
+    color = max(color, vec3(0.0));
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((color * (a * color + b)) /
+        (color * (c * color + d) + e), 0.0, 1.0);
+}
+
 
 uniform float environmentReflectionStrength;
 uniform float ambientStrength;
 uniform bool uFramebufferSRGB;
+uniform int studioLightingEnabled;
+uniform int environmentDiffuseEnabled;
+uniform int toneMappingEnabled;
 
 // Distribuição de microfacetas GGX.
 float distributionGGX(vec3 N, vec3 H, float roughness)
@@ -171,6 +194,39 @@ vec3 calculateNormal()
     return normalize(TBN * tangentNormal);
 }
 
+// Approximate diffuse irradiance from the existing LDR sky cubemap.
+// A small hemisphere sample set avoids a costly per-pixel convolution pass.
+vec3 calculateEnvironmentDiffuse(vec3 N)
+{
+    if (hasEnvironmentMap == 0)
+        return vec3(0.85);
+
+    vec3 up = abs(N.y) < 0.98 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0);
+    vec3 T = normalize(cross(up, N));
+    vec3 B = normalize(cross(N, T));
+    vec3 irradiance = texture(environmentMap, N).rgb * 0.40;
+    irradiance += texture(environmentMap, normalize(N + T * 0.65)).rgb * 0.15;
+    irradiance += texture(environmentMap, normalize(N - T * 0.65)).rgb * 0.15;
+    irradiance += texture(environmentMap, normalize(N + B * 0.65)).rgb * 0.15;
+    irradiance += texture(environmentMap, normalize(N - B * 0.65)).rgb * 0.15;
+    return irradiance;
+}
+
+// Studio fill/rim lights are deliberately unshadowed and supplement the key light.
+vec3 calculateStudioLighting(vec3 N, vec3 V, vec3 albedo, float metallic, float roughness)
+{
+    if (studioLightingEnabled == 0)
+        return vec3(0.0);
+
+    vec3 fillL = normalize(vec3(0.58, 0.42, 0.70));
+    vec3 rimL = normalize(vec3(-0.48, 0.32, -0.82));
+    vec3 fillRadiance = vec3(0.38, 0.55, 0.78);
+    vec3 rimRadiance = vec3(0.72, 0.36, 0.16);
+    vec3 fill = calculatePBR(N, V, fillL, fillRadiance, albedo, metallic, roughness);
+    vec3 rim = calculatePBR(N, V, rimL, rimRadiance, albedo, metallic, roughness);
+    return fill + rim;
+}
+
 // Reflexão ambiental independente da incidência da luz direta.
 vec3 calculateEnvironmentReflection(
     vec3 N,
@@ -202,6 +258,40 @@ vec3 calculateEnvironmentReflection(
     return environmentColor *
            F *
            environmentReflectionStrength;
+}
+
+float calculateDirectionalShadow(vec3 normal, vec3 lightDirection)
+{
+    if (shadowsEnabled == 0)
+        return 0.0;
+
+    vec3 projected = FragPosLightSpace.xyz / max(FragPosLightSpace.w, 0.00001);
+    projected = projected * 0.5 + 0.5;
+
+    // Fora do volume ortográfico da luz não há sombra projetada por este mapa.
+    if (projected.z > 1.0 || projected.z < 0.0 ||
+        projected.x < 0.0 || projected.x > 1.0 ||
+        projected.y < 0.0 || projected.y > 1.0)
+        return 0.0;
+
+    float currentDepth = projected.z;
+    float bias = max(0.00055 * (1.0 - max(dot(normal, lightDirection), 0.0)), 0.00012);
+    vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
+    float shadow = 0.0;
+
+    // PCF 3x3: reduz serrilhado e suaviza a transição entre regiões iluminadas.
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            float closestDepth = texture(
+                shadowMap,
+                projected.xy + vec2(x, y) * texelSize).r;
+            shadow += (currentDepth - bias > closestDepth) ? 1.0 : 0.0;
+        }
+    }
+
+    return shadow / 9.0;
 }
 
 void main()
@@ -296,6 +386,12 @@ void main()
         roughness
     );
 
+    if (lightType == 1 && shadowsEnabled == 1)
+    {
+        float shadow = calculateDirectionalShadow(N, L);
+        directLighting *= (1.0 - shadow);
+    }
+
     // Fresnel para conservação de energia no ambiente.
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
@@ -307,7 +403,21 @@ void main()
     // Ambiente difuso: metais não recebem difusão artificial.
     vec3 kD = (vec3(1.0) - ambientFresnel) * (1.0 - metallic);
 
-    vec3 ambient = ambientStrength * kD * albedo;
+    float ambientOcclusion = 1.0;
+    if (ambientOcclusionEnabled != 0)
+    {
+        vec2 aoUv = gl_FragCoord.xy / max(screenSize, vec2(1.0));
+        ambientOcclusion = clamp(texture(ambientOcclusionMap, aoUv).r, 0.0, 1.0);
+        ambientOcclusion = clamp(
+            mix(1.0, ambientOcclusion, max(ambientOcclusionStrength, 0.0)),
+            0.0, 1.0);
+    }
+
+    vec3 environmentDiffuse = environmentDiffuseEnabled != 0
+        ? calculateEnvironmentDiffuse(N)
+        : vec3(1.0);
+    vec3 ambient = ambientStrength * kD * albedo *
+                   environmentDiffuse * ambientOcclusion;
 
     // Reflexão ambiental: não depende da iluminação direta.
     vec3 environmentReflection = calculateEnvironmentReflection(
@@ -319,10 +429,21 @@ void main()
     );
 
     // Composição final.
+    // A oclusao ambiente tambem atenua levemente reflexoes indiretas,
+    // sem apagar a resposta especular dos materiais metalicos.
+    environmentReflection *= mix(1.0, ambientOcclusion, 0.25);
+
+    vec3 studioLighting = calculateStudioLighting(
+        N, V, albedo, metallic, roughness);
+
     vec3 finalColor =
         ambient +
         directLighting +
-        environmentReflection;
+        environmentReflection +
+        studioLighting;
+
+    if (toneMappingEnabled != 0)
+        finalColor = acesFitted(finalColor);
 
     vec3 outputColor = uFramebufferSRGB ? finalColor : linearToSrgb(finalColor);
     FragColor = vec4(outputColor, albedoSample.a);

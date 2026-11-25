@@ -30,6 +30,10 @@ public:
     void draw(Shader &shader, const Texture &diffuseFallback,
               const glm::mat4 &objectMatrix = glm::mat4(1.0f));
 
+    // Desenha todas as partes no passe de profundidade das sombras.
+    void drawDepth(Shader &shader,
+                   const glm::mat4 &objectMatrix = glm::mat4(1.0f)) const;
+
     // Detecta a face atingida pelo raio em qualquer malha do modelo.
     bool intersectRay(
         const glm::vec3 &rayOrigin,

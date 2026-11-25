@@ -27,9 +27,9 @@ public:
     glm::vec3 direction() const;
 
 private:
-    static constexpr LightType kDefaultType = LightType::Point;
-    static inline const glm::vec3 kDefaultColor{1.0f, 1.0f, 1.0f};
-    static inline const glm::vec3 kDefaultPosition{0.5f, 0.5f, 0.5f};
-    static inline const glm::vec3 kDefaultTarget{0.0f, 0.0f, 0.0f};
-    static constexpr float kDefaultIntensity = 1.0f;
+    static constexpr LightType kDefaultType = LightType::Directional;
+    static inline const glm::vec3 kDefaultColor{1.0f, 0.94f, 0.84f};
+    static inline const glm::vec3 kDefaultPosition{-3.0f, 6.0f, 1.0f};
+    static inline const glm::vec3 kDefaultTarget{0.0f, -0.3f, -3.0f};
+    static constexpr float kDefaultIntensity = 1.4f;
 };

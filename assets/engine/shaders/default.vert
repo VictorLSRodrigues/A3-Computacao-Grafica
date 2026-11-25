@@ -13,6 +13,7 @@ out vec3 color;
 out vec2 texCoord;
 out vec3 Normal;
 out vec3 crntPos;
+out vec4 FragPosLightSpace;
 
 // Base para o cálculo do Normal Map.
 out vec3 Tangent;
@@ -21,12 +22,14 @@ out vec3 Bitangent;
 // Matrizes.
 uniform mat4 camMatrix;
 uniform mat4 model;
+uniform mat4 lightSpaceMatrix;
 
 void main()
 {
     // Posição no espaço do mundo.
     vec4 worldPosition = model * vec4(aPos, 1.0);
     crntPos = worldPosition.xyz;
+    FragPosLightSpace = lightSpaceMatrix * worldPosition;
 
     // Projeção.
     gl_Position = camMatrix * worldPosition;
