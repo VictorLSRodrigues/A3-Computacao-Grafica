@@ -1,0 +1,378 @@
+{
+    "light": {
+        "color": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "intensity": 1.0,
+        "position": [
+            -0.0005999822169542313,
+            1.1413606405258179,
+            -1.068313717842102
+        ],
+        "target": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "type": 1
+    },
+    "objects": [
+        {
+            "name": "grid_plane",
+            "object_index": 0,
+            "position": [
+                0.0,
+                -1.5,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "visible": true
+        },
+        {
+            "name": "tablet",
+            "object_index": 1,
+            "position": [
+                -1.1951757669448853,
+                -0.29452767968177795,
+                -2.5
+            ],
+            "rotation": [
+                -0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.25,
+                0.25,
+                0.25
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Tablet_Vdd.glb",
+            "visible": true
+        },
+        {
+            "name": "caneta",
+            "object_index": 2,
+            "position": [
+                -0.9262489676475525,
+                -0.9574388265609741,
+                -3.7328505516052246
+            ],
+            "rotation": [
+                -0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.25,
+                0.25,
+                0.25
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Caneta 1.glb",
+            "visible": true
+        },
+        {
+            "name": "mouse",
+            "object_index": 3,
+            "position": [
+                0.17072123289108276,
+                -0.7207691073417664,
+                -2.2707531452178955
+            ],
+            "rotation": [
+                1.3531490594687057e-06,
+                -18.58664321899414,
+                -1.978314685402438e-06
+            ],
+            "scale": [
+                0.04909532517194748,
+                0.20000000298023224,
+                0.055538587272167206
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Mouse.glb",
+            "visible": true
+        },
+        {
+            "name": "mesa",
+            "object_index": 4,
+            "position": [
+                0.0,
+                -0.8500000238418579,
+                -3.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Mesa.glb",
+            "visible": true
+        },
+        {
+            "name": "caderno",
+            "object_index": 5,
+            "position": [
+                -1.7610057592391968,
+                0.20977641642093658,
+                -3.1245174407958984
+            ],
+            "rotation": [
+                -0.029691549018025398,
+                0.524917483329773,
+                -89.995361328125
+            ],
+            "scale": [
+                0.25,
+                0.25,
+                0.25
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Caderno.glb",
+            "visible": true
+        },
+        {
+            "name": "caneca",
+            "object_index": 6,
+            "position": [
+                -0.31184059381484985,
+                -0.5380480289459229,
+                -2.6867501735687256
+            ],
+            "rotation": [
+                3.107852762695984e-06,
+                173.37066650390625,
+                0.03287355601787567
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Caneca Final.glb",
+            "visible": true
+        },
+        {
+            "name": "celular",
+            "object_index": 7,
+            "position": [
+                1.0373417139053345,
+                0.8024446368217468,
+                -2.6807751655578613
+            ],
+            "rotation": [
+                -0.02777460217475891,
+                -180.0,
+                -180.0
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/celular.glb",
+            "visible": true
+        },
+        {
+            "name": "lapis",
+            "object_index": 8,
+            "position": [
+                -0.9647268056869507,
+                -0.4921659827232361,
+                -3.358901023864746
+            ],
+            "rotation": [
+                -0.714232861995697,
+                0.011412904597818851,
+                0.011605712585151196
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Lapis.glb",
+            "visible": true
+        },
+        {
+            "name": "lampada",
+            "object_index": 9,
+            "position": [
+                -1.6906342506408691,
+                0.12534531950950623,
+                -3.2158045768737793
+            ],
+            "rotation": [
+                2.13443399843527e-06,
+                5.2912163734436035,
+                -90.00666046142578
+            ],
+            "scale": [
+                0.25,
+                0.25,
+                0.25
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Lampada.glb",
+            "visible": true
+        },
+        {
+            "name": "foto",
+            "object_index": 10,
+            "position": [
+                -0.7784095406532288,
+                0.15515106916427612,
+                -3.391056776046753
+            ],
+            "rotation": [
+                89.95853424072266,
+                -43.22962951660156,
+                -1.8372976779937744
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Foto.glb",
+            "visible": true
+        },
+        {
+            "name": "porta_caneta",
+            "object_index": 11,
+            "position": [
+                -0.9242110848426819,
+                -0.4629727005958557,
+                -3.6872243881225586
+            ],
+            "rotation": [
+                1.1027910318262002e-07,
+                2.8768570772263403e-17,
+                1.1294714852283505e-07
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Porta caneta.glb",
+            "visible": true
+        },
+        {
+            "name": "suculenta",
+            "object_index": 12,
+            "position": [
+                -1.2576926946640015,
+                0.05600452423095703,
+                -3.532562732696533
+            ],
+            "rotation": [
+                -0.000929168367292732,
+                0.00025803729658946395,
+                0.0005209291120991111
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Suculenta_2.glb",
+            "visible": true
+        },
+        {
+            "name": "monitor",
+            "object_index": 13,
+            "position": [
+                -0.01530552189797163,
+                -0.6905221343040466,
+                -3.696411371231079
+            ],
+            "rotation": [
+                -0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.3490394949913025,
+                0.25,
+                0.25
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Monitor.glb",
+            "visible": true
+        },
+        {
+            "name": "teclado",
+            "object_index": 14,
+            "position": [
+                -0.16212613880634308,
+                -0.4721054434776306,
+                -2.3415017127990723
+            ],
+            "rotation": [
+                0.0,
+                -18.709674835205078,
+                0.0
+            ],
+            "scale": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "source_path": "C:/Users/Usuario/Documents/open gl/A3-Computacao-Grafica/assets/sandbox/models/Teclado.glb",
+            "visible": true
+        },
+        {
+            "name": "pyramid",
+            "object_index": 15,
+            "position": [
+                1.1805603504180908,
+                0.2359996885061264,
+                -3.360797643661499
+            ],
+            "rotation": [
+                -0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355
+            ],
+            "visible": true
+        },
+        {
+            "name": "physics_sphere",
+            "object_index": 16,
+            "position": [
+                3.0,
+                -1.0500999689102173,
+                -4.199999809265137
+            ],
+            "rotation": [
+                -0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.8999999761581421,
+                0.8999999761581421,
+                0.8999999761581421
+            ],
+            "visible": true
+        }
+    ],
+    "version": 3
+}

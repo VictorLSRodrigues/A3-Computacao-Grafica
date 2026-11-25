@@ -181,6 +181,13 @@ bool buildWorld(Scene &scene)
         return false;
 
     if (!addModel(
+            "Caneta 1.glb",
+            "caneta",
+            glm::vec3(-1.55f, 0.15f, -2.5f),
+            0.25f))
+        return false;    
+
+    if (!addModel(
             "Mouse.glb",
             "mouse",
             glm::vec3(0.65f, -0.05f, -2.85f),
@@ -202,7 +209,7 @@ bool buildWorld(Scene &scene)
         return false;
 
     if (!addModel(
-            "Caneca.glb",
+            "Caneca Final.glb",
             "caneca",
             glm::vec3(-0.35f, 0.10f, -2.5f),
             0.20f))
