@@ -1,6 +1,8 @@
 # OpenGL — Ambiente Base Configurado para A3
 
-Projeto-base em C++ utilizando OpenGL, GLFW e GLAD, com configuração de compilação por meio do CMake.
+Engine gráfica desenvolvida em C++17 utilizando OpenGL, GLFW, GLAD e CMake. O projeto possui uma arquitetura modular que permite compartilhar o motor gráfico entre diferentes aplicações.
+
+Atualmente, o projeto reúne três aplicações principais: **Rotor Sandbox**, **Dynamis** e **Rotor Launcher**, além da integração com DOOM.
 
 ## 📋 Pré-requisitos
 
@@ -12,14 +14,38 @@ Antes de compilar, instale:
 - Drivers gráficos compatíveis com OpenGL.
 - **Visual Studio Code** (opcional, recomendado para desenvolvimento).
 
-## 📦 Bibliotecas utilizadas
+## 📦 Bibliotecas e tecnologias utilizadas
 
-- **OpenGL** — renderização gráfica.
-- **GLFW 3.5.1** — criação de janelas e gerenciamento de entrada.
-- **GLAD** — carregamento das funções OpenGL.
-- **CMake** — configuração do processo de compilação.
+| Tecnologia | Utilização |
+|---|---|
+| C++17 | Linguagem principal do projeto |
+| OpenGL | Renderização gráfica |
+| GLFW 3.5.1 | Criação de janelas e gerenciamento de entrada |
+| GLAD | Carregamento das funções OpenGL |
+| GLM | Operações matemáticas e transformações 3D |
+| nlohmann/json | Persistência e leitura de arquivos JSON |
+| STB Image | Carregamento de imagens e texturas |
+| STB TrueType | Recursos de fonte |
+| CMake | Configuração e compilação |
+| DoomGeneric | Integração do DOOM |
 
-O código-fonte do GLFW e os arquivos necessários do GLAD estão incluídos no repositório.
+Os códigos-fonte e arquivos necessários das bibliotecas estão incluídos no repositório.
+
+## 🏗️ Arquitetura do projeto
+
+O projeto utiliza uma arquitetura compartilhada:
+
+**Rotor Engine**
+
+Biblioteca estática responsável pelos sistemas centrais do motor gráfico.
+
+**Aplicações**
+
+- **Rotor Sandbox:** ambiente de edição, visualização e simulação de cenas 3D.
+- **Dynamis:** aplicação independente de experimentação com física.
+- **Rotor Launcher:** inicializador que descobre e executa aplicações compatíveis com o Rotor Engine.
+
+As aplicações reutilizam os módulos disponíveis no motor, evitando duplicação de implementações.
 
 ## 📥 Como baixar o projeto
 
@@ -32,26 +58,29 @@ O código-fonte do GLFW e os arquivos necessários do GLAD estão incluídos no 
 
 Dependendo de como o ZIP for extraído, pode ser criada uma pasta com o nome do projeto dentro da pasta onde você o extraiu.
 
-Por exemplo:
+Exemplo:
 
 ```text
 Open-GL-Ambiente-Base-Configurado-Para-A3-/
-└── Open-GL-Ambiente-Base-Configurado-Para-A3-/
+└── A3-Computacao-Grafica/
     ├── CMakeLists.txt
+    ├── CMakePresets.json
     ├── Libraries/
+    ├── external/
+    ├── assets/
     ├── src/
     └── README.md
 ```
 
-Nesse caso, **entre na pasta interna**, pois é nela que está o `CMakeLists.txt`.
+Nesse caso, entre na pasta interna, pois é nela que está o `CMakeLists.txt`.
 
-Os comandos de compilação devem ser executados na raiz real do projeto, onde está esse arquivo. Se você executar os comandos na pasta externa, o CMake poderá informar que não encontrou o projeto.
+Os comandos de compilação devem ser executados na raiz real do projeto.
 
 ## ⚙️ Como configurar o ambiente no Windows
 
 ### 1. Instalar o MSYS2
 
-Baixe e instale o MSYS2 pelo site oficial:
+Baixe e instale o MSYS2:
 
 https://www.msys2.org/
 
@@ -65,9 +94,9 @@ No terminal MSYS2 UCRT64, execute:
 pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-cmake
 ```
 
-Confirme a instalação quando solicitado. Se aparecer uma seleção de pacotes do grupo `toolchain`, pressione Enter para aceitar a seleção padrão e confirme quando solicitado.
+Confirme a instalação quando solicitado.
 
-Esse comando instala o compilador GCC/G++, o CMake e ferramentas de desenvolvimento necessárias.
+Esse comando instala o compilador GCC/G++, o CMake e as ferramentas de desenvolvimento necessárias.
 
 ### 3. Configurar a variável PATH
 
@@ -76,8 +105,6 @@ Adicione o seguinte diretório à variável de ambiente `Path` do Windows:
 ```text
 C:\msys64\ucrt64\bin
 ```
-
-Se o CMake tiver sido instalado separadamente, certifique-se também de que seu diretório esteja no `Path`.
 
 Depois de alterar a variável, abra um novo terminal PowerShell.
 
@@ -90,13 +117,15 @@ g++ --version
 cmake --version
 ```
 
-Se os comandos exibirem as versões instaladas, as ferramentas estão disponíveis no terminal.
+Se os comandos exibirem as versões instaladas, as ferramentas estão disponíveis.
 
-No VS Code, abra a pasta do projeto e selecione o preset **MinGW (MSYS2 UCRT64)** quando o CMake Tools solicitar um preset de configuração.
+No VS Code, abra a pasta do projeto e selecione o preset:
+
+**MinGW (MSYS2 UCRT64)**
 
 ## 🔨 Como compilar
 
-Abra o PowerShell **na raiz do projeto**, na mesma pasta onde está o arquivo `CMakeLists.txt`.
+Abra o PowerShell na raiz do projeto, na mesma pasta onde está o arquivo `CMakeLists.txt`.
 
 ### 1. Configurar o projeto
 
@@ -104,195 +133,415 @@ Abra o PowerShell **na raiz do projeto**, na mesma pasta onde está o arquivo `C
 cmake --preset mingw
 ```
 
-O preset seleciona o gerador **MinGW Makefiles** e configura os arquivos de compilação na pasta `build`.
+O preset utiliza o gerador **MinGW Makefiles** e configura os arquivos de compilação na pasta `build`.
 
 ### 2. Compilar
 
 ```powershell
-cmake --build --preset mingw
+cmake --build --preset mingw --parallel
 ```
 
-O CMake configurará e compilará o GLFW e os dois executáveis: `OpenGLProjeto` (sandbox) e `DoomGeneric` (DOOM).
+O processo compila o motor compartilhado, suas dependências e as aplicações.
+
+### Principais alvos de compilação
+
+| Alvo | Descrição |
+|---|---|
+| `rotor_engine` | Biblioteca central do Rotor Engine |
+| `OpenGLProjeto` | Aplicação Rotor Sandbox |
+| `Dynamis` | Aplicação de experimentação física |
+| `RotorLauncher` | Inicializador de aplicações |
+| `DoomCore` | Núcleo do DoomGeneric |
+| `DoomGeneric` | Executável independente do DoomGeneric |
+| `physics_world_tests` | Testes automatizados da física |
 
 ## ▶️ Como executar
 
-Após uma compilação bem-sucedida, execute:
+Após uma compilação bem-sucedida, os executáveis ficam na pasta `build`.
+
+### Rotor Sandbox
 
 ```powershell
 .\build\OpenGLProjeto.exe
 ```
 
-Para executar o Launcher, utilize:
+Ambiente principal para visualização, edição e simulação de cenas 3D.
+
+### Dynamis
+
+```powershell
+.\build\Dynamis.exe
+```
+
+Aplicação independente para experimentos de física utilizando o Rotor Engine.
+
+### Rotor Launcher
 
 ```powershell
 .\build\RotorLauncher.exe
 ```
 
-O CMake configurará e compilará o GLFW e os executáveis `OpenGLProjeto` (sandbox com DOOM integrado), `RotorLauncher` e `DoomGeneric` (port standalone).
+Inicializador responsável por localizar e executar aplicações compatíveis com o Rotor Engine.
 
-### 🎮 Executando o DOOM
+### DoomGeneric
 
-O projeto também possui integração com o **DOOM**, permitindo iniciar o jogo diretamente pelo menu da aplicação.
+```powershell
+.\build\DoomGeneric.exe
+```
 
-Para utilizar essa funcionalidade, é necessário possuir o arquivo `doom1.wad` (IWAD) que está diponivel na pasta doom_licença.
+Executável independente do port DoomGeneric.
 
-**1. Configurar o arquivo WAD**
+## 🚀 Rotor Launcher
 
-Coloque o arquivo `doom1.wad` na pasta `build` do projeto.
+O Rotor Launcher permite descobrir e iniciar aplicações que utilizam o Rotor Engine.
+
+A descoberta é realizada por meio de arquivos de manifesto com o sufixo:
+
+```text
+.rotor-app.json
+```
+
+Cada manifesto contém informações como:
+
+- Versão do manifesto.
+- Identificador único da aplicação.
+- Nome da aplicação.
+- Descrição.
+- Executável correspondente.
+- Versão compatível da API do Rotor Engine.
+
+O CMake gera automaticamente os manifestos das aplicações incluídas no projeto:
+
+```text
+sandbox.rotor-app.json
+dynamis.rotor-app.json
+```
+
+O Launcher procura manifestos válidos no diretório do próprio executável e apresenta as aplicações encontradas.
+
+Essa estrutura permite adicionar novas aplicações compatíveis sem precisar registrar manualmente cada uma no código do Launcher.
+
+## 🎮 Rotor Sandbox
+
+O Rotor Sandbox é o ambiente principal de experimentação gráfica do projeto.
+
+Permite carregar modelos 3D, editar objetos, manipular geometrias, configurar iluminação e executar simulações físicas.
+
+### Editor 3D
+
+O Editor possui ferramentas para manipulação de objetos e faces.
+
+Principais ferramentas:
+
+- **Move:** movimentação de objetos nos eixos 3D.
+- **Rotate:** rotação de objetos.
+- **Scale:** alteração de escala.
+- **Extrude:** extrusão de faces da geometria.
+
+O Editor também possui seleção de objetos, seleção de faces, gizmos de transformação e barra de ferramentas.
+
+### Histórico de alterações
+
+O Editor possui um sistema de desfazer utilizando:
+
+```text
+Ctrl + Z
+```
+
+O histórico contempla operações de transformação, extrusão e alterações da iluminação registradas pelo Editor.
+
+### Gerenciamento de cenas
+
+O Sandbox possui recursos para salvar, carregar e restaurar cenas.
+
+As cenas são armazenadas em arquivos JSON.
+
+O sistema registra:
+
+- Nome dos objetos.
+- Índice da instância.
+- Posição.
+- Rotação.
+- Escala.
+- Visibilidade.
+- Caminho de origem dos modelos.
+- Geometrias extrudadas.
+- Propriedades da fonte de luz.
+
+O sistema também salva automaticamente o estado da cena ao encerrar a aplicação e tenta recuperá-lo na próxima inicialização.
+
+O menu permite salvar cenas com nomes próprios e selecionar arquivos JSON existentes.
+
+Diretório de cenas:
+
+```text
+src/applications/sandbox/data/
+```
+
+### Renderização e iluminação
+
+O Renderer é responsável por desenhar a cena e gerenciar os recursos gráficos.
+
+Recursos disponíveis:
+
+- Shaders de renderização.
+- Materiais e texturas.
+- Iluminação.
+- Reflexões ambientais.
+- Skybox.
+- Marcador visual da fonte de luz.
+- Renderização de modelos e malhas.
+- Efeitos de chuva.
+
+### Configurações do Sandbox
+
+O menu de configurações possui categorias:
+
+| Categoria | Recursos |
+|---|---|
+| Câmera | Campo de visão, velocidade de caminhada, velocidade com Shift e sensibilidade |
+| Ambiente | Skybox, chuva e velocidade da física |
+| Iluminação | Luz ambiente difusa e reflexão ambiental |
+| Janela | Janela normal, maximizada, sem bordas e tela cheia |
+| DOOM | Inicialização do jogo integrado |
+
+### Modelos 3D
+
+Os modelos utilizados pelo Sandbox estão organizados em:
+
+```text
+assets/sandbox/models/
+```
+
+O projeto trabalha com modelos no formato GLB, incluindo objetos como mesa, tablet, mouse, teclado, monitor, celular, caderno, caneca, lápis, lâmpada e outros elementos de composição da cena.
+
+As texturas utilizadas estão em:
+
+```text
+assets/sandbox/textures/
+```
+
+### Atalhos do Sandbox
+
+| Tecla | Ação |
+|---|---|
+| `ESC` | Abrir ou fechar o menu |
+| `TAB` | Alternar entre navegação e edição |
+| `CTRL + Z` | Desfazer a última alteração do Editor |
+| `1` a `7` | Visualizar objetos específicos da cena |
+| `F8` | Visualizar a foto |
+| `F9` | Visualizar o porta-caneta |
+| `F10` | Visualizar a suculenta |
+| `0` | Exibir todos os objetos |
+| `F4` | Ativar ou desativar o profiling da física |
+
+Durante a execução do DOOM, `F10` retorna ao Sandbox.
+
+## ⚙️ Sistema de Física — Rotor Engine
+
+O motor possui um sistema próprio de física desenvolvido em C++.
+
+A implementação é organizada em módulos de corpos rígidos, colisores, geometria de colisão e resolução de contatos.
+
+### Recursos físicos
+
+- Gravidade.
+- Corpos dinâmicos.
+- Esferas e caixas orientadas (OBB).
+- Colisores baseados em malhas trianguladas.
+- Colisores estáticos.
+- Plano de chão.
+- Superfície de bacia.
+- Detecção e resolução de colisões.
+- Restituição.
+- Atrito estático e dinâmico.
+- Aplicação de forças e torques.
+- Forças contínuas.
+- Impulsos lineares e angulares.
+- Amortecimento linear e angular.
+- Escala de tempo da simulação.
+- Estabilização inicial de sobreposições.
+- Captura e restauração da pose inicial.
+
+O sistema permite integrar os corpos físicos às transformações dos objetos da cena.
+
+### Profiling da física
+
+O profiling pode ser ativado ou desativado pelo atalho:
+
+```text
+F4
+```
+
+Quando ativado, gera informações de desempenho no console e no arquivo:
+
+```text
+physics_profile.log
+```
+
+## 🧪 Dynamis
+
+O Dynamis é uma aplicação independente desenvolvida para demonstrar e experimentar os recursos físicos do Rotor Engine.
+
+O cenário atual possui uma bacia procedural e duas esferas com massas diferentes.
+
+### Experimento de rolamento
+
+A aplicação demonstra:
+
+- Movimento de corpos esféricos.
+- Gravidade.
+- Atrito com a superfície.
+- Rolamento.
+- Colisão entre corpos.
+- Transferência de movimento.
+- Influência da massa no comportamento da simulação.
+
+As esferas utilizam padrões visuais diferentes para facilitar a observação de sua rotação.
+
+### Controles
+
+| Tecla | Ação |
+|---|---|
+| `TAB` | Alternar entre simulação e edição |
+| `W`, `A`, `S`, `D` | Aplicar força ao corpo dinâmico selecionado |
+| `R` | Reiniciar o experimento |
+
+Quando um corpo dinâmico está selecionado durante a simulação, a câmera pode acompanhar e orbitar esse objeto.
+
+No modo de edição, a física fica pausada e o Editor disponibiliza suas ferramentas de transformação.
+
+## 🎮 Integração com DOOM
+
+O projeto possui integração com o DoomGeneric, permitindo iniciar DOOM diretamente dentro da aplicação Rotor Sandbox.
+
+Para utilizar essa funcionalidade, é necessário disponibilizar um arquivo `doom1.wad` compatível.
+
+O executável procura esse arquivo no mesmo diretório de `OpenGLProjeto.exe`.
+
+### 1. Configurar o arquivo WAD
+
+Após compilar, copie o arquivo para a pasta `build`:
 
 ```powershell
 Copy-Item ".\external\doom_licença\doom1.wad" ".\build\doom1.wad"
 ```
-**2. Execute o projeto novamente**
 
-Após copiar o arquivo, execute:
+Utilize somente arquivos de jogo que você tenha autorização para utilizar.
+
+### 2. Executar o Sandbox
 
 ```powershell
 .\build\OpenGLProjeto.exe
 ```
 
-**3. Inicie o jogo**
+### 3. Iniciar o jogo
 
-Execute `OpenGLProjeto.exe`, pressione Esc e acesse **Configurações → DOOM → Iniciar DOOM**. O jogo roda dentro da mesma janela da engine. Durante o jogo, pressione **F10** para voltar ao Sandbox sem fechar a aplicação.
+No Sandbox:
 
-## 🛠️ Funcionalidades da Engine
+1. Pressione `ESC`.
+2. Entre em **Configurações**.
+3. Acesse a categoria **DOOM**.
+4. Selecione **Iniciar DOOM**.
 
-### ↩️ Ctrl + Z — Sistema de desfazer
+O jogo é executado dentro da mesma janela da aplicação.
 
-A engine possui um sistema de histórico de ações que permite desfazer alterações realizadas na cena utilizando **Ctrl + Z**.
+Para retornar ao Sandbox, pressione:
 
-É possível restaurar o estado anterior de objetos e da luz, incluindo operações de:
+```text
+F10
+```
 
-- Movimentação.
-- Rotação.
-- Escalonamento.
+## 🧪 Testes automatizados
 
-O sistema permite desfazer alterações sem precisar selecionar novamente o elemento modificado.
+O projeto possui testes automatizados para o sistema de física.
 
-## 📁 Estrutura do projeto
+O arquivo de testes está localizado em:
+
+```text
+tests/physics_world_tests.cpp
+```
+
+Para executar os testes após a compilação:
+
+```powershell
+ctest --test-dir build --output-on-failure
+```
+
+O CTest apresenta o resultado de cada teste e informa eventuais falhas.
+
+## 📁 Estrutura atual do projeto
+
+A estrutura abaixo representa a organização modular encontrada no projeto.
 
 ```text
 .
 ├── .vscode/
-│   ├── c_cpp_properties.json
-│   ├── settings.json
-│   └── tasks.json
 │
 ├── assets/
-│   ├── fonts/
-│   │   └── DejaVuSans.ttf
+│   ├── editor/
+│   │   └── icons/
 │   │
-│   ├── icons/
-│   │   ├── move.png
-│   │   ├── rotate-3d.png
-│   │   ├── scaling.png
-│   │   └── License-Lucide.txt
+│   ├── engine/
+│   │   ├── fonts/
+│   │   ├── shaders/
+│   │   ├── skybox/
+│   │   └── textures/
 │   │
-│   ├── models/
-│   │   ├── macaco.glb
-│   │   └── multi.glb
-│   │
-│   ├── shaders/
-│   │   ├── default.vert
-│   │   ├── default.frag
-│   │   ├── light.vert
-│   │   ├── light.frag
-│   │   ├── sky.vert
-│   │   ├── sky.frag
-│   │   ├── text.vert
-│   │   ├── text.frag
-│   │   ├── ui.vert
-│   │   ├── ui.frag
-│   │   └── icon.frag
-│   │
-│   ├── skybox/
-│   │   ├── back.png
-│   │   ├── bottom.png
-│   │   ├── front.png
-│   │   ├── left.png
-│   │   ├── right.png
-│   │   └── top.png
-│   │
-│   └── textures/
-│       ├── default.png
-│       ├── terra.png
-│       ├── terraSpecular.png
-│       └── teste_uv.png
+│   └── sandbox/
+│       ├── models/
+│       └── textures/
 │
 ├── Libraries/
 │   ├── glad/
-│   │   ├── include/
-│   │   └── src/
-│   │
 │   ├── glfw-3.5.1/
-│   │
-│   ├── include/
-│   │   ├── glad/
-│   │   ├── KHR/
-│   │   ├── glm/
-│   │   ├── json/
-│   │   ├── stb_image.h
-│   │   └── stb_truetype.h
-│   │
-│   └── lib/
+│   └── include/
+│       ├── glm/
+│       ├── glad/
+│       ├── KHR/
+│       ├── json/
+│       ├── stb_image.h
+│       └── stb_truetype.h
+│
+├── external/
+│   ├── doom_licença/
+│   ├── doomgeneric/
+│   │   └── doomgeneric/
+│   └── nlohmann/
 │
 ├── src/
-│   ├── core/
-│   │   ├── application.cpp
-│   │   ├── application.h
-│   │   ├── renderer.cpp
-│   │   └── renderer.h
+│   ├── applications/
+│   │   ├── dynamis/
+│   │   ├── launcher/
+│   │   └── sandbox/
+│   │       ├── data/
+│   │       ├── doom/
+│   │       └── ui/
 │   │
-│   ├── graphics/
-│   │   ├── buffers/
-│   │   │   ├── VAO.cpp
-│   │   │   ├── VAO.h
-│   │   │   ├── VBO.cpp
-│   │   │   ├── VBO.h
-│   │   │   ├── EBO.cpp
-│   │   │   └── EBO.h
-│   │   │
-│   │   ├── cubemap.cpp
-│   │   ├── cubemap.h
-│   │   ├── mesh.cpp
-│   │   ├── mesh.h
-│   │   ├── model.cpp
-│   │   ├── model.h
-│   │   ├── shader.cpp
-│   │   ├── shader.h
-│   │   ├── shapes.cpp
-│   │   ├── shapes.h
-│   │   ├── skybox.cpp
-│   │   ├── skybox.h
-│   │   ├── texture.cpp
-│   │   ├── texture.h
-│   │   └── vertex.h
-│   │
-│   ├── scene/
-│   │   ├── light.cpp
-│   │   ├── light.h
-│   │   ├── scene.cpp
-│   │   ├── scene.h
-│   │   ├── transform.h
-│   │   ├── world.cpp
-│   │   └── world.h
-│   │
-│   ├── ui/
-│   │   ├── HUD.cpp
-│   │   ├── HUD.h
-│   │   ├── UI.cpp
-│   │   ├── UI.h
-│   │   ├── font.cpp
-│   │   ├── font.h
-│   │   ├── menu.cpp
-│   │   └── menu.h
-│   │
-│   ├── camera.cpp
-│   ├── camera.h
-│   ├── main.cpp
-│   ├── settings.h
-│   ├── window.cpp
-│   └── window.h
+│   └── engine/
+│       ├── application/
+│       ├── editor/
+│       ├── graphics/
+│       │   ├── buffers/
+│       │   ├── camera/
+│       │   ├── environment/
+│       │   ├── geometry/
+│       │   ├── mesh/
+│       │   ├── model/
+│       │   └── resources/
+│       │
+│       ├── physics/
+│       │   ├── collision/
+│       │   └── solver/
+│       │
+│       ├── platform/
+│       ├── renderer/
+│       ├── scene/
+│       │   └── scenarios/
+│       └── ui/
+│
+├── tests/
+│   └── physics_world_tests.cpp
 │
 ├── CMakeLists.txt
 ├── CMakePresets.json
@@ -303,10 +552,25 @@ O sistema permite desfazer alterações sem precisar selecionar novamente o elem
 
 ## 🛠️ Desenvolvimento
 
-O projeto utiliza C++17 e CMake. As configurações em `.vscode/` auxiliam o IntelliSense e a integração com o ambiente de desenvolvimento.
+O projeto utiliza C++17 e CMake.
 
-As pastas de compilação são geradas localmente e não precisam ser versionadas.
+O motor gráfico está separado das aplicações para facilitar a reutilização de funcionalidades e a criação de novos projetos compatíveis com o Rotor Engine.
+
+As principais responsabilidades estão organizadas em módulos:
+
+- **Application:** ciclo de vida das aplicações.
+- **Platform:** gerenciamento de janelas e entradas.
+- **Graphics:** geometria, modelos, malhas, buffers, câmera e recursos gráficos.
+- **Renderer:** renderização da cena e dos efeitos visuais.
+- **Physics:** corpos rígidos, colisões e resolução de contatos.
+- **Scene:** objetos, transformações, iluminação e persistência.
+- **Editor:** seleção, manipulação e edição de objetos.
+- **UI:** interface e componentes visuais.
+
+As configurações de desenvolvimento do VS Code ficam em `.vscode/`.
+
+Os arquivos gerados durante a compilação ficam na pasta `build/` e não precisam ser versionados.
 
 ## 📄 Licença
 
-Consulte o arquivo `LICENSE` incluído neste repositório para conhecer os termos de uso e distribuição.
+Consulte os arquivos `LICENSE` e os documentos de licença das dependências incluídas no projeto para conhecer os respectivos termos de uso e distribuição.
