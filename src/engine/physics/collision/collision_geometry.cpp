@@ -548,31 +548,15 @@ glm::vec3 supportPoint(
         const auto& vertices = mesh.vertices;
         const bool collectStats = scratch && scratch->collectStats;
         const std::uint32_t vertexGeneration =
-            scratch && mesh.supportVertexIndices.empty() &&
-                !mesh.bvhNodes.empty()
-            ? beginVertexStampGeneration(*scratch, vertices.size())
-            : 0u;
+            scratch && !mesh.bvhNodes.empty()
+                ? beginVertexStampGeneration(*scratch, vertices.size())
+                : 0u;
         if (collectStats)
             ++scratch->counters.supportQueries;
         std::size_t bestIndex = 0;
         float bestProjection = -std::numeric_limits<float>::max();
 
-        if (!mesh.supportVertexIndices.empty())
-        {
-            for (const unsigned int vertexIndex : mesh.supportVertexIndices)
-            {
-                if (collectStats)
-                    ++scratch->counters.supportVerticesTested;
-                const float projection = glm::dot(
-                    vertices[vertexIndex], localDirection);
-                if (projection > bestProjection)
-                {
-                    bestProjection = projection;
-                    bestIndex = vertexIndex;
-                }
-            }
-        }
-        else if (!mesh.bvhNodes.empty())
+        if (!mesh.bvhNodes.empty())
         {
             // Busca de suporte branch-and-bound: bounds de nós que não podem
             // superar o melhor vértice conhecido são descartados sem percorrer

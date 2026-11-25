@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <limits>
@@ -38,6 +39,8 @@ namespace
     // Mesa.glb tem um tampo com aproximadamente 0,21 unidade no eixo local Y.
     // O colisor representa apenas essa placa; pernas continuam sendo visuais.
     constexpr float SANDBOX_TABLETOP_COLLIDER_THICKNESS = 0.21f;
+    // Limite de triângulos para manter malhas visuais densas fora do caminho físico.
+    constexpr std::size_t SANDBOX_MAX_DETAILED_COLLIDER_TRIANGLES = 1800;
 
     bool appendGeometryTriangles(
         const Geometry& geometry,
@@ -108,11 +111,70 @@ namespace
         return triangleIndices.size() >= 3;
     }
 
+    bool includeGeometryTriangleCount(
+        const Geometry& geometry, std::size_t& totalTriangles)
+    {
+        if (geometry.getTopology() != PrimitiveTopology::Triangles ||
+            geometry.getStructuredVertices().empty())
+        {
+            return false;
+        }
+
+        const auto& indices = geometry.getIndexData();
+        if (!indices.empty())
+        {
+            if (indices.size() % 3 != 0)
+                return false;
+            totalTriangles += indices.size() / 3;
+            return totalTriangles <= SANDBOX_MAX_DETAILED_COLLIDER_TRIANGLES;
+        }
+
+        for (const Face& face : geometry.getFaces())
+        {
+            if (face.vertexIndices.size() < 3)
+                continue;
+            totalTriangles += face.vertexIndices.size() - 2;
+            if (totalTriangles > SANDBOX_MAX_DETAILED_COLLIDER_TRIANGLES)
+                return false;
+        }
+        return true;
+    }
+
     std::shared_ptr<const rotor::physics::TriangleMeshColliderData>
     buildObjectTriangleMeshCollider(
         const Scene::Object& object,
         glm::vec3& localCenterOfMass)
     {
+        // Conta antes de copiar vértices/índices. Um modelo denso vai direto
+        // para o fallback OBB, sem alocar buffers temporários de dezenas de
+        // milhares de triângulos que seriam descartados logo em seguida.
+        std::size_t sourceTriangleCount = 0;
+        if (object.model)
+        {
+            for (std::size_t meshIndex = 0;
+                 meshIndex < object.model->getMeshCount(); ++meshIndex)
+            {
+                const Geometry* geometry = object.model->getMeshGeometry(meshIndex);
+                if (!geometry ||
+                    !includeGeometryTriangleCount(*geometry, sourceTriangleCount))
+                {
+                    return nullptr;
+                }
+            }
+        }
+        else if (object.mesh)
+        {
+            if (!includeGeometryTriangleCount(
+                    object.mesh->getGeometry(), sourceTriangleCount))
+            {
+                return nullptr;
+            }
+        }
+        else
+        {
+            return nullptr;
+        }
+
         std::vector<glm::vec3> positions;
         std::vector<unsigned int> triangleIndices;
 
@@ -141,6 +203,12 @@ namespace
             }
         }
         else
+        {
+            return nullptr;
+        }
+
+        if (triangleIndices.size() / 3 >
+            SANDBOX_MAX_DETAILED_COLLIDER_TRIANGLES)
         {
             return nullptr;
         }
@@ -330,12 +398,18 @@ bool SandboxApplication::registerScenePhysics(bool stabilizeOverlaps)
         }
         else
         {
+            // A geometria visual não precisa ser copiada integralmente para a
+            // física. Mantemos triângulos em modelos pequenos, onde os detalhes
+            // ainda são baratos; modelos densos recebem uma OBB pela bounding box.
+            // Assim, o Caderno/Suculenta/Celular não carregam dezenas de milhares
+            // de triângulos no caminho quente de colisão.
             glm::vec3 localCenterOfMass = boundsCenter;
-            std::shared_ptr<const rotor::physics::TriangleMeshColliderData> meshCollider =
-                buildObjectTriangleMeshCollider(object, localCenterOfMass);
+            std::shared_ptr<const rotor::physics::TriangleMeshColliderData>
+                meshCollider = buildObjectTriangleMeshCollider(
+                    object, localCenterOfMass);
 
-            // A posição física acompanha o centro de massa aproximado, que é
-            // ponderado pela área dos triângulos. A origem visual continua intacta.
+            // O colisor OBB usa o centro da AABB local; a malha detalhada mantém
+            // o centro de massa ponderado pela área de sua superfície.
             binding.localCenterOfMass = localCenterOfMass;
             binding.bodyTransform = object.transform;
             const glm::vec3 worldCenterOfMass = glm::vec3(
@@ -361,10 +435,6 @@ bool SandboxApplication::registerScenePhysics(bool stabilizeOverlaps)
             }
             else
             {
-                // Fallback explícito para geometrias não trianguladas ou Raw.
-                binding.localCenterOfMass = boundsCenter;
-                binding.bodyTransform = object.transform;
-                binding.bodyTransform.move(object.visualCenter());
                 bodyRegistered = physics.addBoxBody(
                     binding.bodyTransform,
                     halfExtents,
@@ -373,8 +443,8 @@ bool SandboxApplication::registerScenePhysics(bool stabilizeOverlaps)
                     mass,
                     0.78f,
                     0.58f);
-                std::cerr << "[SANDBOX] " << object.name
-                          << ": geometria sem triângulos estruturados; usando OBB."
+                std::cout << "[SANDBOX] " << object.name
+                          << ": usando colisor OBB simplificado (malha densa ou indisponível)."
                           << std::endl;
             }
         }

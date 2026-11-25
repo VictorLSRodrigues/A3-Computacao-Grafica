@@ -1262,14 +1262,68 @@ int main()
         bruteForceSupport = std::max(bruteForceSupport, vertex.y);
     passed &= expect(
         std::fabs(exactSupportPoint.y - bruteForceSupport) < 1e-6f &&
-            supportScratch.counters.supportBvhNodesVisited == 0 &&
+            supportScratch.counters.supportBvhNodesVisited > 0 &&
             supportScratch.counters.supportVerticesTested <=
                 meshBoxData->vertices.size() &&
-            supportScratch.counters.supportVerticesTested ==
-                meshBoxData->supportVertexIndices.size() &&
             supportScratch.counters.supportVerticesTested <
                 meshBoxData->triangleIndices.size(),
-        "mesh support search preserves the exact extreme while testing shared vertices once");
+        "mesh support search uses the BVH and preserves the exact extreme");
+
+    // Malha densa: a consulta de suporte deve podar a maior parte da BVH,
+    // em vez de testar linearmente todos os vértices únicos.
+    std::vector<glm::vec3> denseSupportVertices;
+    std::vector<unsigned int> denseSupportIndices;
+    constexpr int supportGridResolution = 100;
+    denseSupportVertices.reserve(
+        static_cast<std::size_t>(supportGridResolution + 1) *
+        static_cast<std::size_t>(supportGridResolution + 1));
+    for (int z = 0; z <= supportGridResolution; ++z)
+    {
+        for (int x = 0; x <= supportGridResolution; ++x)
+        {
+            denseSupportVertices.emplace_back(
+                static_cast<float>(x), 0.0f, static_cast<float>(z));
+        }
+    }
+    for (int z = 0; z < supportGridResolution; ++z)
+    {
+        for (int x = 0; x < supportGridResolution; ++x)
+        {
+            const unsigned int a = static_cast<unsigned int>(
+                z * (supportGridResolution + 1) + x);
+            const unsigned int b = a + 1;
+            const unsigned int c = a + supportGridResolution + 1;
+            const unsigned int d = c + 1;
+            denseSupportIndices.insert(
+                denseSupportIndices.end(), {a, c, b, b, c, d});
+        }
+    }
+    rotor::physics::TriangleMeshColliderData denseSupportMesh;
+    passed &= expect(
+        rotor::physics::buildTriangleMeshColliderData(
+            denseSupportVertices, denseSupportIndices, denseSupportMesh),
+        "dense support mesh builds with a BVH");
+    Transform denseSupportTransform;
+    rotor::physics::RigidBody denseSupportBody;
+    denseSupportBody.transform = &denseSupportTransform;
+    denseSupportBody.collider.shape =
+        rotor::physics::ColliderShape::TriangleMesh;
+    denseSupportBody.collider.triangleMesh =
+        std::make_shared<rotor::physics::TriangleMeshColliderData>(
+            std::move(denseSupportMesh));
+    rotor::physics::collision::MeshCollisionScratch denseSupportScratch;
+    denseSupportScratch.collectStats = true;
+    const glm::vec3 diagonalSupport = glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f));
+    const glm::vec3 denseSupportPoint =
+        rotor::physics::collision::supportPoint(
+            denseSupportBody, diagonalSupport, &denseSupportScratch);
+    passed &= expect(
+        denseSupportPoint.x > 49.9f && denseSupportPoint.z > 49.9f &&
+            denseSupportScratch.counters.supportBvhNodesVisited <
+                denseSupportBody.collider.triangleMesh->bvhNodes.size() / 2 &&
+            denseSupportScratch.counters.supportVerticesTested <
+                denseSupportBody.collider.triangleMesh->vertices.size() / 8,
+        "dense mesh support query prunes most BVH nodes and vertices");
 
     // Uma malha com triângulos espacialmente separados deve consultar somente
     // os poucos nós próximos da caixa, em vez de percorrer toda a geometria.

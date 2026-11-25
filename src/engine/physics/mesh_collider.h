@@ -30,7 +30,6 @@ struct TriangleMeshColliderData
     // de vértices). A hierarquia é construída uma vez e reutilizada nas consultas.
     std::vector<TriangleMeshBvhNode> bvhNodes;
     std::vector<std::uint32_t> triangleOrder;
-    std::vector<unsigned int> supportVertexIndices;
 
     // Centro de massa aproximado no espaço local original da origem do modelo.
     // Para malhas abertas, é o centróide ponderado pela área superficial.

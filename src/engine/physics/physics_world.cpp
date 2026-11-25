@@ -33,6 +33,42 @@ bool isFiniteVector(const glm::vec3& value)
     return std::isfinite(value.x) && std::isfinite(value.y) &&
         std::isfinite(value.z);
 }
+
+float projectedBodyHalfExtent(
+    const RigidBody& body, const glm::vec3& normalizedDirection)
+{
+    if (body.collider.shape == ColliderShape::Sphere)
+        return std::max(0.0f, body.collider.sphereRadius);
+    if (!body.transform)
+        return 0.0f;
+
+    const glm::quat orientation = body.transform->orientation();
+    const glm::vec3 half = glm::max(
+        body.collider.boxHalfExtents, glm::vec3(0.0f));
+    const glm::vec3 axisX = orientation * glm::vec3(1.0f, 0.0f, 0.0f);
+    const glm::vec3 axisY = orientation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 axisZ = orientation * glm::vec3(0.0f, 0.0f, 1.0f);
+    return half.x * std::fabs(glm::dot(axisX, normalizedDirection)) +
+        half.y * std::fabs(glm::dot(axisY, normalizedDirection)) +
+        half.z * std::fabs(glm::dot(axisZ, normalizedDirection));
+}
+
+float projectedStaticBoxHalfExtent(
+    const StaticBoxCollider& collider, const glm::vec3& normalizedDirection)
+{
+    if (!collider.transform)
+        return 0.0f;
+
+    const glm::vec3 half =
+        glm::abs(collider.transform->scale()) * collider.localHalfExtents;
+    const glm::quat orientation = collider.transform->orientation();
+    const glm::vec3 axisX = orientation * glm::vec3(1.0f, 0.0f, 0.0f);
+    const glm::vec3 axisY = orientation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 axisZ = orientation * glm::vec3(0.0f, 0.0f, 1.0f);
+    return half.x * std::fabs(glm::dot(axisX, normalizedDirection)) +
+        half.y * std::fabs(glm::dot(axisY, normalizedDirection)) +
+        half.z * std::fabs(glm::dot(axisZ, normalizedDirection));
+}
 }
 
 PhysicsWorld::AxisAlignedBounds PhysicsWorld::makeBodyBounds(const RigidBody& body)
@@ -765,8 +801,12 @@ void PhysicsWorld::step(float dt)
         motion.linearDisplacement = body.velocity * dt +
             0.5f * acceleration * dt * dt;
 
-        const glm::vec3 angularAcceleration = body.inverseInertiaTensorWorld() *
-            (body.torqueAccumulator + body.continuousTorque);
+        const glm::vec3 totalTorque =
+            body.torqueAccumulator + body.continuousTorque;
+        const glm::vec3 angularAcceleration =
+            glm::dot(totalTorque, totalTorque) > 0.0f
+                ? body.inverseInertiaTensorWorld() * totalTorque
+                : glm::vec3(0.0f);
         const float angularTravel = body.collider.shape == BodyShape::Sphere
             ? 0.0f
             : glm::length(body.collider.boxHalfExtents) *
@@ -813,12 +853,20 @@ void PhysicsWorld::step(float dt)
                 !overlaps(a.sweptBounds, b.sweptBounds))
                 continue;
 
-            const float bFeature = b.minimumHalfExtent > 1e-6f
-                ? b.minimumHalfExtent : a.minimumHalfExtent;
-            const float featureSize = std::min(a.minimumHalfExtent, bFeature);
-            const float relativeTravel = glm::length(
-                a.linearDisplacement - b.linearDisplacement) +
-                a.angularTravel + b.angularTravel;
+            const glm::vec3 relativeDisplacement =
+                a.linearDisplacement - b.linearDisplacement;
+            const float relativeLinearTravel = glm::length(relativeDisplacement);
+            const float angularTravel = a.angularTravel + b.angularTravel;
+            float featureSize = std::min(a.minimumHalfExtent, b.minimumHalfExtent);
+            if (relativeLinearTravel > 1e-6f)
+            {
+                const glm::vec3 travelDirection =
+                    relativeDisplacement / relativeLinearTravel;
+                featureSize = std::min(
+                    projectedBodyHalfExtent(bodies_[i], travelDirection),
+                    projectedBodyHalfExtent(bodies_[j], travelDirection));
+            }
+            const float relativeTravel = relativeLinearTravel + angularTravel;
             includeRequiredSubsteps(relativeTravel, featureSize);
         }
     }
@@ -834,16 +882,18 @@ void PhysicsWorld::step(float dt)
         {
             if (!collider.transform)
                 continue;
-            const glm::vec3 scale = glm::abs(collider.transform->scale());
-            const float staticFeature = std::min(
-                scale.x * collider.localHalfExtents.x,
-                std::min(scale.y * collider.localHalfExtents.y,
-                         scale.z * collider.localHalfExtents.z));
-            if (staticFeature <= 1e-6f ||
-                !overlaps(motion.sweptBounds, makeStaticBoxBounds(collider)))
+            if (!overlaps(motion.sweptBounds, makeStaticBoxBounds(collider)))
                 continue;
+            const float linearTravel = glm::length(motion.linearDisplacement);
+            const glm::vec3 travelDirection = linearTravel > 1e-6f
+                ? motion.linearDisplacement / linearTravel
+                : glm::vec3(0.0f, 1.0f, 0.0f);
+            const float bodyFeature =
+                projectedBodyHalfExtent(body, travelDirection);
+            const float staticFeature =
+                projectedStaticBoxHalfExtent(collider, travelDirection);
             includeRequiredSubsteps(
-                motion.totalTravel, std::min(motion.minimumHalfExtent, staticFeature));
+                motion.totalTravel, std::min(bodyFeature, staticFeature));
         }
 
         if (hasGroundPlane_ && motion.sweptBounds.minimum.y <= groundHeight_ + 1e-4f)
@@ -852,7 +902,9 @@ void PhysicsWorld::step(float dt)
             // de tunneling contra o chão; só contam movimento normal e rotação.
             const float groundNormalTravel =
                 std::fabs(motion.linearDisplacement.y) + motion.angularTravel;
-            includeRequiredSubsteps(groundNormalTravel, motion.minimumHalfExtent);
+            const float groundFeature = projectedBodyHalfExtent(
+                body, glm::vec3(0.0f, 1.0f, 0.0f));
+            includeRequiredSubsteps(groundNormalTravel, groundFeature);
         }
         else if (hasGroundBowl_)
         {
@@ -863,7 +915,15 @@ void PhysicsWorld::step(float dt)
                 groundBowlRadius_, groundBowlDepth_ + groundBowlLipHeight_ + 1e-3f,
                 groundBowlRadius_);
             if (overlaps(motion.sweptBounds, bowlBounds))
-                includeRequiredSubsteps(motion.totalTravel, motion.minimumHalfExtent);
+            {
+                const float linearTravel = glm::length(motion.linearDisplacement);
+                const glm::vec3 travelDirection = linearTravel > 1e-6f
+                    ? motion.linearDisplacement / linearTravel
+                    : glm::vec3(0.0f, 1.0f, 0.0f);
+                includeRequiredSubsteps(
+                    motion.totalTravel,
+                    projectedBodyHalfExtent(body, travelDirection));
+            }
         }
     }
 
@@ -889,18 +949,26 @@ void PhysicsWorld::step(float dt)
 
             const glm::vec3 acceleration = gravity_ +
                 (body.forceAccumulator + body.continuousForce) * body.inverseMass;
-            const glm::vec3 angularAcceleration = body.inverseInertiaTensorWorld() *
-                (body.torqueAccumulator + body.continuousTorque);
+            const glm::vec3 totalTorque =
+                body.torqueAccumulator + body.continuousTorque;
+            if (glm::dot(totalTorque, totalTorque) > 0.0f)
+            {
+                body.angularVelocity +=
+                    (body.inverseInertiaTensorWorld() * totalTorque) * substep;
+            }
 
             body.velocity += acceleration * substep;
-            body.angularVelocity += angularAcceleration * substep;
-            body.velocity *= std::exp(-body.linearDamping * substep);
-            body.angularVelocity *= std::exp(-body.angularDamping * substep);
+            if (body.linearDamping > 0.0f)
+                body.velocity *= std::exp(-body.linearDamping * substep);
+            if (body.angularDamping > 0.0f)
+                body.angularVelocity *= std::exp(-body.angularDamping * substep);
             body.transform->translate(body.velocity * substep);
 
-            const float angularSpeed = glm::length(body.angularVelocity);
-            if (angularSpeed > 1e-6f)
+            const float angularSpeedSquared =
+                glm::dot(body.angularVelocity, body.angularVelocity);
+            if (angularSpeedSquared > 1e-12f)
             {
+                const float angularSpeed = std::sqrt(angularSpeedSquared);
                 const glm::quat delta = glm::angleAxis(
                     angularSpeed * substep, body.angularVelocity / angularSpeed);
                 body.transform->setOrientation(glm::normalize(

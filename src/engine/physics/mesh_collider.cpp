@@ -155,18 +155,6 @@ bool buildTriangleMeshColliderData(
         return false;
     }
 
-    std::vector<std::uint8_t> referencedVertices(result.vertices.size(), 0u);
-    result.supportVertexIndices.reserve(
-        std::min(result.vertices.size(), result.triangleIndices.size()));
-    for (const unsigned int index : result.triangleIndices)
-    {
-        if (referencedVertices[index] == 0u)
-        {
-            referencedVertices[index] = 1u;
-            result.supportVertexIndices.push_back(index);
-        }
-    }
-
     const glm::dvec3 centerOfMass = weightedCentroid / totalArea;
     result.localCenterOfMass = glm::vec3(centerOfMass);
     result.surfaceArea = static_cast<float>(totalArea);
